@@ -1,0 +1,11 @@
+.trial-layout { max-width: 800px; margin: 2rem auto; padding: 1.5rem; line-height: 1.6; }
+.trial-layout fieldset { display: grid; gap: .7rem; border: 1px solid var(--border, #364152); border-radius: 12px; padding: 1.3rem; }
+.trial-layout label { margin-top: .4rem; }
+.trial-layout input, .trial-layout select { width: 100%; }
+.trial-layout .check { display: flex; gap: .7rem; align-items: flex-start; }
+.trial-layout .check input { width: auto; flex: 0 0 auto; margin-top: .4rem; }
+.trial-summary { padding: 1rem; background: rgba(99,102,241,.15); border-radius: 8px; font-weight: 600; }
+.trial-layout [hidden] { display: none !important; }
+.trial-layout a { color: var(--accent, #b5b8ff); text-decoration: underline; }
+.trial-layout #message { padding: .7rem 0; }
+.trial-layout pre { white-space: pre-wrap; font: inherit; }

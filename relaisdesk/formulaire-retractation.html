@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exercer votre droit de rétractation | RelaisDesk</title>
+  <meta name="description" content="Fonction gratuite permettant à un consommateur de notifier sa rétractation d'une commande RelaisDesk.">
+  <meta name="robots" content="index, follow">
+  <meta name="referrer" content="no-referrer">
+  <link rel="canonical" href="https://relaisdesk.fr/formulaire-retractation.html">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="icon" type="image/avif" href="/logo.avif">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <header class="header">
+    <div class="container nav-container">
+      <a href="/" class="logo-group" aria-label="Accueil RelaisDesk">
+        <img src="logo.avif" alt="" class="logo-img" width="42" height="42">
+        <span>Relais<span class="gradient-text">Desk</span></span>
+      </a>
+      <div class="nav-actions"><a href="/" class="btn btn-secondary btn-sm">Accueil</a></div>
+    </div>
+  </header>
+
+  <main class="legal-wrapper">
+    <div class="container" style="max-width: 760px;">
+      <a href="/" class="back-home-btn">← Retour à l'accueil</a>
+      <article class="legal-card">
+        <header class="legal-header">
+          <div class="badge">Consommateurs</div>
+          <h1>Exercer votre droit de rétractation</h1>
+          <p class="legal-date">Notification gratuite en ligne</p>
+        </header>
+        <div class="legal-body">
+          <p>Si vous avez commandé RelaisDesk en qualité de consommateur, vous pouvez notifier votre décision dans les quatorze jours suivant la conclusion du contrat. Cette fonction ne vous demande pas de justifier votre décision.</p>
+          <p>Vous pouvez aussi adresser une déclaration non ambiguë via notre <a href="contact.html" style="color: var(--border-focus);">formulaire de contact en ligne</a> ou par courrier à RelaisDesk — Service Client, 2 Chemin de Lonzais, 03170 Bizeneuille, France.</p>
+          <p>Vous pouvez également écrire directement à <span data-legal-email="4844455f4a485f6b594e474a42584f4e5840054d59"><a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#99;&#111;&#110;&#116;&#97;&#99;&#116;&#64;&#114;&#101;&#108;&#97;&#105;&#115;&#100;&#101;&#115;&#107;&#46;&#102;&#114;">&#99;&#111;&#110;&#116;&#97;&#99;&#116;&#64;&#114;&#101;&#108;&#97;&#105;&#115;&#100;&#101;&#115;&#107;&#46;&#102;&#114;</a></span>.</p>
+
+          <form id="withdrawalForm">
+            <div class="form-group">
+              <label class="form-label" for="withdrawalKind">Contrat concerné</label>
+              <select id="withdrawalKind" class="input-text" style="width: 100%;"><option value="order">Commande prépayée</option><option value="trial">Essai gratuit / abonnement après essai</option></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="withdrawalOrderID">Référence de commande ou de contrat reçue par e-mail *</label>
+              <input type="text" id="withdrawalOrderID" class="input-text" style="width: 100%;" placeholder="Référence de commande ou de contrat" autocomplete="off" maxlength="255" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="withdrawalEmail">Adresse e-mail utilisée lors de la commande *</label>
+              <input type="email" id="withdrawalEmail" class="input-text" style="width: 100%;" autocomplete="email" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="withdrawalName">Nom et prénom</label>
+              <input type="text" id="withdrawalName" class="input-text" style="width: 100%;" autocomplete="name" maxlength="200">
+            </div>
+            <p>En envoyant ce formulaire, je notifie sans ambiguïté ma décision de me rétracter du contrat RelaisDesk identifié ci-dessus.</p>
+            <p>Pour un essai : aucune facture n'est nécessaire. La référence figure dans l'e-mail d'activation et l'espace client. La rétractation pendant l'essai arrête le contrat et l'accès, sans facturation rétroactive. Pour conserver l'accès jusqu'au dernier jour sans être prélevé, utilisez plutôt <a href="client/">l'annulation du renouvellement</a>. En cas de référence perdue, le courriel, le formulaire de contact et le courrier restent utilisables.</p>
+            <div id="withdrawalReview" role="status" hidden style="white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid; padding: 1rem; margin-bottom: 1rem;"></div>
+            <div id="withdrawalErrorMessage" role="alert" style="display: none; color: var(--danger); margin-bottom: 1rem;"></div>
+            <button type="submit" id="withdrawalSubmitBtn" class="btn btn-primary btn-block">Se rétracter du contrat</button>
+          </form>
+          <div id="withdrawalResult" class="checker-result active" role="status" style="display: none; margin-top: 1rem;"></div>
+
+          <h2>Effets de la demande</h2>
+          <p>Un accusé de réception horodaté et une référence vous seront affichés et envoyés par courriel. Si vous avez demandé l'activation immédiate, le montant correspondant au service effectivement fourni avant votre notification peut rester dû dans les conditions prévues par la loi et les CGV. Votre demande sera examinée sans que le formulaire préjuge de droits plus favorables qui pourraient vous être applicables.</p>
+          <p>Les données du formulaire sont utilisées uniquement pour identifier la commande, traiter la rétractation et conserver la preuve de la demande. Consultez la <a href="politique-confidentialite.html" style="color: var(--border-focus);">politique de confidentialité</a>.</p>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container"><div class="footer-bottom"><p>&copy; 2026 RelaisDesk. Tous droits réservés.</p></div></div>
+  </footer>
+  <script src="app.js?v=20260909-trial-v2"></script>
+  <script src="legal-email.js" defer></script>
+</body>
+</html>

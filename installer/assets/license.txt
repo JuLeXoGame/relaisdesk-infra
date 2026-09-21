@@ -1,0 +1,68 @@
+INFORMATIONS DE LICENCE ET CONDITIONS D'ACCES RELAISDESK
+Version 2026-09-07
+
+EDITEUR DU SERVICE
+Julien BELLOT, entrepreneur individuel (EI)
+Informatique A Domicile 03 / RelaisDesk
+SIREN 940 747 108 - SIRET 940 747 108 00014
+2 Chemin de Lonzais, 03170 Bizeneuille, France
+contact@relaisdesk.fr - 06 62 85 59 30
+TVA non applicable, art. 293 B du CGI
+
+1. LOGICIELS LIBRES ET DROITS DES TIERS
+Ce paquet comprend une version modifiée de RustDesk Community sous GNU
+Affero General Public License version 3 (AGPLv3), ainsi que des composants
+tiers soumis à leurs licences respectives.
+
+Leurs droits d'utilisation, d'étude, de copie, de modification et de
+redistribution restent ceux de leurs licences, y compris après la fin d'un
+accès commercial RelaisDesk. Les avis de copyright et conditions doivent être
+conservés. RelaisDesk ne revendique pas la propriété exclusive de ces composants.
+
+Les sources correspondantes du fork, sous-modules modifiés et instructions
+nécessaires de construction sont accessibles gratuitement :
+https://relaisdesk.fr/logiciel-libre.html
+Licence AGPLv3 : https://www.gnu.org/licenses/agpl-3.0.html
+
+Les composants originaux indépendants, lorsqu'ils ne constituent pas une
+oeuvre dérivée couverte par une licence libre, ne sont pas automatiquement
+placés sous AGPLv3 par cette notice. Leur utilisation avec le service est
+autorisée ; les droits non accordés restent réservés, sous réserve des droits
+prévus par la loi. Cette distinction ne restreint aucun droit sur les
+composants effectivement couverts par l'AGPLv3 ou une autre licence libre.
+
+2. SERVICE COMMERCIAL ET CONNEXIONS SIMULTANEES
+Le paiement rémunère l'accès à l'infrastructure exploitée, sa configuration
+et le support de l'offre. Durée et capacité sont celles de la commande.
+L'application peut être installée sur plusieurs ordinateurs : seuls les
+appareils techniciens connectés simultanément au service sont décomptés.
+La licence du logiciel n'accorde pas un accès illimité gratuit au service.
+
+Les identifiants personnels du service doivent rester confidentiels. L'accès
+aux systèmes de tiers nécessite leur autorisation. Une modification licite
+du logiciel n'autorise aucun accès frauduleux au service ou aux postes de tiers.
+
+3. CONTRAT ET DONNEES PERSONNELLES
+La version des CGV acceptée pour la commande reste applicable :
+https://relaisdesk.fr/cgv.html
+L'installation ne remplace pas cette acceptation, ne déclenche pas de nouvelle
+commande et n'entraîne aucune renonciation aux droits légaux.
+Annexe professionnelle : https://relaisdesk.fr/sous-traitance-rgpd.html
+Confidentialité : https://relaisdesk.fr/politique-confidentialite.html
+
+4. GARANTIES ET RESPONSABILITES
+Les exclusions propres aux licences libres ne suppriment pas les obligations
+du vendeur du service ni les garanties légales. Aucune responsabilité que la
+loi interdit de limiter n'est exclue. Le technicien répond de ses propres
+interventions et le vendeur de ses propres manquements, conformément aux CGV.
+La fin du service n'impose pas de supprimer les copies librement licenciées.
+
+5. INDEPENDANCE ET DISTRIBUTION
+RelaisDesk est un fork indépendant, non affilié à RustDesk et non approuvé par
+ses titulaires sauf accord écrit contraire. Les marques des tiers restent
+leur propriété. La signature Ed25519 du manifeste est distincte de Windows
+Authenticode. La distribution n'est pas conditionnée à SignPath ; un fichier
+non signé peut afficher un avertissement ou un éditeur inconnu sous Windows.
+
+Copyright 2026 Julien BELLOT EI, pour ses contributions uniquement.
+Les licences et copyrights des composants tiers restent applicables.

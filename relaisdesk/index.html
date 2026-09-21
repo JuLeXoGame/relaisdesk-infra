@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RelaisDesk | Logiciel de support et téléassistance pour tous les professionnels</title>
+  <meta name="description" content="Logiciel de prise en main et téléassistance à distance pour professionnels et entreprises : assistance ponctuelle illimitée, parc dès 500 postes et serveurs sécurisés en France. Dès 24,90 €/mois.">
+  <meta name="author" content="RelaisDesk">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <link rel="canonical" href="https://relaisdesk.fr/">
+
+  <!-- Open Graph / Facebook / LinkedIn / Discord -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://relaisdesk.fr/">
+  <meta property="og:title" content="RelaisDesk | Logiciel de support et téléassistance pour tous les professionnels">
+  <meta property="og:description" content="Logiciel de téléassistance et prise en main à distance pour tous les professionnels. Assistance ponctuelle illimitée, parc dès 500 postes et serveurs hébergés en France. Dès 24,90 €/mois.">
+  <meta property="og:image" content="https://relaisdesk.fr/logo.avif">
+  <meta property="og:image:secure_url" content="https://relaisdesk.fr/logo.avif">
+  <meta property="og:image:type" content="image/avif">
+  <meta property="og:image:width" content="795">
+  <meta property="og:image:height" content="795">
+  <meta property="og:image:alt" content="Logo RelaisDesk">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:site_name" content="RelaisDesk">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:url" content="https://relaisdesk.fr/">
+  <meta name="twitter:title" content="RelaisDesk | Logiciel de support et téléassistance pour tous les professionnels">
+  <meta name="twitter:description" content="Logiciel de téléassistance et prise en main à distance pour tous les professionnels. Assistance ponctuelle illimitée, parc dès 500 postes et serveurs hébergés en France. Dès 24,90 €/mois.">
+  <meta name="twitter:image" content="https://relaisdesk.fr/logo.avif">
+  <meta name="twitter:image:alt" content="Logo RelaisDesk">
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="icon" type="image/avif" href="/logo.avif">
+  <link rel="manifest" href="manifest.json">
+  <!-- Language Selector Critical Styles (immediate render, zero cache dependency) -->
+  <style>
+    .lang-selector-dropdown { position: relative; display: inline-flex; align-items: center; }
+    .lang-dropdown-btn { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.8rem; font-size: 0.85rem; font-weight: 600; font-family: inherit; color: #f8fafc; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 8px; cursor: pointer; line-height: 1; user-select: none; transition: all 0.2s ease; }
+    .lang-dropdown-btn:hover, .lang-selector-dropdown.open .lang-dropdown-btn { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.32); }
+    .lang-btn-flag { font-size: 1.05rem; line-height: 1; }
+    .lang-btn-code { font-size: 0.82rem; font-weight: 700; letter-spacing: 0.04em; color: #f8fafc; }
+    .lang-btn-arrow { width: 12px; height: 12px; transition: transform 0.2s ease; opacity: 0.75; }
+    .lang-selector-dropdown.open .lang-btn-arrow { transform: rotate(180deg); }
+    .lang-dropdown-list { display: none; position: absolute; top: calc(100% + 6px); right: 0; min-width: 170px; max-height: 220px; overflow-y: auto; background: #0b0f19; background: rgba(11, 15, 25, 0.98); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 10px; box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05); list-style: none !important; padding: 5px; margin: 0; z-index: 1000; overscroll-behavior: contain; }
+    .lang-selector-dropdown.open .lang-dropdown-list { display: block; }
+    .lang-dropdown-list::-webkit-scrollbar { width: 5px; }
+    .lang-dropdown-list::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.03); border-radius: 4px; }
+    .lang-dropdown-list::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.25); border-radius: 4px; }
+    .lang-dropdown-list::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.4); }
+    .lang-dropdown-list { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.25) rgba(255, 255, 255, 0.03); }
+    .lang-dropdown-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.5rem 0.7rem; font-size: 0.85rem; font-weight: 500; color: #cbd5e1; border-radius: 6px; cursor: pointer; user-select: none; list-style: none !important; transition: background 0.15s ease, color 0.15s ease; }
+    .lang-dropdown-item:hover { background: rgba(255, 255, 255, 0.1); color: #ffffff; }
+    .lang-dropdown-item.active { background: rgba(99, 102, 241, 0.18); color: #818cf8; font-weight: 600; }
+    .lang-item-flag { font-size: 1.05rem; line-height: 1; }
+    .lang-item-name { flex: 1; white-space: nowrap; }
+    .lang-check { font-size: 0.8rem; color: #818cf8; display: none; margin-left: auto; font-weight: 700; }
+    .lang-dropdown-item.active .lang-check { display: inline-block; }
+  </style>
+  <link rel="stylesheet" href="styles.css?v=20260912-nav-center">
+
+  <!-- Données Structurées Schema.org (JSON-LD) pour Google -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://relaisdesk.fr/#organization",
+        "name": "RelaisDesk",
+        "legalName": "Julien BELLOT EI — RelaisDesk",
+        "url": "https://relaisdesk.fr/",
+        "logo": "https://relaisdesk.fr/logo.avif",
+        "telephone": "+33662855930",
+        "identifier": "SIRET 94074710800014",
+        "description": "Service de téléassistance et de support informatique à distance basé sur RustDesk Community.",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "2 Chemin de Lonzais",
+          "postalCode": "03170",
+          "addressLocality": "Bizeneuille",
+          "addressCountry": "FR"
+        }
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://relaisdesk.fr/#website",
+        "url": "https://relaisdesk.fr/",
+        "name": "RelaisDesk",
+        "inLanguage": "fr-FR",
+        "publisher": {
+          "@id": "https://relaisdesk.fr/#organization"
+        }
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://relaisdesk.fr/#software",
+        "name": "RelaisDesk",
+        "url": "https://relaisdesk.fr/",
+        "image": "https://relaisdesk.fr/logo.avif",
+        "softwareVersion": "1.0.0",
+        "operatingSystem": "Windows 10, Windows 11, Linux (Debian, Ubuntu)",
+        "applicationCategory": "BusinessApplication",
+        "publisher": {
+          "@id": "https://relaisdesk.fr/#organization"
+        },
+        "offers": [
+          {
+            "@type": "Offer",
+            "name": "Starter",
+            "price": "24.90",
+            "priceCurrency": "EUR",
+            "availability": "https://schema.org/InStock",
+            "description": "1 technicien simultané, 500 postes enregistrables dans la console, assistance ponctuelle illimitée",
+            "url": "https://relaisdesk.fr/#pricing"
+          },
+          {
+            "@type": "Offer",
+            "name": "Pro",
+            "price": "110.00",
+            "priceCurrency": "EUR",
+            "availability": "https://schema.org/InStock",
+            "description": "5 techniciens simultanés, 1 000 postes enregistrables dans la console, assistance ponctuelle illimitée",
+            "url": "https://relaisdesk.fr/#pricing"
+          },
+          {
+            "@type": "Offer",
+            "name": "Personnalisé",
+            "price": "199.00",
+            "priceCurrency": "EUR",
+            "availability": "https://schema.org/InStock",
+            "description": "10 à 500 techniciens simultanés, parc à partir de 2 000 postes, assistance ponctuelle illimitée",
+            "url": "https://relaisdesk.fr/#pricing"
+          }
+        ],
+        "description": "Logiciel professionnel de prise en main et support à distance pour entreprises et professionnels, avec assistance ponctuelle illimitée et console de parc de 500 à 4 500 postes selon la licence."
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://relaisdesk.fr/#faq",
+        "inLanguage": "fr-FR",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Comment mes clients finaux se connectent-ils ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+			  "text": "Vos clients téléchargent l'application Client légère. Depuis votre application Technicien, vous générez un code unique de 8 caractères (ex: AB12-CD34). Le client saisit ce code et rejoint directement votre session sécurisée."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Combien de temps les codes d'assistance sont-ils valables ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Chaque code d'assistance est valide pendant 12 heures. Vous pouvez en générer un nombre illimité chaque jour pour vos interventions, quel que soit votre plan (Starter, Pro ou Personnalisé)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Mes clients doivent-ils payer quelque chose ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "L'application Client est 100% gratuite et sans abonnement pour vos clients finaux. Si vous le souhaitez, vous pouvez cependant activer l'option Prestations Stripe Connect pour leur facturer directement vos dépannages au forfait ou au temps passé."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Puis-je facturer mes interventions informatiques directement à mes clients ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Oui. RelaisDesk intègre en option la facturation de vos prestations via Stripe Connect. Depuis votre application Technicien, choisissez « Connexion & Prestation » pour facturer un forfait prépayé ou au temps réel connecté (tarif horaire calculé à la minute). Le client règle directement par carte bancaire via Stripe Checkout."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Comment fonctionne le paiement et la livraison de la licence ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Par carte bancaire (Stripe), votre licence est créée immédiatement et envoyée par email avec vos identifiants. Par virement bancaire, la licence est activée dès réception des fonds par notre administration."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Puis-je utiliser RelaisDesk sous macOS ou Linux ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Windows (.exe) et Linux (.deb) sont proposés. macOS n’est pas encore disponible publiquement. L’accès permanent nécessite Windows et les services compatibles installés ; il n’est pas disponible sous Linux ou macOS."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Ambient Glow Effects -->
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <!-- Notification Banner (Stripe Return) -->
+  <div id="notificationBanner" class="notification-banner"></div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="container nav-container">
+      <a href="/" class="logo-group" aria-label="Accueil RelaisDesk">
+        <img src="logo.avif" alt="" class="logo-img" width="42" height="42">
+        <span>Relais<span class="gradient-text">Desk</span></span>
+      </a>
+
+      <ul class="nav-menu" id="main-navigation">
+        <li><a href="#features" class="nav-link" data-i18n="nav_features">Fonctionnalités</a></li>
+        <li><a href="#prestations" class="nav-link" data-i18n="nav_prestations">Prestations</a></li>
+        <li><a href="#pricing" class="nav-link" data-i18n="nav_pricing">Tarifs</a></li>
+        <li><a href="#downloads" class="nav-link" data-i18n="nav_downloads">Téléchargements</a></li>
+        <li><a href="#faq" class="nav-link" data-i18n="nav_faq">FAQ</a></li>
+		<li class="mobile-only"><a href="client/" class="nav-link" style="color: #67e8f9; font-weight: 600;" data-i18n="nav_client">Espace Client</a></li>
+        <li class="mobile-only"><a href="client/#codes" class="nav-link" style="color: #60a5fa; font-weight: 600;" data-i18n="nav_technician">👨‍💻 Espace Technicien</a></li>
+        <li class="mobile-only"><a href="#pricing" class="nav-link" style="color: #38bdf8; font-weight: 700;" data-i18n="nav_order">⚡ Commander</a></li>
+      </ul>
+
+      <div class="nav-actions">
+		<a href="client/" class="btn btn-secondary btn-sm" data-i18n="nav_client">Espace Client</a>
+        <a href="client/#codes" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+          <span data-i18n="nav_technician">👨‍💻 Espace Technicien</span>
+        </a>
+        <a href="#pricing" class="btn btn-primary btn-sm" data-i18n="nav_order">Commander</a>
+        <div class="lang-selector-dropdown" id="langDropdown">
+          <button class="lang-dropdown-btn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Sélectionner la langue">
+            <span class="lang-btn-flag">🇫🇷</span>
+            <span class="lang-btn-code">FR</span>
+            <svg class="lang-btn-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <ul class="lang-dropdown-list" role="listbox" aria-label="Langues disponibles">
+            <li role="option" data-lang="fr" class="lang-dropdown-item active"><span class="lang-item-flag">🇫🇷</span><span class="lang-item-name">Français</span><span class="lang-check">✓</span></li>
+            <li role="option" data-lang="en" class="lang-dropdown-item"><span class="lang-item-flag">🇬🇧</span><span class="lang-item-name">English</span><span class="lang-check"></span></li>
+            <li role="option" data-lang="de" class="lang-dropdown-item"><span class="lang-item-flag">🇩🇪</span><span class="lang-item-name">Deutsch</span><span class="lang-check"></span></li>
+            <li role="option" data-lang="es" class="lang-dropdown-item"><span class="lang-item-flag">🇪🇸</span><span class="lang-item-name">Español</span><span class="lang-check"></span></li>
+            <li role="option" data-lang="it" class="lang-dropdown-item"><span class="lang-item-flag">🇮🇹</span><span class="lang-item-name">Italiano</span><span class="lang-check"></span></li>
+            <li role="option" data-lang="ru" class="lang-dropdown-item"><span class="lang-item-flag">🇷🇺</span><span class="lang-item-name">Русский</span><span class="lang-check"></span></li>
+            <li role="option" data-lang="pl" class="lang-dropdown-item"><span class="lang-item-flag">🇵🇱</span><span class="lang-item-name">Polski</span><span class="lang-check"></span></li>
+          </ul>
+        </div>
+        <button class="mobile-toggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="main-navigation">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container hero-content">
+      <div class="badge" data-i18n="hero_badge">🇫🇷 Infrastructure exploitée en France / UE</div>
+      <h1 class="hero-title"><span data-i18n="hero_title_prefix">Le logiciel de support et téléassistance </span><span class="gradient-text" data-i18n="hero_title_highlight">pour tous les professionnels</span></h1>
+      <p class="hero-subtitle" data-i18n="hero_subtitle">
+        Proposez une assistance rapide à vos clients et collaborateurs sans surcoût par session.
+		Flux de session chiffrés de bout en bout et infrastructure hébergée en France.
+      </p>
+
+      <div class="hero-buttons">
+        <a href="#pricing" class="btn btn-primary" data-i18n="hero_btn_pricing">Voir les offres</a>
+        <a href="#downloads" class="btn btn-secondary" data-i18n="hero_btn_downloads">Télécharger les applications</a>
+      </div>
+
+      <div class="hero-stats">
+        <div class="stat-item">
+          <div class="stat-val gradient-text" data-i18n="hero_stat1_val">Illimités</div>
+          <p data-i18n="hero_stat1_desc">Codes d'assistance pour vos clients</p>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val gradient-text" data-i18n="hero_stat2_val">Flux chiffrés</div>
+		  <p data-i18n="hero_stat2_desc">Serveurs de rendez-vous et de relais opérés par RelaisDesk</p>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val gradient-text" data-i18n="hero_stat3_val">Dès 24,90€/m</div>
+          <p data-i18n="hero_stat3_desc">Mensuel ou remise annuelle</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="section">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge" data-i18n="features_badge">Avantages Clés</div>
+        <h2 class="section-title" data-i18n="features_title">Pourquoi choisir RelaisDesk ?</h2>
+        <p class="section-subtitle" data-i18n="features_subtitle">Une solution performante et intuitive, adaptée à tous les métiers nécessitant une prise en main à distance.</p>
+      </div>
+
+      <div class="grid-3">
+        <div class="feature-card">
+          <div class="feature-icon">👥</div>
+          <h3 data-i18n="feat1_title">Accès Clients Gratuits & Illimités</h3>
+          <p data-i18n="feat1_desc">Vos clients n'ont rien à payer et rien à configurer. Vous générez simplement un code temporaire de 12 heures depuis votre application.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+		  <h3 data-i18n="feat2_title">Infrastructure hébergée en France</h3>
+		  <p data-i18n="feat2_desc">Rendez-vous et relais sur Oracle Cloud Infrastructure à Marseille. La politique de confidentialité décrit les prestataires et transferts éventuels.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">💻</div>
+		  <h3 data-i18n="feat3_title">Prêt à l'emploi</h3>
+		  <p data-i18n="feat3_desc">Configuration réseau pré-embarquée dans vos exécutables. Zéro adresse IP ni clé publique à saisir manuellement.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3 data-i18n="feat4_title">Connexion Directe & Relayée</h3>
+          <p data-i18n="feat4_desc">Connexion P2P directe chiffrée de bout en bout dès que possible, bascule automatique et transparente sur nos relais si NAT strict.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">📜</div>
+          <h3 data-i18n="feat5_title">Multiplateforme Pro</h3>
+          <p data-i18n="feat5_desc">Windows et Linux sont proposés. macOS n’est pas encore disponible publiquement. L’accès permanent est réservé à Windows dans les versions proposées.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">💳</div>
+          <h3 data-i18n="feat6_title">Facturation des Dépannages (Optionnel)</h3>
+          <p data-i18n="feat6_desc">Encaissez vos interventions au forfait ou au temps réel connecté directement via Stripe Checkout. L'assistance classique reste toujours gratuite et sans commission.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Fleet / Management Console Showcase Section -->
+  <section id="fleet" class="section fleet-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge" data-i18n="fleet_badge">⚡ Gestion de Parc & Télémaintenance</div>
+        <h2 class="section-title" data-i18n="fleet_title">Une console moderne pour superviser et administrer votre parc</h2>
+        <p class="section-subtitle" data-i18n="fleet_subtitle">Pilotez vos serveurs, postes de travail et caisses distantes en continu avec l'accès permanent (unattended), sans interrompre vos collaborateurs.</p>
+      </div>
+
+      <div class="fleet-grid">
+        <!-- Feature Highlights Column -->
+        <div class="fleet-features-col">
+          <div class="fleet-feature-card">
+            <div class="fleet-feat-icon">📡</div>
+            <div>
+              <h3 data-i18n="fleet_feat1_title">Supervision & statut en temps réel</h3>
+              <p data-i18n="fleet_feat1_desc">Visualisez instantanément quels postes sont en ligne ou hors ligne, leur système d'exploitation, leur alias et la date de leur dernière activité.</p>
+            </div>
+          </div>
+
+          <div class="fleet-feature-card">
+            <div class="fleet-feat-icon">⚡</div>
+            <div>
+              <h3 data-i18n="fleet_feat2_title">Accès permanent en 1 clic</h3>
+              <p data-i18n="fleet_feat2_desc">Connectez-vous en un clic à vos serveurs ou machines distantes sans qu'un utilisateur n'ait besoin de valider la demande d'assistance à l'écran.</p>
+            </div>
+          </div>
+
+          <div class="fleet-feature-card">
+            <div class="fleet-feat-icon">💻</div>
+            <div>
+              <h3 data-i18n="fleet_feat3_title">Enrôlement express & scripts CLI</h3>
+              <p data-i18n="fleet_feat3_desc">Générez un code temporaire ou copiez la commande PowerShell pour déployer automatiquement vos postes en quelques secondes via vos scripts GPO ou MDM.</p>
+            </div>
+          </div>
+
+          <div class="fleet-feature-card">
+            <div class="fleet-feat-icon">🛡️</div>
+            <div>
+              <h3 data-i18n="fleet_feat4_title">Sécurité et hébergement en France</h3>
+              <p data-i18n="fleet_feat4_desc">Signatures Ed25519 pour l’authentification, flux de session chiffrés de bout en bout, transmissions sécurisées HTTPS, serveurs en France et 2FA TOTP.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visual UI Mockup Column -->
+        <div class="fleet-mockup-col">
+          <div class="fleet-mockup-window">
+            <div class="mockup-header">
+              <div class="mockup-dots">
+                <span class="mockup-dot red"></span>
+                <span class="mockup-dot yellow"></span>
+                <span class="mockup-dot green"></span>
+              </div>
+              <div class="mockup-title" data-i18n="fleet_mockup_title">RelaisDesk — Console de Parc</div>
+              <div class="mockup-badge" data-i18n="fleet_quota_hint">500 postes inclus</div>
+            </div>
+
+            <div class="mockup-toolbar">
+              <div class="mockup-search">
+                <span class="search-icon">🔍</span>
+                <span class="search-placeholder" data-i18n="fleet_mockup_search">Rechercher par alias, ID ou emplacement...</span>
+              </div>
+              <div class="mockup-actions">
+                <span class="mockup-btn-new">+ Enrôler un poste</span>
+              </div>
+            </div>
+
+            <div class="mockup-device-list">
+              <!-- Item 1: Online Server -->
+              <div class="mockup-device-item online">
+                <div class="mockup-device-icon">🖥️</div>
+                <div class="mockup-device-info">
+                  <div class="mockup-device-title-row">
+                    <span class="mockup-device-name">SRV-COMPTA-PARIS</span>
+                    <span class="mockup-status-tag tag-online">
+                      <span class="pulse-dot"></span> <span data-i18n="fleet_mockup_online">En ligne</span>
+                    </span>
+                  </div>
+                  <div class="mockup-device-sub">
+                    <span>Windows Server 2022</span> • <span>ID: 948 201 552</span> • <span>Siège social</span>
+                  </div>
+                </div>
+                <div class="mockup-device-action">
+                  <span class="mockup-connect-btn">⚡ <span data-i18n="fleet_mockup_connect">Connecter</span></span>
+                </div>
+              </div>
+
+              <!-- Item 2: Online Workstation -->
+              <div class="mockup-device-item online">
+                <div class="mockup-device-icon">💻</div>
+                <div class="mockup-device-info">
+                  <div class="mockup-device-title-row">
+                    <span class="mockup-device-name">PC-ACCUEIL-SECRETARIAT</span>
+                    <span class="mockup-status-tag tag-online">
+                      <span class="pulse-dot"></span> <span data-i18n="fleet_mockup_online">En ligne</span>
+                    </span>
+                  </div>
+                  <div class="mockup-device-sub">
+                    <span>Windows 11 Pro</span> • <span>ID: 812 404 119</span> • <span>Hall principal</span>
+                  </div>
+                </div>
+                <div class="mockup-device-action">
+                  <span class="mockup-connect-btn">⚡ <span data-i18n="fleet_mockup_connect">Connecter</span></span>
+                </div>
+              </div>
+
+              <!-- Item 3: Offline POS -->
+              <div class="mockup-device-item offline">
+                <div class="mockup-device-icon">📠</div>
+                <div class="mockup-device-info">
+                  <div class="mockup-device-title-row">
+                    <span class="mockup-device-name">TPV-MAGASIN-LYON</span>
+                    <span class="mockup-status-tag tag-offline">
+                      <span class="dot-gray"></span> <span data-i18n="fleet_mockup_offline">Hors ligne</span>
+                    </span>
+                  </div>
+                  <div class="mockup-device-sub">
+                    <span>Windows 10 IoT</span> • <span>ID: 703 118 420</span> • <span data-i18n="fleet_mockup_last_seen">Vu il y a 18 min</span>
+                  </div>
+                </div>
+                <div class="mockup-device-action">
+                  <span class="mockup-connect-btn disabled">Inactif</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mockup-footer">
+              <span class="mockup-footer-count">🟢 2 en ligne / 3 postes actifs</span>
+              <a href="client/" class="mockup-footer-link">Ouvrir la console →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Prestations & Billing Showcase Section -->
+  <section id="prestations" class="section prestation-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge" data-i18n="prestation_badge">💳 Prestations & Facturation Intégrée</div>
+        <h2 class="section-title" data-i18n="prestation_title">Facturez vos dépannages au forfait ou au temps passé</h2>
+        <p class="section-subtitle" data-i18n="prestation_subtitle">Une exclusivité RelaisDesk : faites régler vos interventions à vos clients en toute simplicité via Stripe Checkout, sans logiciel tiers de facturation.</p>
+      </div>
+
+      <div class="fleet-grid">
+        <!-- Feature Highlights Column -->
+        <div class="fleet-features-col">
+          <div class="fleet-feature-card">
+            <div class="fleet-feat-icon">⚡</div>
+            <div>
+              <h3 data-i18n="prestation_feat1_title">Double mode : Connexion directe ou Prestation</h3>
+              <p data-i18n="prestation_feat1_desc">Conservez la liberté d'offrir une téléassistance gratuite habituelle en 1 clic (« Connexion directe »), ou choisissez « Connexion & Prestation » pour facturer votre intervention.</p>
+            </div>
+          </div>
+
+          <div class="fleet-feature-card">
+            <div class="fleet-feat-icon">⏱️</div>
+            <div>
+              <h3 data-i18n="prestation_feat2_title">Forfait prépayé ou Tarif horaire connecté</h3>
+              <p data-i18n="prestation_feat2_desc">Définissez vos tarifs dans votre espace client. Encaissez un forfait avant le dépannage, ou au prorata exact des minutes réellement connectées grâce au compteur sécurisé (coupures non facturées).</p>
+            </div>
+          </div>
+
+          <div class="fleet-feature-card">
+            <div class="fleet-feat-icon">🔒</div>
+            <div>
+              <h3 data-i18n="prestation_feat3_title">Paiement Stripe Checkout 100% sécurisé</h3>
+              <p data-i18n="prestation_feat3_desc">Votre client règle par carte bancaire sur la page hébergée officielle de Stripe. Aucun numéro bancaire ne transite par l'application ni par votre ordinateur.</p>
+            </div>
+          </div>
+
+          <div class="fleet-feature-card">
+            <div class="fleet-feat-icon">🏦</div>
+            <div>
+              <h3 data-i18n="prestation_feat4_title">Virement direct sur votre compte bancaire</h3>
+              <p data-i18n="prestation_feat4_desc">Connectez votre compte bancaire en quelques clics grâce à Stripe Connect. Les encaissements vous sont reversés directement. Option activable ou désactivable quand vous le souhaitez.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visual UI Mockup Column -->
+        <div class="fleet-mockup-col">
+          <div class="fleet-mockup-window prestation-mockup-window">
+            <div class="mockup-header">
+              <div class="mockup-dots">
+                <span class="mockup-dot red"></span>
+                <span class="mockup-dot yellow"></span>
+                <span class="mockup-dot green"></span>
+              </div>
+              <div class="mockup-title" data-i18n="prestation_mockup_title">RelaisDesk Technicien — Prise en main</div>
+              <div class="mockup-badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3);" data-i18n="prestation_mockup_badge">Option Prestation Active</div>
+            </div>
+
+            <!-- Launcher Simulation -->
+            <div class="prestation-mockup-body">
+              <div class="prestation-mockup-field-row">
+                <span class="prestation-mockup-label" data-i18n="prestation_mockup_client_id_label">ID du poste client :</span>
+                <span class="prestation-mockup-code">812 404 119</span>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="prestation-mockup-buttons">
+                <div class="prestation-btn-sample direct">
+                  <span data-i18n="prestation_btn_direct">⚡ Connexion directe</span>
+                  <small data-i18n="prestation_btn_direct_sub">(Gratuit / Sans facturation)</small>
+                </div>
+                <div class="prestation-btn-sample billing active-glow">
+                  <span data-i18n="prestation_btn_billing">💳 Connexion & Prestation</span>
+                  <small data-i18n="prestation_btn_billing_sub">(Tarif ou forfait sélectionné)</small>
+                </div>
+              </div>
+
+              <!-- Selected Rate & Timer Box -->
+              <div class="prestation-session-card">
+                <div class="prestation-session-header">
+                  <span class="prestation-rate-tag" data-i18n="prestation_sample_rate">Tarif horaire : 50,00 € / heure</span>
+                  <span class="mockup-status-tag tag-online"><span class="pulse-dot"></span> <span data-i18n="prestation_session_active">Session active</span></span>
+                </div>
+                <div class="prestation-meter-row">
+                  <div class="prestation-meter-val" data-i18n="prestation_sample_timer">⏱️ 18 min 42 s</div>
+                  <div class="prestation-meter-price" data-i18n="prestation_sample_price">15,58 € TTC</div>
+                </div>
+                <p class="prestation-meter-sub" data-i18n="prestation_meter_hint">Compteur monotone anti-triche • Déconnexions déduites</p>
+
+                <div class="prestation-checkout-preview">
+                  <div class="prestation-checkout-info">
+                    <strong data-i18n="prestation_checkout_ready">Paiement client prêt :</strong>
+                    <span data-i18n="prestation_checkout_link_info">Lien Stripe Checkout sécurisé</span>
+                  </div>
+                  <span class="prestation-pay-link" data-i18n="prestation_checkout_cta">💳 Payer par carte (Stripe) →</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mockup-footer">
+              <span class="mockup-footer-count" data-i18n="prestation_mockup_footer">🛡️ Sécurité Stripe Connect • Sans stockage de carte</span>
+              <a href="client/#services" class="mockup-footer-link" data-i18n="prestation_mockup_footer_link">Configurer mes tarifs →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing Section -->
+  <section id="pricing" class="section">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge" data-i18n="pricing_badge">Grille Tarifaire</div>
+        <h2 class="section-title" data-i18n="pricing_title">Des forfaits simples et transparents</h2>
+        <p class="section-subtitle" data-i18n="pricing_subtitle">Installez l'application Technicien sur autant d'ordinateurs que nécessaire : seule l'utilisation simultanée est limitée par l'offre.</p>
+      </div>
+      <!-- Billing Cycle Switcher -->
+      <div class="billing-toggle-container">
+        <div class="billing-toggle-wrapper">
+          <button type="button" class="billing-toggle-btn active" data-cycle="monthly" id="cycleMonthlyBtn">
+            <span data-i18n="billing_monthly">Facturation mensuelle</span>
+          </button>
+          <button type="button" class="billing-toggle-btn" data-cycle="annual" id="cycleAnnualBtn">
+            <span data-i18n="billing_annual">Facturation annuelle</span>
+            <span class="billing-badge" data-i18n="billing_annual_badge">Remise annuelle ✨</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="pricing-grid">
+        <!-- Starter Card -->
+        <div class="price-card">
+          <div class="price-header">
+            <h3 class="plan-name" data-i18n="plan_starter">Starter</h3>
+            <p class="plan-desc" data-i18n="plan_starter_desc">Pour indépendant ou professionnel solo</p>
+          </div>
+          <div class="price-amount">
+            <span id="starterPriceVal" class="price-val">24,90</span>
+            <span id="starterPricePeriod" class="price-period" data-i18n="plan_period_monthly">€ / mois</span>
+          </div>
+          <div id="starterSavings" class="price-savings">30 jours d'essai gratuit • Sans engagement</div>
+          <ul class="price-features">
+            <li><span class="check">✓</span> <strong data-i18n="plan_feat_1tech">1 connexion simultanée</strong></li>
+            <li class="highlight-feature"><span class="check">✓</span> <strong><span>500</span> <span data-i18n="plan_feat_managed_devices">postes enregistrables dans la console</span></strong></li>
+            <li><span class="check">✓</span> <span data-i18n="plan_feat_unlimited_clients">Clients assistés illimités (codes 12h)</span></li>
+            <li><span class="check">✓</span> <span data-i18n="feat5_title">Applications Windows & Linux</span></li>
+            <li><span class="check">✓</span> <span data-i18n="plan_feat_e2e">Chiffrement de bout en bout</span></li>
+            <li><span class="check">✓</span> <span data-i18n="plan_feat_support">Support technique</span></li>
+          </ul>
+          <button class="btn btn-secondary btn-block" data-action="open-order" data-plan="starter" data-i18n="plan_btn_trial">Démarrer l'essai 30 jours</button>
+        </div>
+
+        <!-- Pro Card (Featured) -->
+        <div class="price-card featured">
+          <div style="position: absolute; top: -12px; right: 24px;">
+            <span class="badge badge-pop" data-i18n="plan_pro_badge">Recommandé</span>
+          </div>
+          <div class="price-header">
+            <h3 class="plan-name" data-i18n="plan_pro">Pro</h3>
+            <p class="plan-desc" data-i18n="plan_pro_desc">Pour équipes, cabinets & services d'assistance</p>
+          </div>
+          <div class="price-amount">
+            <span id="proPriceVal" class="price-val">110,00</span>
+            <span id="proPricePeriod" class="price-period" data-i18n="plan_period_monthly">€ / mois</span>
+          </div>
+          <div id="proSavings" class="price-savings">30 jours d'essai gratuit • Sans engagement</div>
+          <ul class="price-features">
+            <li><span class="check">✓</span> <strong data-i18n="plan_feat_5tech">1 à 5 connexions simultanées</strong></li>
+            <li class="highlight-feature"><span class="check">✓</span> <strong><span>1 000</span> <span data-i18n="plan_feat_managed_devices">postes enregistrables dans la console</span></strong></li>
+            <li><span class="check">✓</span> <span data-i18n="plan_feat_unlimited_clients">Clients assistés illimités (codes 12h)</span></li>
+            <li><span class="check">✓</span> <span data-i18n="feat5_title">Applications Windows & Linux</span></li>
+            <li><span class="check">✓</span> <span data-i18n="plan_feat_e2e">Chiffrement de bout en bout</span></li>
+            <li><span class="check">✓</span> <span data-i18n="plan_feat_support">Support technique</span></li>
+          </ul>
+          <button class="btn btn-primary btn-block" data-action="open-order" data-plan="pro" data-i18n="plan_btn_trial">Démarrer l'essai 30 jours</button>
+        </div>
+
+        <!-- Personnalisé Card (Dynamic Slider 10-500) -->
+        <div class="price-card">
+          <div class="price-header">
+            <h3 class="plan-name" data-i18n="plan_ultra">Personnalisé</h3>
+            <p class="plan-desc" data-i18n="plan_ultra_desc">Sur-mesure grandes équipes & entreprises (10 à 500 accès)</p>
+          </div>
+          
+          <div class="price-amount">
+            <span id="ultraPriceVal" class="price-val">199,00</span>
+            <span id="ultraPricePeriod" class="price-period" data-i18n="plan_period_monthly">€ / mois</span>
+          </div>
+          <div id="ultraSavings" class="price-savings">30 jours d'essai gratuit • Sans engagement</div>
+
+          <div class="slider-container">
+            <div class="slider-label">
+              <span data-i18n="plan_tech_label">Connexions simultanées :</span>
+              <strong id="ultraTechCount" class="gradient-text">10</strong>
+            </div>
+            <input type="range" id="ultraTechSlider" class="tech-slider" min="10" max="500" step="10" value="10">
+            <div class="slider-note" data-i18n="plan_slider_note">Glissez de 10 à 500 connexions simultanées</div>
+          </div>
+
+          <ul class="price-features">
+            <li><span class="check">✓</span> <strong id="ultraTechFeature" data-i18n="plan_feat_custom_tech">10 à 500 connexions simultanées</strong></li>
+            <li class="highlight-feature"><span class="check">✓</span> <strong><span id="ultraDeviceCount">2 000</span> <span data-i18n="plan_feat_managed_devices">postes enregistrables dans la console</span></strong></li>
+            <li><span class="check">✓</span> <span data-i18n="plan_feat_unlimited_clients">Clients assistés illimités (codes 12h)</span></li>
+            <li><span class="check">✓</span> <span data-i18n="plan_feat_e2e_traffic">Bande passante dédiée & SLA</span></li>
+            <li><span class="check">✓</span> <span data-i18n="plan_feat_support">Support technique</span></li>
+          </ul>
+          <button class="btn btn-secondary btn-block" data-action="open-order" data-plan="ultra" data-i18n="plan_btn_trial">Démarrer l'essai 30 jours</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Downloads Section -->
+  <section id="downloads" class="section">
+    <div class="container">
+      <div class="downloads-box">
+        <div class="section-header" style="margin-bottom: 2rem;">
+          <div class="badge" data-i18n="dl_badge">Espace Téléchargements</div>
+          <h2 class="section-title" data-i18n="dl_title">Téléchargez les applications officielles</h2>
+          <p class="section-subtitle" data-i18n="dl_subtitle">Binaires officiels hébergés sur notre infrastructure de téléchargement.</p>
+        </div>
+
+        <div class="download-cards">
+          <!-- Technicien -->
+          <div class="download-card">
+            <h3 data-i18n="dl_tech_heading">👨‍💻 Application Technicien (Configurateur)</h3>
+            <p data-i18n="dl_tech_desc">Destinée aux techniciens disposant d'une licence. Permet de configurer automatiquement RustDesk et de générer les codes d'assistance.</p>
+            <div class="download-actions" style="flex-wrap: wrap;">
+              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Setup_1.0.0.exe" class="btn btn-primary btn-sm" data-i18n="dl_win_installer">📦 Installeur Setup (.exe)</a>
+              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Portable.exe" class="btn btn-secondary btn-sm" data-i18n="dl_win_portable">Portatif (.exe)</a>
+              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Mac.dmg" class="btn btn-secondary btn-sm btn-mac-locked" data-i18n="dl_mac_dmg" title="Bientôt disponible (Accès réservé)">🍏 macOS (.dmg) — Bientôt disponible</a>
+              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien.deb" class="btn btn-secondary btn-sm" data-i18n="dl_linux_deb">🐧 Linux (.deb)</a>
+              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Linux" class="btn btn-secondary btn-sm" title="Exécutable Linux autonome">🐧 Linux autonome</a>
+            </div>
+          </div>
+
+          <!-- Client -->
+          <div class="download-card">
+            <h3 data-i18n="dl_viewer_heading">👥 Application Client (Poste assisté)</h3>
+            <p data-i18n="dl_viewer_desc">Application légère pour vos clients finaux. Il leur suffit d'entrer le code à 8 caractères (XXXX-XXXX) fourni par le technicien.</p>
+            <div class="download-actions" style="flex-wrap: wrap;">
+              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Setup.exe" class="btn btn-primary btn-sm" data-i18n="dl_win_installer">📦 Installeur Setup (.exe)</a>
+              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Portable.exe" class="btn btn-secondary btn-sm" data-i18n="dl_win_portable">Portatif (.exe)</a>
+              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Mac.dmg" class="btn btn-secondary btn-sm btn-mac-locked" data-i18n="dl_mac_dmg" title="Bientôt disponible (Accès réservé)">🍏 macOS (.dmg) — Bientôt disponible</a>
+              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_viewer.deb" class="btn btn-secondary btn-sm" data-i18n="dl_linux_deb">🐧 Linux (.deb)</a>
+            </div>
+          </div>
+        </div>
+        <p id="permanent-access-compatibility" style="margin-top: 1.25rem; color: var(--text-secondary);">
+          <strong>Accès permanent :</strong> Windows avec les services compatibles installés et une autorisation préalable documentée. Cette fonction n'est pas disponible sous Linux ou macOS dans les versions actuellement proposées, y compris les paquets Linux 1.0.2 préparés. L'assistance ponctuelle Linux reste distincte. <a href="cgv.html">Compatibilité et conditions d'utilisation</a>.
+        </p>
+        <p style="margin-top: 1.25rem; text-align: center; color: var(--text-secondary); font-size: 0.85rem;">
+          <span data-i18n="dl_hash_info">Vérification d'intégrité : empreintes SHA-256 et manifeste Ed25519 vérifiés à chaque mise à jour.</span> <a href="https://api.relaisdesk.fr/api/v1/downloads/SHA256SUMS.txt">SHA256SUMS.txt</a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section id="faq" class="section">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge" data-i18n="faq_badge">FAQ</div>
+        <h2 class="section-title" data-i18n="faq_title">Questions fréquentes</h2>
+        <p class="section-subtitle" data-i18n="faq_subtitle">Tout ce que vous devez savoir sur le fonctionnement de RelaisDesk.</p>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-item">
+          <button type="button" class="faq-question" aria-expanded="false" aria-controls="faq-answer-1">
+            <span data-i18n="faq_q1">Comment mes clients finaux se connectent-ils ?</span>
+            <span class="faq-icon" aria-hidden="true">▼</span>
+          </button>
+          <div class="faq-answer" id="faq-answer-1" data-i18n="faq_a1">
+			Vos clients téléchargent l'application Client légère. Depuis votre application Technicien, vous générez un code unique de 8 caractères (ex: AB12-CD34). Le client saisit ce code et RustDesk rejoint directement notre serveur auto-hébergé.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-question" aria-expanded="false" aria-controls="faq-answer-2">
+            <span data-i18n="faq_q2">Combien de temps les codes d'assistance sont-ils valables ?</span>
+            <span class="faq-icon" aria-hidden="true">▼</span>
+          </button>
+          <div class="faq-answer" id="faq-answer-2" data-i18n="faq_a2">
+            Chaque code d'assistance est valide pendant 12 heures. Vous pouvez en générer un nombre illimité chaque jour pour vos interventions, quel que soit votre plan (Starter, Pro ou Ultra).
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-question" aria-expanded="false" aria-controls="faq-answer-3">
+            <span data-i18n="faq_q3">Mes clients doivent-ils payer quelque chose ?</span>
+            <span class="faq-icon" aria-hidden="true">▼</span>
+          </button>
+          <div class="faq-answer" id="faq-answer-3" data-i18n="faq_a3">
+            L'application Client est 100% gratuite et sans abonnement pour vos clients finaux. Si vous le souhaitez, vous pouvez cependant activer l'option Prestations Stripe Connect pour leur facturer directement vos dépannages au forfait ou au temps passé.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-question" aria-expanded="false" aria-controls="faq-answer-4">
+            <span data-i18n="faq_q4">Comment fonctionne le paiement et la livraison de la licence ?</span>
+            <span class="faq-icon" aria-hidden="true">▼</span>
+          </button>
+          <div class="faq-answer" id="faq-answer-4" data-i18n="faq_a4">
+            Par carte bancaire (Stripe), votre licence est créée immédiatement et envoyée par email avec vos identifiants. Par virement bancaire, la licence est activée dès réception des fonds par notre administration.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-question" aria-expanded="false" aria-controls="faq-answer-5">
+            <span data-i18n="faq_q5">Puis-je utiliser RelaisDesk sous Linux ?</span>
+            <span class="faq-icon" aria-hidden="true">▼</span>
+          </button>
+          <div class="faq-answer" id="faq-answer-5" data-i18n="faq_a5">
+            Windows (.exe) et Linux (.deb) sont proposés. macOS n’est pas encore disponible publiquement. L’accès permanent nécessite Windows et les services compatibles installés ; il n’est pas disponible sous Linux ou macOS.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-question" aria-expanded="false" aria-controls="faq-answer-6">
+            <span data-i18n="faq_q6">Puis-je facturer mes interventions informatiques directement à mes clients ?</span>
+            <span class="faq-icon" aria-hidden="true">▼</span>
+          </button>
+          <div class="faq-answer" id="faq-answer-6" data-i18n="faq_a6">
+            Oui. RelaisDesk intègre en option la facturation de vos prestations via Stripe Connect. Depuis votre application Technicien, choisissez « Connexion & Prestation » pour facturer un forfait prépayé ou au temps réel connecté (tarif horaire calculé à la minute). Le client règle directement par carte bancaire via Stripe Checkout.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <a href="/" class="logo-group" style="margin-bottom: 1rem;" aria-label="Accueil RelaisDesk">
+            <img src="logo.avif" alt="" class="logo-img" width="42" height="42" loading="lazy">
+            <span>Relais<span class="gradient-text">Desk</span></span>
+          </a>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">
+            Service de support et de contrôle à distance basé sur RustDesk Community (AGPLv3).
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <h4 data-i18n="footer_links">Navigation</h4>
+          <ul>
+            <li><a href="#features" data-i18n="nav_features">Fonctionnalités</a></li>
+            <li><a href="#prestations" data-i18n="nav_prestations">Prestations</a></li>
+            <li><a href="#pricing" data-i18n="nav_pricing">Tarifs</a></li>
+            <li><a href="#downloads" data-i18n="nav_downloads">Téléchargements</a></li>
+            <li><a href="client/" data-i18n="nav_client">Espace Client</a></li>
+            <li><a href="client/#codes" data-i18n="nav_technician">👨‍💻 Espace Technicien</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Téléchargements</h4>
+          <ul>
+            <li><a href="downloads/RelaisDesk_Technicien_Setup_1.0.0.exe">Technicien Setup (.exe)</a></li>
+            <li><a href="downloads/RelaisDesk_Technicien_Portable.exe">Technicien Portable (.exe)</a></li>
+            <li><a href="downloads/RelaisDesk_Setup.exe">Client Setup (.exe)</a></li>
+            <li><a href="downloads/RelaisDesk_Portable.exe">Client Portable (.exe)</a></li>
+            <li><a href="downloads/RelaisDesk_Technicien.deb">Technicien Linux (.deb)</a></li>
+            <li><a href="downloads/RelaisDesk_Technicien_Linux">Technicien Linux (binaire)</a></li>
+            <li><a href="downloads/RelaisDesk_viewer.deb">Client Linux (.deb)</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Contact & Légal</h4>
+          <ul>
+            <li><a href="contact.html">Formulaire de contact</a></li>
+            <li><a href="mentions-legales.html">Mentions légales</a></li>
+            <li><a href="politique-confidentialite.html">Politique de confidentialité</a></li>
+            <li><a href="cgv.html">Conditions Générales</a></li>
+            <li><a href="formulaire-retractation.html">Exercer une rétractation</a></li>
+            <li><a href="logiciel-libre.html">Logiciel libre & code source</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 RelaisDesk. Tous droits réservés.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal Checkout / Commande -->
+  <div id="orderModal" class="modal-overlay">
+    <div class="modal-content">
+      <button class="modal-close" data-action="close-order">&times;</button>
+      <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Souscrire à RelaisDesk</h3>
+      <p style="color: var(--text-secondary); font-size: 0.9rem;">Choisissez votre statut et vérifiez les informations avant de commander.</p>
+
+      <div class="order-summary-box">
+        <div class="order-summary-row">
+          <span>Offre sélectionnée :</span>
+          <strong id="modalPlanName">Pro</strong>
+        </div>
+        <div class="order-summary-row">
+          <span>Capacité simultanée :</span>
+          <strong id="modalTechs">5 connexions technicien</strong>
+        </div>
+        <div class="order-summary-row">
+          <span>Formule :</span>
+          <strong id="modalBillingCycle">Mensuelle (30 jours)</strong>
+        </div>
+        <div class="order-summary-row total">
+          <span id="modalTotalLabel">Total pour 30 jours :</span>
+          <span id="modalTotalPrice" class="gradient-text">110,00 €</span>
+        </div>
+      </div>
+
+      <div id="orderFormFields">
+        <form id="orderForm">
+          <div class="form-group">
+            <label class="form-label" for="orderCustomerType">Vous commandez en qualité de *</label>
+            <select id="orderCustomerType" class="input-text" style="width: 100%;" required>
+              <option value="business">Professionnel</option>
+              <option value="consumer">Particulier / consommateur</option>
+            </select>
+			<small style="color: var(--text-muted); font-size: 0.78rem;">Médiation de la consommation : aucun médiateur n'est encore désigné ; cette obligation reste à régulariser. Vos droits légaux restent applicables. Voir les CGV.</small>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="orderEmail">Votre adresse e-mail *</label>
+            <input type="email" id="orderEmail" class="input-text" style="width: 100%;" placeholder="vous@exemple.fr" autocomplete="email" required>
+            <small style="color: var(--text-muted); font-size: 0.78rem;">Votre clé de licence et facture seront envoyées à cette adresse.</small>
+          </div>
+
+          <!-- Coordonnées de facturation -->
+          <div class="form-group" style="margin-top: -0.25rem;">
+            <label class="form-label" for="orderName">Nom et prénom ou raison sociale *</label>
+            <input type="text" id="orderName" class="input-text" style="width: 100%;" placeholder="Ex. Jean Dupont ou Société ABC" autocomplete="name" maxlength="200" required>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group">
+              <label class="form-label" for="orderPostalCode">Code postal *</label>
+              <input type="text" id="orderPostalCode" class="input-text" style="width: 100%;" placeholder="Ex. 75001" autocomplete="postal-code" maxlength="32" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="orderCity">Ville *</label>
+              <input type="text" id="orderCity" class="input-text" style="width: 100%;" placeholder="Ex. Paris" autocomplete="address-level2" maxlength="100" required>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group">
+              <label class="form-label" for="orderAddress">Adresse postale *</label>
+              <input type="text" id="orderAddress" class="input-text" style="width: 100%;" placeholder="Ex. 10 rue de la Paix" autocomplete="street-address" maxlength="500" required>
+            </div>
+            <div class="form-group" id="orderSiretGroup">
+              <label class="form-label" for="orderSiret">N° SIRET / TVA (facultatif)</label>
+              <input type="text" id="orderSiret" class="input-text" style="width: 100%;" placeholder="Ex. 123 456 789 00012" maxlength="32">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Mode de règlement :</label>
+            <div class="payment-methods">
+              <!-- Stripe Trial -->
+              <div id="payOpt_stripe" class="payment-option selected" data-action="select-payment" data-payment-method="stripe">
+                <span>💳</span>
+                <div>
+                  <div>Carte Bancaire — Essai 30 jours</div>
+                  <small style="color: #34d399; font-size: 0.75rem; font-weight: 600;">0 € aujourd'hui (Stripe)</small>
+                </div>
+              </div>
+
+              <!-- Bank Transfer Direct -->
+              <div id="payOpt_bank_transfer" class="payment-option" data-action="select-payment" data-payment-method="bank_transfer">
+                <span>🏛️</span>
+                <div>
+                  <div>Virement bancaire</div>
+                  <small style="color: var(--text-muted); font-size: 0.75rem;">Paiement direct (sans essai)</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- PayPal Disabled Phase 2 -->
+            <div class="payment-option disabled" style="width: 100%; margin-bottom: 1rem;">
+              <span>🅿️</span>
+              <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                <span>PayPal</span>
+                <span style="font-size: 0.75rem; color: var(--warning); font-weight: normal;">Bientôt disponible (Phase 2)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="padding: 0.9rem; border: 1px solid var(--border-color); border-radius: 0.75rem; background: rgba(15, 23, 42, 0.5);">
+            <p id="orderFleetQuota" style="font-size: 0.9rem; margin-bottom: 0.75rem;"></p>
+            <p id="orderTermsPeriodNote" style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.75rem;">0 € prélevé aujourd'hui. Vos coordonnées de carte sont vérifiées par Stripe. L'abonnement payant ne démarre qu'à l'issue des 30 jours gratuits, résiliable à tout moment en 1 clic dans l'espace client.</p>
+            <label style="display: flex; gap: 0.65rem; align-items: flex-start; font-size: 0.84rem; margin-bottom: 0.75rem;">
+              <input type="checkbox" id="orderTermsAccepted" required style="margin-top: 0.2rem;">
+              <span>J'ai lu et j'accepte les <a href="cgv.html" target="_blank" rel="noopener" style="color: var(--border-focus);">CGV/CGU version 2026-09-21</a> et j'ai pris connaissance de la <a href="politique-confidentialite.html" target="_blank" rel="noopener" style="color: var(--border-focus);">politique de confidentialité</a>. *</span>
+            </label>
+            <label id="trialRecurringLabel" style="display: flex; gap: 0.65rem; align-items: flex-start; font-size: 0.84rem; margin-bottom: 0.75rem;">
+              <input type="checkbox" id="orderRecurringAccepted" required style="margin-top: 0.2rem;">
+              <span id="orderRecurringText">J'accepte le prélèvement automatique au tarif prévu après les 30 jours gratuits, sauf annulation préalable dans l'espace client. *</span>
+            </label>
+            <label id="immediatePerformanceLabel" style="display: none; gap: 0.65rem; align-items: flex-start; font-size: 0.84rem;">
+              <input type="checkbox" id="orderImmediatePerformance" style="margin-top: 0.2rem;">
+              <span>Je demande expressément l'activation avant la fin du délai de rétractation de 14 jours. Si je me rétracte après le début du service, un montant proportionnel au service déjà fourni pourra rester dû. *</span>
+            </label>
+          </div>
+
+          <div id="orderErrorMessage" role="alert" style="display: none; color: var(--danger); font-size: 0.88rem; margin-bottom: 1rem;"></div>
+
+          <button type="submit" id="submitOrderBtn" class="btn btn-primary btn-block">Démarrer mon essai gratuit de 30 jours (0 €)</button>
+        </form>
+      </div>
+
+      <!-- Trial Instructions Display -->
+      <div id="trialResult" class="bank-info-box" style="display: none; text-align: center;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎉</div>
+        <h4 style="color: #34d399; margin-bottom: 0.5rem;">Demande d'essai enregistrée !</h4>
+        <p style="margin-bottom: 1rem; line-height: 1.5; font-size: 0.95rem;">
+          Un e-mail de confirmation vient d'être envoyé à <strong id="trialEmailSent" style="color: var(--border-focus);"></strong>.
+        </p>
+        <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: var(--radius-md); padding: 1rem; text-align: left; margin-bottom: 1.25rem; font-size: 0.88rem; color: var(--text-secondary);">
+          <p style="margin-bottom: 0.5rem;"><strong style="color: var(--text-primary);">Prochaines étapes :</strong></p>
+          <p style="margin-bottom: 0.5rem;">1. Cliquez sur le lien de confirmation reçu dans votre boîte e-mail.</p>
+          <p style="margin-bottom: 0.5rem;">2. Validez votre moyen de paiement chez Stripe (<strong>0 € débité aujourd'hui</strong>).</p>
+          <p style="margin: 0;">3. Vos identifiants et votre licence d'essai de 30 jours sont activés immédiatement !</p>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+          💡 <em>Pensez à vérifier vos courriers indésirables / spams si vous ne recevez pas l'e-mail dans la minute.</em>
+        </p>
+        <button class="btn btn-primary btn-block btn-sm" data-action="close-order">Fermer</button>
+      </div>
+
+      <!-- Bank Transfer Instructions Display -->
+      <div id="bankTransferResult" class="bank-info-box" style="display: none;">
+        <h4 style="color: #34d399; margin-bottom: 0.5rem;">✅ Commande enregistrée !</h4>
+        <p style="margin-bottom: 0.75rem;">Veuillez effectuer votre virement avec les coordonnées ci-dessous :</p>
+        
+        <div class="copy-row">
+          <span>Montant : <strong id="bankAmountVal">20,00 €</strong></span>
+        </div>
+        
+        <div class="copy-row">
+          <span>Référence : <strong id="bankRefVal">ORD-XXXX-XXXX</strong></span>
+          <button class="copy-btn" data-action="copy-text" data-target="bankRefVal">Copier</button>
+        </div>
+
+        <div class="copy-row">
+          <span>IBAN : <strong id="bankIbanVal">FR76...</strong></span>
+          <button class="copy-btn" data-action="copy-text" data-target="bankIbanVal">Copier</button>
+        </div>
+
+        <div class="copy-row">
+          <span>BIC : <strong id="bankBicVal">BNPAFRPP</strong></span>
+        </div>
+
+        <div class="copy-row">
+          <span>Bénéficiaire : <strong id="bankHolderVal">RelaisDesk</strong></span>
+        </div>
+
+        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.75rem;">
+          ⚠️ <em>Indiquez impérativement la référence de commande dans le libellé de votre virement. Votre licence sera activée dès validation bancaire.</em>
+        </p>
+
+        <button class="btn btn-secondary btn-block btn-sm" style="margin-top: 1rem;" data-action="close-order">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Déblocage macOS (Bêta-test) -->
+  <div id="macPasswordModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 440px; text-align: center;">
+      <button class="modal-close" id="closeMacPasswordModal">&times;</button>
+      <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🍏</div>
+      <h3 style="font-size: 1.35rem; margin-bottom: 0.5rem;" data-i18n="mac_modal_title">Accès Bêta-testeurs macOS</h3>
+      <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1.25rem;" data-i18n="mac_modal_desc">
+        La version macOS est actuellement réservée à l'équipe de test. Veuillez saisir le mot de passe pour débloquer le téléchargement :
+      </p>
+      <form id="macPasswordForm">
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <input type="password" id="macPasswordInput" class="input-text" style="width: 100%; text-align: center; font-size: 1.05rem; letter-spacing: 2px;" placeholder="Mot de passe..." autocomplete="current-password" required>
+          <div id="macPasswordError" style="display: none; color: var(--danger); font-size: 0.85rem; margin-top: 0.5rem; font-weight: 500;" data-i18n="mac_modal_error">Mot de passe incorrect.</div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" data-i18n="mac_modal_btn">🔓 Débloquer le téléchargement</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="i18n.js?v=20260912-legal-ui"></script>
+  <script src="app.js?v=20260921-legal-crypto-v1"></script>
+</body>
+</html>

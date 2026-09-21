@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RelaisDesk — Espace client</title>
+  <meta name="description" content="Espace client commercial RelaisDesk : licences, renouvellements, factures et historique d'interventions.">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://*.googleusercontent.com https://ssl.gstatic.com; frame-src https://accounts.google.com/; connect-src 'self' https://api.relaisdesk.fr http://localhost:* http://127.0.0.1:* https://accounts.google.com/; object-src 'none'; base-uri 'self'; form-action 'self';">
+  <meta name="theme-color" content="#0b0f19">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="icon" type="image/avif" href="../logo.avif">
+  <script src="https://accounts.google.com/gsi/client" async defer onload="if(window.initGoogleSignIn)window.initGoogleSignIn()"></script>
+  <!-- Language Selector Critical Styles (immediate render, zero cache dependency) -->
+  <style>
+    .lang-selector-dropdown{position:relative;display:inline-flex;align-items:center}
+    .lang-dropdown-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;font-size:13px;font-weight:700;font-family:inherit;color:#f8fafc;background:#1e293b;border:1px solid #334155;border-radius:10px;cursor:pointer;line-height:1;user-select:none;transition:all .15s ease}
+    .lang-dropdown-btn:hover,.lang-selector-dropdown.open .lang-dropdown-btn{background:#26354a;border-color:#475569}
+    .lang-btn-flag{font-size:14px;line-height:1}
+    .lang-btn-code{font-size:12px;font-weight:800;letter-spacing:.04em;color:#f8fafc}
+    .lang-btn-arrow{width:12px;height:12px;transition:transform .2s ease;opacity:.75}
+    .lang-selector-dropdown.open .lang-btn-arrow{transform:rotate(180deg)}
+    .lang-dropdown-list{display:none;position:absolute;top:calc(100% + 6px);right:0;min-width:165px;max-height:200px;overflow-y:auto;background:rgba(15,23,42,.98);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.16);border-radius:10px;box-shadow:0 16px 36px rgba(0,0,0,.6);list-style:none!important;padding:5px;margin:0;z-index:1100;overscroll-behavior:contain}
+    .lang-dropdown-list::-webkit-scrollbar{width:5px}
+    .lang-dropdown-list::-webkit-scrollbar-track{background:rgba(255,255,255,.03);border-radius:4px}
+    .lang-dropdown-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.25);border-radius:4px}
+    .lang-dropdown-list::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.4)}
+    .lang-dropdown-list{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.25) rgba(255,255,255,.03)}
+    .lang-selector-dropdown.open .lang-dropdown-list{display:block}
+    .lang-dropdown-item{display:flex;align-items:center;gap:8px;padding:7px 10px;font-size:13px;font-weight:600;color:#cbd5e1;border-radius:7px;cursor:pointer;user-select:none;list-style:none!important;transition:background .15s ease,color .15s ease}
+    .lang-dropdown-item:hover{background:rgba(255,255,255,.08);color:#fff}
+    .lang-dropdown-item.active{background:rgba(37,99,235,.2);color:#93c5fd}
+    .lang-item-flag{font-size:14px;line-height:1}
+    .lang-item-name{flex:1;white-space:nowrap}
+    .lang-check{font-size:12px;color:#60a5fa;display:none;margin-left:auto;font-weight:700}
+    .lang-dropdown-item.active .lang-check{display:inline-block}
+  </style>
+  <link rel="stylesheet" href="styles.css?v=20260912-titles">
+</head>
+<body>
+  <div class="glow glow-one"></div>
+  <div class="glow glow-two"></div>
+
+  <main id="authScreen" class="auth-shell">
+    <section class="auth-card" aria-labelledby="authTitle">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <a class="brand" href="../"><img src="../logo.avif" alt="" width="42" height="42"><span>Relais<span>Desk</span></span></a>
+        <div class="lang-selector-dropdown" id="authLangDropdown">
+          <button class="lang-dropdown-btn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Sélectionner la langue">
+            <span class="lang-btn-flag">🇫🇷</span>
+            <span class="lang-btn-code">FR</span>
+            <svg class="lang-btn-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <ul class="lang-dropdown-list" role="listbox" aria-label="Langues disponibles">
+            <li role="option" data-lang="fr" class="lang-dropdown-item active"><span class="lang-item-flag">🇫🇷</span><span class="lang-item-name">Français</span><span class="lang-check">✓</span></li>
+            <li role="option" data-lang="en" class="lang-dropdown-item"><span class="lang-item-flag">🇬🇧</span><span class="lang-item-name">English</span><span class="lang-check"></span></li>
+            <li role="option" data-lang="de" class="lang-dropdown-item"><span class="lang-item-flag">🇩🇪</span><span class="lang-item-name">Deutsch</span><span class="lang-check"></span></li>
+            <li role="option" data-lang="es" class="lang-dropdown-item"><span class="lang-item-flag">🇪🇸</span><span class="lang-item-name">Español</span><span class="lang-check"></span></li>
+            <li role="option" data-lang="it" class="lang-dropdown-item"><span class="lang-item-flag">🇮🇹</span><span class="lang-item-name">Italiano</span><span class="lang-check"></span></li>
+            <li role="option" data-lang="ru" class="lang-dropdown-item"><span class="lang-item-flag">🇷🇺</span><span class="lang-item-name">Русский</span><span class="lang-check"></span></li>
+            <li role="option" data-lang="pl" class="lang-dropdown-item"><span class="lang-item-flag">🇵🇱</span><span class="lang-item-name">Polski</span><span class="lang-check"></span></li>
+          </ul>
+        </div>
+      </div>
+      <p class="eyebrow" data-i18n="client_portal_eyebrow">Espace client unifié</p>
+      <h1 id="authTitle" data-i18n="client_login_title">Vos licences et documents, au même endroit</h1>
+      <!-- Vue 1 : Connexion avec Email & Mot de passe -->
+      <div id="passwordLoginView">
+        <p class="muted" data-i18n="client_login_desc">Connectez-vous à votre espace client à l’aide de votre compte Google ou de votre mot de passe.</p>
+
+        <!-- Connexion rapide avec Google -->
+        <div id="googleSignInWrapper" style="margin: 1.25rem 0 0.5rem 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 44px;">
+          <div id="g_id_onload"
+               data-client_id="226991768980-c2rcfkicoft0hl9m346n45ad088utri9.apps.googleusercontent.com"
+               data-callback="handleGoogleLoginResponse"
+               data-auto_prompt="false">
+          </div>
+          <div id="googleSignInBtn" class="g_id_signin"
+               data-type="standard"
+               data-shape="rectangular"
+               data-theme="filled_black"
+               data-text="signin_with"
+               data-size="large"
+               data-logo_alignment="left"
+               data-width="320">
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; margin: 1.25rem 0 1.25rem 0;">
+          <div style="flex: 1; height: 1px; background: rgba(255, 255, 255, 0.12);"></div>
+          <span class="muted" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em;">ou par mot de passe</span>
+          <div style="flex: 1; height: 1px; background: rgba(255, 255, 255, 0.12);"></div>
+        </div>
+
+        <form id="passwordLoginForm" class="stack">
+          <label for="loginEmail" data-i18n="client_email_label">Adresse e-mail</label>
+          <input id="loginEmail" type="email" autocomplete="email" maxlength="254" required placeholder="vous@entreprise.fr">
+          <label for="loginPassword" data-i18n="client_pwd_label">Mot de passe</label>
+          <input id="loginPassword" type="password" autocomplete="current-password" required placeholder="••••••••">
+          <button id="passwordLoginButton" class="button primary" type="submit" data-i18n="client_login_btn">Se connecter</button>
+        </form>
+        <div class="auth-links">
+          <button id="showForgotButton" class="button link" type="button" data-i18n="client_forgot_btn">Mot de passe oublié ?</button>
+        </div>
+      </div>
+
+      <!-- Vue 4 : Défi 2FA (Code Authenticator ou E-mail) -->
+      <div id="totpChallengeView" hidden>
+        <p class="muted" data-i18n="client_2fa_challenge_desc">Saisissez le code à 6 chiffres généré par votre application Authenticator, ou demandez la réception d'un code temporaire par e-mail.</p>
+        <form id="totpChallengeForm" class="stack">
+          <input type="hidden" id="totpChallengeToken">
+
+          <!-- Option : Bouton d'envoi de code par e-mail bien visible et large -->
+          <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(59, 130, 246, 0.35); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+            <button id="btnSend2FAEmailCode" class="button secondary" type="button" style="width: 100%; padding: 14px 18px; font-size: 1rem; font-weight: 750; display: flex; align-items: center; justify-content: center; gap: 10px; background: #1e293b; border: 1px solid #3b82f6; color: #93c5fd; box-shadow: 0 2px 8px rgba(0,0,0,0.25);" data-i18n="client_2fa_send_email_btn">✉️ M'envoyer un code par e-mail</button>
+            <p id="emailCodeNotice" class="message" role="status" style="margin: 0; font-size: 0.9rem; text-align: center; display: none;"></p>
+          </div>
+
+          <!-- Séparateur visuel -->
+          <div style="display: flex; align-items: center; gap: 12px; margin: 2px 0;">
+            <div style="flex: 1; height: 1px; background: rgba(255, 255, 255, 0.1);"></div>
+            <span class="muted" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em;" data-i18n="client_2fa_or_separator">ou saisissez votre code</span>
+            <div style="flex: 1; height: 1px; background: rgba(255, 255, 255, 0.1);"></div>
+          </div>
+
+          <!-- Saisie du code (Authenticator, email ou secours) -->
+          <div>
+            <label for="totpChallengeCode" data-i18n="client_2fa_code_label" style="display: block; margin-bottom: 6px;">Code Authenticator, code reçu par e-mail ou code de secours</label>
+            <input id="totpChallengeCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="32" required placeholder="123456" style="font-size: 1.25rem; text-align: center; letter-spacing: 0.2em; font-weight: 700; padding: 12px;">
+          </div>
+
+          <!-- Mémorisation de l'appareil pendant 30 jours -->
+          <label class="check" style="margin-top: 2px; font-size: 0.92rem; cursor: pointer;">
+            <input type="checkbox" id="rememberDeviceCheckbox" checked>
+            <span data-i18n="client_2fa_remember_device">Se souvenir de cet appareil pendant 30 jours</span>
+          </label>
+
+          <!-- Validation finale -->
+          <button id="totpChallengeSubmitButton" class="button primary" type="submit" data-i18n="client_2fa_submit" style="margin-top: 6px; padding: 13px; font-size: 1rem;">Valider la connexion</button>
+        </form>
+        <div class="auth-links">
+          <button id="backToPasswordLoginButton" class="button link" type="button" data-i18n="client_back_login">← Retour à la connexion par mot de passe</button>
+        </div>
+      </div>
+
+      <!-- Vue 2 : Demande de lien par e-mail (oubli de mot de passe) -->
+      <div id="forgotPasswordView" hidden>
+        <p class="muted" data-i18n="client_forgot_desc">Saisissez votre adresse e-mail. Nous vous enverrons un lien sécurisé permettant de définir ou réinitialiser votre mot de passe.</p>
+        <form id="forgotPasswordForm" class="stack">
+          <label for="forgotEmail" data-i18n="client_email_label">Adresse e-mail</label>
+          <input id="forgotEmail" type="email" autocomplete="email" maxlength="254" required placeholder="vous@entreprise.fr">
+          <button id="forgotSubmitButton" class="button primary" type="submit" data-i18n="client_forgot_submit">Recevoir mon lien sécurisé</button>
+        </form>
+        <div class="auth-links">
+          <button id="backToLoginButton" class="button link" type="button" data-i18n="client_back_login">← Retour à la connexion par mot de passe</button>
+        </div>
+      </div>
+
+      <!-- Vue 3 : Définition du nouveau mot de passe via lien sécurisé -->
+      <div id="resetPasswordView" hidden>
+        <p class="muted" data-i18n="client_reset_desc">Définissez votre mot de passe (8 caractères minimum) pour accéder directement à votre espace client.</p>
+        <form id="resetPasswordForm" class="stack">
+          <input type="hidden" id="resetToken">
+          <label for="newPassword" data-i18n="client_new_pwd">Nouveau mot de passe</label>
+          <input id="newPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="••••••••">
+          <label for="confirmPassword" data-i18n="client_confirm_pwd">Confirmer le mot de passe</label>
+          <input id="confirmPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="••••••••">
+
+          <label for="resetCurrent2FACode">Code 2FA actuel ou code de secours (si déjà activée)</label>
+          <input id="resetCurrent2FACode" type="text" autocomplete="one-time-code" maxlength="32" placeholder="Code actuel ou code de secours">
+          <p class="muted">Le lien reçu par courriel ne remplace pas votre second facteur. Laissez ce champ vide uniquement si la 2FA n’était pas activée.</p>
+
+          <!-- Option d'activation 2FA à l'inscription / définition du mot de passe -->
+          <div class="totp-setup-box" style="margin-top: 14px; padding: 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px;">
+            <label class="check" style="margin-bottom: 0;">
+              <input id="enable2FAAtReset" type="checkbox">
+              <span style="font-weight: 600;" data-i18n="client_enable_2fa_checkbox">Activer la validation en deux étapes (2FA TOTP — Recommandé)</span>
+            </label>
+            <div id="reset2FAContainer" style="display: none; margin-top: 12px;" class="stack">
+              <p class="muted" style="font-size: 0.85rem;" data-i18n="client_2fa_scan_instructions">Scannez ce QR code avec votre application d'authentification ou copiez la clé secrète ci-dessous.</p>
+              <div id="resetQRCodeDisplay" style="text-align: center; margin: 8px auto; background: #fff; padding: 12px; border-radius: 8px; width: 160px; height: 160px; display: flex; align-items: center; justify-content: center;"></div>
+              <p style="font-size: 0.8rem; font-family: monospace; word-break: break-all; text-align: center;" id="resetSecretDisplay"></p>
+              <label for="resetTotpCode" data-i18n="client_2fa_confirm_code_label">Code de confirmation à 6 chiffres</label>
+              <input id="resetTotpCode" type="text" inputmode="numeric" maxlength="6" placeholder="123456">
+              <div id="resetRecoveryCodesBox" style="font-size: 0.8rem; background: rgba(0,0,0,0.25); padding: 10px; border-radius: 6px; margin-top: 6px;">
+                <strong style="color: #38bdf8;">⚠️ Codes de secours (conservez-les précieusement) :</strong>
+                <pre id="resetRecoveryCodesList" style="margin: 6px 0 0; font-family: monospace; color: #cbd5e1; white-space: pre-wrap; font-size: 0.78rem;"></pre>
+              </div>
+            </div>
+          </div>
+
+          <button id="resetSubmitButton" class="button primary" type="submit" data-i18n="client_reset_submit" style="margin-top: 12px;">Enregistrer et me connecter</button>
+        </form>
+      </div>
+
+      <p id="authMessage" class="message" role="status" aria-live="polite"></p>
+      <p class="security-note" data-i18n="client_security_note">Connexion sécurisée par chiffrement TLS. Vos sessions et codes sont protégés.</p>
+    </section>
+  </main>
+
+  <div id="appScreen" class="app" hidden>
+    <aside class="sidebar">
+      <a class="brand" href="../"><img src="../logo.avif" alt="" width="38" height="38"><span>Relais<span>Desk</span></span></a>
+      <nav aria-label="Navigation de l'espace client">
+        <button class="nav-item active" data-panel="overview" data-i18n="nav_overview">Vue d’ensemble</button>
+        <button class="nav-item" data-panel="codes" data-i18n="nav_codes">🔑 Téléassistance & Codes</button>
+        <button class="nav-item" data-panel="devices" data-i18n="nav_devices">🖥️ Parc & Postes permanents</button>
+        <button class="nav-item" data-panel="team" id="teamNav" data-i18n="nav_team" hidden>Équipe & droits</button>
+        <button class="nav-item" data-panel="team-devices" id="teamDevicesNav" data-i18n="nav_team_devices" hidden>Mes postes autorisés</button>
+        <button class="nav-item" data-panel="licenses" data-i18n="nav_licenses">Licences</button>
+        <button class="nav-item" data-panel="billing" data-i18n="nav_billing">Commandes & factures</button>
+        <button class="nav-item" data-panel="interventions" data-i18n="nav_interventions">Historique</button>
+        <button class="nav-item" data-panel="services" id="servicesNav" hidden>Prestations & paiements clients</button>
+        <button class="nav-item" data-panel="settings" data-i18n="nav_settings">Préférences</button>
+      </nav>
+      <div class="account">
+        <div class="account-identifiers">
+          <span id="accountCustomerID"></span><br>
+          <span id="accountEmail"></span>
+        </div>
+        <button id="logoutButton" class="button subtle" type="button" data-i18n="nav_logout">Déconnexion</button>
+      </div>
+    </aside>
+
+    <section class="content">
+      <header class="topbar">
+        <div><p class="eyebrow" data-i18n="client_portal_eyebrow">Espace client</p><h1 id="pageTitle">Vue d’ensemble</h1></div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <div class="lang-selector-dropdown" id="topbarLangDropdown">
+            <button class="lang-dropdown-btn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Sélectionner la langue">
+              <span class="lang-btn-flag">🇫🇷</span>
+              <span class="lang-btn-code">FR</span>
+              <svg class="lang-btn-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <ul class="lang-dropdown-list" role="listbox" aria-label="Langues disponibles">
+              <li role="option" data-lang="fr" class="lang-dropdown-item active"><span class="lang-item-flag">🇫🇷</span><span class="lang-item-name">Français</span><span class="lang-check">✓</span></li>
+              <li role="option" data-lang="en" class="lang-dropdown-item"><span class="lang-item-flag">🇬🇧</span><span class="lang-item-name">English</span><span class="lang-check"></span></li>
+              <li role="option" data-lang="de" class="lang-dropdown-item"><span class="lang-item-flag">🇩🇪</span><span class="lang-item-name">Deutsch</span><span class="lang-check"></span></li>
+              <li role="option" data-lang="es" class="lang-dropdown-item"><span class="lang-item-flag">🇪🇸</span><span class="lang-item-name">Español</span><span class="lang-check"></span></li>
+              <li role="option" data-lang="it" class="lang-dropdown-item"><span class="lang-item-flag">🇮🇹</span><span class="lang-item-name">Italiano</span><span class="lang-check"></span></li>
+              <li role="option" data-lang="ru" class="lang-dropdown-item"><span class="lang-item-flag">🇷🇺</span><span class="lang-item-name">Русский</span><span class="lang-check"></span></li>
+              <li role="option" data-lang="pl" class="lang-dropdown-item"><span class="lang-item-flag">🇵🇱</span><span class="lang-item-name">Polski</span><span class="lang-check"></span></li>
+            </ul>
+          </div>
+          <button id="refreshButton" class="button secondary" type="button" data-i18n="btn_refresh">Actualiser</button>
+        </div>
+      </header>
+      <p id="appMessage" class="message" role="status" aria-live="polite"></p>
+
+      <section class="panel" id="panel-team">
+        <div class="card">
+          <h2>Équipe & droits par dossier</h2>
+          <p>À partir du plan Pro, invitez un technicien par place achetée dans votre forfait. Les invitations en attente comptent pendant 48 heures. Le compte administrateur conserve la gestion des dossiers ; tous les techniciens connectés partagent le quota de connexions simultanées du forfait.</p>
+          <p>Un dossier autorisé inclut ses sous-dossiers. Sans dossier autorisé, aucun poste n’est accessible. Les postes non classés restent réservés à l’administrateur.</p>
+          <label for="teamLicense" id="teamLicenseLabel">Forfait</label><select id="teamLicense"></select>
+          <p id="teamCapacity" role="status"></p>
+          <button type="button" class="button primary" id="teamInvite">Inviter un technicien</button>
+          <div id="teamMembers" class="list"></div>
+        </div>
+      </section>
+      <section class="panel" id="panel-team-devices">
+        <div class="card">
+          <h2>Mes postes autorisés</h2>
+          <p>Vos accès sont accordés par l’administrateur de l’équipe. Connectez-vous à l'application RelaisDesk Technicien directement avec votre adresse e-mail personnelle et votre mot de passe.</p>
+          <label for="teamContext">Équipe / Organisation</label><select id="teamContext"></select>
+          <button type="button" class="button secondary" id="teamDevicesRefresh">Actualiser</button>
+          <div id="teamDeviceList" class="list"></div>
+          <button type="button" class="button secondary" id="teamDevicesMore" hidden>Charger la suite</button>
+        </div>
+      </section>
+
+      <section class="panel active" id="panel-overview">
+        <div class="card" id="subscriptionsCard" hidden>
+          <h2 data-i18n="trial_subscriptions_title">Essai gratuit et abonnements automatiques</h2>
+          <p data-i18n="trial_subscriptions_description">Consultez votre échéance et annulez le renouvellement sans supprimer votre accès à la période gratuite ou déjà payée.</p>
+          <div id="subscriptionsList" class="list"></div>
+        </div>
+        <div class="metrics">
+          <article><strong id="metricLicenses">0</strong><span data-i18n="metric_lic">licences</span></article>
+          <article><strong id="metricInvoices">0</strong><span data-i18n="metric_inv">factures</span></article>
+          <article><strong id="metricInterventions">0</strong><span data-i18n="metric_int">interventions</span></article>
+        </div>
+        <div class="card">
+          <h2 data-i18n="overview_expiries">Échéances à surveiller</h2>
+          <div id="expirySummary" class="list"></div>
+        </div>
+        <div class="card privacy-card">
+          <h2 data-i18n="overview_privacy_title">Historique respectueux de vos données</h2>
+          <p data-i18n="overview_privacy_desc">RelaisDesk conserve uniquement les métadonnées professionnelles renseignées : référence client, titre, horaires, durée et compte rendu. Aucun écran, fichier, mot de passe ou contenu de session n’est enregistré.</p>
+        </div>
+      </section>
+
+      <!-- Panneau Téléassistance & Codes (Fusion Espace Technicien) -->
+      <section class="panel" id="panel-codes">
+        <div class="section-heading">
+          <div>
+            <h2 data-i18n="codes_title">🔑 Téléassistance & Codes d'accès</h2>
+            <p data-i18n="codes_subtitle">Générez des codes temporaires valables 12 heures pour prendre en main les postes de vos clients.</p>
+          </div>
+          <div class="actions">
+            <button id="refreshCodesButton" class="button secondary" type="button" data-i18n="refresh_codes">Actualiser les codes</button>
+          </div>
+        </div>
+
+        <div class="card generator-card">
+          <h3 data-i18n="generator_heading" style="margin-top:0; font-size:18px;">⚡ Générer un nouveau code client</h3>
+          <form id="generateCodeForm" class="stack" style="margin-top: 14px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
+              <div>
+                <label for="codeLicenseSelect" data-i18n="code_license_label">Licence utilisée</label>
+                <select id="codeLicenseSelect" required style="margin-top: 6px;"></select>
+              </div>
+              <div>
+                <label for="codeClientEmail" data-i18n="code_client_label">Référence client ou e-mail (optionnel)</label>
+                <input id="codeClientEmail" maxlength="254" placeholder="client@entreprise.fr ou Client Dupont" style="margin-top: 6px;">
+              </div>
+            </div>
+            <button id="generateCodeSubmit" class="button primary" type="submit" style="align-self: flex-start; margin-top: 8px;" data-i18n="generate_code_btn">⚡ Générer le code d'assistance (12h)</button>
+            <p id="generateCodeMessage" class="message" role="status" aria-live="polite"></p>
+          </form>
+
+          <div id="codeResultBox" style="display: none; margin-top: 16px; padding: 18px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+              <div>
+                <span style="font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;" data-i18n="code_generated_label">Code client à transmettre :</span>
+                <div id="displayGeneratedCode" style="font-family: monospace; font-size: 32px; font-weight: 800; color: #10b981; letter-spacing: 0.1em; margin: 4px 0;">----</div>
+                <span id="displayGeneratedExpiry" style="font-size: 12px; color: var(--muted);"></span>
+              </div>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button id="copyCodeOnlyBtn" class="button secondary" type="button" data-i18n="copy_code_only">📋 Copier le code</button>
+                <button id="copyClientMessageBtn" class="button primary" type="button" data-i18n="copy_client_msg">📩 Copier message client</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 data-i18n="active_codes_heading" style="margin-top:0; font-size:18px;">Codes générés récemment</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th data-i18n="th_code">Code</th>
+                  <th data-i18n="th_client">Client</th>
+                  <th data-i18n="th_license">Licence</th>
+                  <th data-i18n="th_status">Statut</th>
+                  <th data-i18n="th_created">Créé le</th>
+                  <th data-i18n="th_expires">Expire le</th>
+                  <th data-i18n="th_rustdesk_id">ID RustDesk</th>
+                  <th style="text-align: right;" data-i18n="th_action">Action</th>
+                </tr>
+              </thead>
+              <tbody id="viewerCodesBody">
+                <tr><td colspan="8" class="empty" data-i18n="loading_codes">Chargement des codes...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panneau Parc & Postes permanents (Console de gestion / Unattended) -->
+      <section class="panel" id="panel-devices">
+        <div class="section-heading">
+          <div>
+            <h2 data-i18n="devices_title">🖥️ Parc & Postes permanents</h2>
+            <p data-i18n="devices_subtitle">Inventaire du parc et accès permanent prévu pour Windows. Le statut n'est pas une garantie de connexion. Accès permanent non disponible sous Linux ou macOS.</p>
+          </div>
+          <div class="actions">
+            <button id="refreshDevicesButton" class="button secondary" type="button" data-i18n="refresh_devices">Actualiser le parc</button>
+            <button id="openEnrollDialogButton" class="button primary" type="button" data-i18n="btn_enroll_device">➕ Enrôler un nouveau poste</button>
+          </div>
+        </div>
+
+        <div id="fleetQuotaSummary" class="card" aria-live="polite" hidden></div>
+        <div class="metrics devices-metrics">
+          <article>
+            <strong id="devicesTotalCount">0</strong>
+            <span data-i18n="devices_stat_total">postes enregistrés</span>
+          </article>
+          <article>
+            <strong id="devicesOnlineCount" style="color: #10b981;">0</strong>
+            <span data-i18n="devices_stat_online">en ligne maintenant</span>
+          </article>
+          <article>
+            <strong id="devicesOfflineCount" style="color: #94a3b8;">0</strong>
+            <span data-i18n="devices_stat_offline">hors ligne</span>
+          </article>
+        </div>
+
+        <div class="card" style="margin-top: 16px;">
+          <!-- Barre d'outils : Recherche et Gestion des Dossiers -->
+          <div class="fleet-toolbar">
+            <div class="fleet-search-box">
+              <span class="fleet-search-icon">🔍</span>
+              <input id="deviceSearchInput" type="search" placeholder="Rechercher par nom, hôte, ID, dossier..." style="padding-left: 36px; padding-right: 70px; margin: 0; font-size: 14px;" data-i18n-placeholder="search_devices_placeholder">
+              <span id="deviceSearchCount" class="fleet-search-count" style="display: none;">0 trouvé</span>
+            </div>
+            <div class="fleet-folder-actions">
+              <button id="btnNewFolder" class="button secondary" type="button" data-i18n="btn_new_folder">➕ Nouveau dossier</button>
+              <button id="btnNewSubFolder" class="button secondary" type="button" data-i18n="btn_new_subfolder" style="display: none;">➕ Sous-dossier</button>
+              <button id="btnRenameFolder" class="button secondary" type="button" data-i18n="btn_rename_folder" style="display: none;">✏️ Renommer</button>
+              <button id="btnDeleteFolder" class="button btn-danger" type="button" data-i18n="btn_delete_folder" style="display: none;">🗑️ Supprimer</button>
+            </div>
+          </div>
+
+          <!-- Fil d'Ariane (Breadcrumbs) pour la navigation dans les dossiers -->
+          <div id="deviceFolderBreadcrumbs" class="folder-breadcrumbs"></div>
+
+          <!-- Liste des sous-dossiers (Pills / Badges cliquables) -->
+          <div id="deviceFoldersList" class="folder-pills-list"></div>
+
+          <div class="table-wrap" style="margin-top: 12px;">
+            <table>
+              <thead>
+                <tr>
+                  <th data-i18n="th_device_status">Statut</th>
+                  <th data-i18n="th_device_alias">Nom / Machine</th>
+                  <th data-i18n="th_device_os">Système</th>
+                  <th data-i18n="th_device_folder">Dossier</th>
+                  <th data-i18n="th_rustdesk_id">ID RustDesk</th>
+                  <th data-i18n="th_perm_code">Code Permanent</th>
+                  <th data-i18n="th_last_seen">Dernière activité</th>
+                  <th style="text-align: right;" data-i18n="th_action">Action</th>
+                </tr>
+              </thead>
+              <tbody id="devicesBody">
+                <tr><td colspan="8" class="empty" data-i18n="loading_devices">Chargement du parc de machines...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <button id="moreDevicesButton" class="button secondary" type="button" hidden data-i18n="fleet_more">Charger les postes suivants</button>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-licenses">
+        <div class="section-heading"><div><h2 data-i18n="licenses_heading">Mes licences</h2><p data-i18n="licenses_subheading">Les installations du logiciel Technicien sont illimitées. Les connexions simultanées et le quota du parc dépendent de l'offre choisie.</p></div></div>
+        <div id="licensesList" class="cards-grid"></div>
+      </section>
+
+      <section class="panel" id="panel-billing">
+        <div class="card">
+          <h2 data-i18n="orders_heading">Commandes</h2>
+          <div class="table-wrap"><table><thead><tr><th data-i18n="th_order_ref">Référence</th><th data-i18n="th_order_type">Type</th><th data-i18n="th_order_plan">Offre</th><th data-i18n="th_order_amount">Montant</th><th data-i18n="th_order_status">Statut</th><th data-i18n="th_order_date">Date</th></tr></thead><tbody id="ordersBody"></tbody></table></div>
+        </div>
+        <div class="card">
+          <h2 data-i18n="invoices_heading">Factures</h2>
+          <div class="table-wrap"><table><thead><tr><th data-i18n="th_inv_number">Numéro</th><th data-i18n="th_order_plan">Offre</th><th data-i18n="th_order_amount">Montant</th><th data-i18n="th_order_date">Date</th><th></th></tr></thead><tbody id="invoicesBody"></tbody></table></div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-interventions">
+        <div class="section-heading"><div><h2 data-i18n="interventions_heading">Historique professionnel</h2><p data-i18n="interventions_subheading">Les connexions et codes viewer génèrent automatiquement une fiche que le technicien peut démarrer et clôturer.</p></div><div class="actions"><button id="refreshInterventionsButton" class="button secondary" type="button" data-i18n="btn_refresh">Actualiser</button><button id="newInterventionButton" class="button secondary" type="button" data-i18n="btn_add_card">Ajouter une fiche</button><button id="exportButton" class="button primary" type="button" data-i18n="btn_export_csv">Exporter en CSV</button></div></div>
+		<div class="card"><div class="table-wrap"><table><thead><tr><th data-i18n="th_order_ref">Référence</th><th data-i18n="th_client">Client</th><th>Objet</th><th>Compte rendu</th><th data-i18n="th_status">Statut</th><th>Début</th><th>Durée</th><th>Actions</th></tr></thead><tbody id="interventionsBody"></tbody></table></div></div>
+      </section>
+
+      <section class="panel" id="panel-services">
+        <div class="card">
+          <h2>Vos prestations et les paiements de vos clients</h2>
+          <p>Ces encaissements reviennent à votre entreprise, sur votre compte Stripe. Ils sont distincts de votre abonnement RelaisDesk. Les frais Stripe restent applicables.</p>
+          <p id="serviceStatus" role="status"></p>
+          <p id="serviceTermsStatus" role="status"></p>
+          <form id="serviceTermsForm" class="stack">
+            <p><a href="../prestations/conditions-2026-09-19.html" target="_blank" rel="noopener">Lire les conditions de cette option</a> · <a href="../prestations/conditions-2026-09-19.txt" download>Conserver une copie</a></p>
+            <label><input id="serviceTermsAccept" type="checkbox" required> Je suis habilité à engager mon entreprise et j'accepte les conditions de l'option prestations, version 2026-09-19-prestations-v1, y compris leur complément RGPD.</label>
+            <button class="button secondary" type="submit">Enregistrer mon acceptation</button>
+          </form>
+          <div class="actions">
+            <button id="serviceConnect" class="button secondary" type="button">Configurer mon compte Stripe</button>
+            <button id="serviceToggle" class="button primary" type="button">Activer les prestations</button>
+            <button id="serviceRefresh" class="button secondary" type="button">Actualiser</button>
+          </div>
+          <p>Forfait prépayé : règlement avant la prise en main. Tarif horaire : seules les périodes connectées sont comptées au prorata, règlement après fermeture de la prise en main. Le client paie sur une page Stripe externe.</p>
+          <p>Vous restez responsable de l'information préalable du client, de son accord, des taxes applicables, de la facture de prestation et des remboursements. Un reçu de paiement ne remplace pas nécessairement votre facture. Configurez également vos informations commerciales et de contact dans Stripe.</p>
+        </div>
+        <div class="card">
+          <h2>Catalogue commun à votre équipe</h2>
+          <form id="serviceRateForm" class="stack">
+            <label for="serviceRateLabel">Intitulé de la prestation</label>
+            <input id="serviceRateLabel" maxlength="160" required>
+            <label for="serviceRateMode">Mode de facturation</label>
+            <select id="serviceRateMode"><option value="prepaid">Forfait prépayé</option><option value="hourly">Tarif horaire</option></select>
+            <label for="serviceRateAmount">Prix total payable en euros (par heure pour l'horaire)</label>
+            <input id="serviceRateAmount" inputmode="decimal" placeholder="60,00" required pattern="[0-9]+([.,][0-9]{1,2})?">
+            <button class="button primary" type="submit">Ajouter le tarif</button>
+          </form>
+          <p>Un tarif utilisé est figé sur la prestation. Pour changer un prix, archivez l'ancien tarif et créez-en un nouveau. Entre 0,50 € et 10 000 €, 100 tarifs actifs maximum.</p>
+          <div id="serviceRates" class="list"></div>
+        </div>
+        <div class="card"><h2>Dernières prestations</h2><div id="serviceWork" class="list"></div></div>
+      </section>
+
+      <section class="panel" id="panel-settings">
+        <div class="card settings-card">
+          <h2 data-i18n="settings_reminders_title">Relances d’échéance</h2>
+          <label class="toggle"><input id="remindersToggle" type="checkbox"><span data-i18n="settings_reminders_label">Recevoir les rappels automatiques avant expiration</span></label>
+          <p class="muted" data-i18n="settings_reminders_note">Ce réglage concerne les rappels facultatifs des licences prépayées. Il n'annule pas un abonnement automatique : utilisez le bouton d'annulation dans la vue d'ensemble. Les notifications contractuelles et de paiement restent envoyées.</p>
+        </div>
+        <div class="card settings-card">
+          <h2 data-i18n="settings_pwd_title">Mot de passe du compte</h2>
+          <form id="changePasswordForm" class="stack">
+            <label for="currentPassword" data-i18n="settings_cur_pwd">Mot de passe actuel</label>
+            <input id="currentPassword" type="password" autocomplete="current-password" required placeholder="••••••••">
+            <label for="changeNewPassword" data-i18n="settings_new_pwd">Nouveau mot de passe (min. 8 caractères)</label>
+            <input id="changeNewPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="••••••••">
+            <label for="changeConfirmPassword" data-i18n="settings_conf_new_pwd">Confirmer le nouveau mot de passe</label>
+            <input id="changeConfirmPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="••••••••">
+            <button id="changePasswordButton" class="button secondary" type="submit" data-i18n="btn_change_pwd">Modifier mon mot de passe</button>
+            <p id="changePasswordMessage" class="message" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+        <div class="card settings-card" id="settings2FACard">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
+            <div>
+              <h2 data-i18n="settings_2fa_heading">Validation en deux étapes (2FA TOTP)</h2>
+              <p class="muted" id="totpStatusDescription" data-i18n="settings_2fa_desc">Protégez votre compte avec une application d'authentification (Google Authenticator, Microsoft Authenticator, etc.).</p>
+            </div>
+            <div id="totpStatusBadge" class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 4px 10px; border-radius: 9999px; font-weight: 600; font-size: 0.85rem;">Désactivé</div>
+          </div>
+          <div id="totpActionButtons" style="margin-top: 1rem; display: flex; gap: 10px; flex-wrap: wrap;">
+            <button id="btnStart2FASetup" class="button primary" type="button" data-i18n="btn_enable_2fa">Activer la 2FA</button>
+            <button id="btnRegenRecoveryCodes" class="button secondary" type="button" style="display: none;" data-i18n="btn_regen_recovery">Régénérer les codes de secours</button>
+            <button id="btnDisable2FA" class="button subtle" type="button" style="display: none; color: #ef4444;" data-i18n="btn_disable_2fa">Désactiver la 2FA</button>
+          </div>
+          <div id="totpRecoveryRemaining" style="margin-top: 8px; font-size: 0.85rem; color: var(--muted); display: none;"></div>
+        </div>
+        <div class="card"><h2>Sécurité du compte</h2><p>Votre session expire automatiquement après 30 minutes d’inactivité et disparaît à la fermeture de l’onglet.</p></div>
+      </section>
+    </section>
+  </div>
+
+  <dialog id="setup2FADialog">
+    <form id="setup2FAForm" method="dialog" class="dialog-card" style="max-width: 520px;">
+      <button id="closeSetup2FADialog" class="dialog-close" type="button" aria-label="Fermer">×</button>
+      <p class="eyebrow">Sécurité renforcée</p>
+      <h2>Activer la validation en deux étapes</h2>
+      <p class="muted" style="font-size: 0.88rem;">1. Scannez le QR code ci-dessous avec votre application Authenticator (Google Authenticator, Microsoft Authenticator, Aegis, 1Password) :</p>
+      
+      <div id="setup2FAQRElement" style="background: #fff; padding: 14px; border-radius: 8px; width: 170px; height: 170px; margin: 12px auto; display: flex; align-items: center; justify-content: center;"></div>
+      
+      <div style="text-align: center; margin-bottom: 12px;">
+        <span class="muted" style="font-size: 0.8rem;">Clé de configuration manuelle :</span><br>
+        <code id="setup2FASecretKey" style="font-size: 0.95rem; font-weight: 700; color: #38bdf8; word-break: break-all; user-select: all;"></code>
+      </div>
+
+      <div id="setup2FARecoveryNotice" style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+        <p style="font-weight: 600; font-size: 0.85rem; color: #f59e0b; margin-bottom: 4px;">⚠️ Codes de secours à usage unique</p>
+        <p class="muted" style="font-size: 0.8rem; margin-bottom: 6px;">Conservez ces codes en lieu sûr. Ils vous permettront de vous reconnecter si vous perdez votre téléphone :</p>
+        <pre id="setup2FARecoveryList" style="font-family: monospace; font-size: 0.8rem; color: #cbd5e1; white-space: pre-wrap; margin: 0; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; user-select: all;"></pre>
+      </div>
+
+      <p class="muted" style="font-size: 0.88rem;">2. Saisissez le code à 6 chiffres généré par l'application pour confirmer l'activation :</p>
+      <div class="stack" style="margin-top: 8px;">
+        <label for="setup2FAPassword">Confirmez votre mot de passe actuel</label>
+        <input id="setup2FAPassword" type="password" autocomplete="current-password" required>
+        <label for="setup2FAInputCode">Code de confirmation à six chiffres</label>
+        <input id="setup2FAInputCode" type="text" inputmode="numeric" maxlength="6" required placeholder="Ex : 123456" style="font-size: 1.1rem; text-align: center; letter-spacing: 0.15em;">
+        <button id="btnConfirm2FAActivation" class="button primary" type="submit" style="margin-top: 6px;">Confirmer et activer la 2FA</button>
+        <p id="setup2FAMessage" class="message" role="status"></p>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="disable2FADialog">
+    <form id="disable2FAForm" method="dialog" class="dialog-card" style="max-width: 440px;">
+      <button id="closeDisable2FADialog" class="dialog-close" type="button" aria-label="Fermer">×</button>
+      <p class="eyebrow">Sécurité</p>
+      <h2>Désactiver la 2FA</h2>
+      <p class="muted" style="font-size: 0.88rem;">Confirmez votre mot de passe et votre second facteur. Les sessions existantes seront fermées.</p>
+      <div class="stack" style="margin-top: 10px;">
+        <label for="disable2FACode">Code 2FA actuel ou code de secours</label>
+        <input id="disable2FACode" type="text" autocomplete="one-time-code" maxlength="32" required>
+        <label for="disable2FAPassword" data-i18n="client_pwd_label">Mot de passe</label>
+        <input id="disable2FAPassword" type="password" autocomplete="current-password" required placeholder="••••••••">
+        <button id="btnConfirmDisable2FA" class="button danger" type="submit" style="margin-top: 8px; background: #ef4444; border-color: #ef4444;">Désactiver définitivement la 2FA</button>
+        <p id="disable2FAMessage" class="message" role="status"></p>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="recoveryCodesDialog">
+    <form id="recoveryCodesForm" method="dialog" class="dialog-card" style="max-width: 480px;">
+      <button id="closeRecoveryCodesDialog" class="dialog-close" type="button" aria-label="Fermer">×</button>
+      <p class="eyebrow">Codes de secours</p>
+      <h2>Nouveaux codes de secours</h2>
+      <p class="muted" style="font-size: 0.85rem;">Les anciens codes ont été invalidés. Conservez ces nouveaux codes en lieu sûr :</p>
+      <pre id="regenRecoveryCodesList" style="font-family: monospace; font-size: 0.85rem; color: #38bdf8; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 6px; white-space: pre-wrap; margin: 12px 0; user-select: all;"></pre>
+      <div style="display: flex; gap: 10px;">
+        <button id="btnCopyRegenCodes" class="button primary" type="button">📋 Copier les codes</button>
+        <button class="button secondary" type="submit">Fermer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="cancelSubscriptionDialog" aria-labelledby="cancelSubscriptionTitle" aria-describedby="cancelSubscriptionExplanation">
+    <form class="dialog-card cancellation-review">
+      <h2 id="cancelSubscriptionTitle" data-cancel="title" tabindex="-1" autofocus>Vérifier votre résiliation</h2>
+      <dl>
+        <dt data-cancel="contractLabel">Référence du contrat</dt><dd data-cancel="contract"></dd>
+        <dt data-cancel="accountLabel">E-mail du compte</dt><dd data-cancel="account"></dd>
+        <dt data-cancel="offerLabel">Abonnement</dt><dd data-cancel="offer"></dd>
+        <dt data-cancel="priceLabel">Prix récurrent</dt><dd data-cancel="price"></dd>
+        <dt data-cancel="endLabel">Fin de l’accès gratuit ou payé</dt><dd data-cancel="end"></dd>
+      </dl>
+      <p id="cancelSubscriptionExplanation" class="muted" data-cancel="explanation"></p>
+      <p><a href="../contact.html" data-cancel="support"></a></p>
+      <div class="actions">
+        <button class="button secondary" type="button" data-cancel="back">Retour aux abonnements</button>
+        <button class="button primary" type="submit" data-cancel="submit">Confirmer la résiliation du contrat</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="renewDialog">
+    <form id="renewForm" method="dialog" class="dialog-card">
+      <button id="closeRenewDialog" class="dialog-close" type="button" aria-label="Fermer">×</button>
+      <p class="eyebrow">Renouvellement</p><h2>Prolonger la licence</h2>
+      <p id="renewLicenseLabel" class="muted"></p>
+      <label for="paymentMethod">Mode de paiement</label>
+      <select id="paymentMethod"><option value="stripe">Carte bancaire — Stripe</option><option value="bank_transfer">Virement bancaire</option></select>
+      <label class="check"><input id="renewTerms" type="checkbox" required><span>J’accepte les <a href="../cgv.html" target="_blank" rel="noopener">CGV/CGU en vigueur</a>.</span></label>
+      <label class="check"><input id="renewImmediate" type="checkbox"><span>Je demande l’exécution immédiate du renouvellement. Cette case est obligatoire pour un consommateur.</span></label>
+      <button class="button primary" type="submit">Continuer vers le paiement</button>
+      <p id="renewMessage" class="message" role="status"></p>
+    </form>
+  </dialog>
+
+  <dialog id="interventionDialog">
+    <form id="interventionForm" method="dialog" class="dialog-card">
+      <button id="closeInterventionDialog" class="dialog-close" type="button" aria-label="Fermer">×</button>
+      <p class="eyebrow">Historique</p><h2>Ajouter une fiche</h2>
+      <label for="interventionLicense">Licence</label><select id="interventionLicense" required></select>
+      <label for="interventionClient">Référence client</label><input id="interventionClient" maxlength="254" placeholder="Entreprise Dupont ou dossier #123">
+      <label for="interventionTitle">Objet</label><input id="interventionTitle" maxlength="160" value="Assistance à distance" required>
+      <button class="button primary" type="submit">Créer la fiche</button>
+      <p id="interventionMessage" class="message" role="status"></p>
+    </form>
+  </dialog>
+
+  <dialog id="completeInterventionDialog">
+    <form id="completeInterventionForm" method="dialog" class="dialog-card">
+      <button id="closeCompleteInterventionDialog" class="dialog-close" type="button" aria-label="Fermer">×</button>
+      <p class="eyebrow">Historique</p><h2>Clôturer la fiche</h2>
+      <label for="completeClientReference">Référence client</label><input id="completeClientReference" maxlength="254">
+      <label for="completeTitle">Objet</label><input id="completeTitle" maxlength="160" value="Assistance à distance" required>
+      <label for="completeSummary">Compte rendu</label><textarea id="completeSummary" maxlength="4000" rows="4" placeholder="Résumé de l'intervention"></textarea>
+      <button class="button primary" type="submit">Clôturer la fiche</button>
+      <p id="completeInterventionMessage" class="message" role="status"></p>
+    </form>
+  </dialog>
+
+  <dialog id="enrollDeviceDialog">
+    <form id="enrollDeviceForm" method="dialog" class="dialog-card" style="max-width: 540px;">
+      <button id="closeEnrollDeviceDialog" class="dialog-close" type="button" aria-label="Fermer">×</button>
+      <p class="eyebrow" data-i18n="enroll_eyebrow" style="padding-right: 2.5rem;">Accès permanent sans surveillance</p>
+      <h2 data-i18n="enroll_heading">Enrôler un nouveau poste</h2>
+      <p class="muted" data-i18n="enroll_desc">Code d'installation à usage unique, valable 15 minutes. Accès permanent prévu pour Windows avec les services compatibles et un mot de passe permanent. Non disponible sous Linux ou macOS dans les versions actuelles.</p>
+      <p class="muted">Avant l'installation, obtenez une autorisation préalable documentée du propriétaire ou du responsable habilité et informez les utilisateurs des connexions possibles sans validation interactive. La suppression du poste révoque ses accès futurs via RelaisDesk, sans désinstaller le logiciel ni effacer les autres réglages locaux. Ne saisissez aucun secret dans les alias ou notes. <a href="../cgv.html" target="_blank" rel="noopener">Conditions d'accès permanent</a> · <a href="../politique-confidentialite.html" target="_blank" rel="noopener">Données et conservation</a>.</p>
+
+      <div class="stack" style="margin-top: 14px;">
+        <label for="enrollLicenseSelect" data-i18n="code_license_label">Licence de rattachement</label>
+        <select id="enrollLicenseSelect" required></select>
+
+        <label for="enrollAliasInput" data-i18n="device_alias_label">Nom convivial du poste (Alias)</label>
+        <input id="enrollAliasInput" maxlength="100" required placeholder="Ex : Serveur Compta, PC Accueil, Caisse #1">
+
+        <label for="enrollNotesInput" data-i18n="device_notes_label">Emplacement ou notes (optionnel)</label>
+        <input id="enrollNotesInput" maxlength="254" placeholder="Ex : Siège social - Bureau 204">
+
+        <button id="enrollSubmitBtn" class="button primary" type="submit" style="margin-top: 8px;" data-i18n="btn_generate_perm_code">⚡ Créer le code permanent</button>
+        <p id="enrollDialogMessage" class="message" role="status"></p>
+      </div>
+
+      <div id="enrollResultBox" style="display: none; margin-top: 20px; padding: 18px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px;">
+        <span style="font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;" data-i18n="perm_code_generated_label">Code permanent généré :</span>
+        <div id="displayEnrollCode" style="font-family: monospace; font-size: 28px; font-weight: 800; color: #10b981; letter-spacing: 0.1em; margin: 6px 0;">----</div>
+        <p style="font-size: 13px; color: var(--muted); margin: 6px 0 14px 0;" data-i18n="perm_code_help">Copiez ce code maintenant : il ne sera plus affiché après fermeture. Il expire après 15 minutes et ne peut pas installer un autre poste.</p>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button id="copyEnrollCodeBtn" class="button secondary" type="button" data-i18n="copy_code_only">📋 Copier le code</button>
+          <button id="copyEnrollCmdBtn" class="button primary" type="button" data-i18n="copy_enroll_cmd">💻 Copier commande CLI</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modale : Création ou modification d'un dossier -->
+  <dialog id="folderModal">
+    <form id="folderForm" method="dialog" class="dialog-card" style="max-width: 480px;">
+      <button id="closeFolderModal" class="dialog-close" type="button" aria-label="Fermer">×</button>
+      <p class="eyebrow">Organisation du parc</p>
+      <h2 id="folderModalTitle">Nouveau dossier</h2>
+      <div class="stack" style="margin-top: 10px;">
+        <input type="hidden" id="folderModalMode" value="create">
+        <input type="hidden" id="folderModalId" value="">
+        <input type="hidden" id="folderModalParentId" value="">
+        <label for="folderModalName" id="folderModalNameLabel">Nom du dossier</label>
+        <input id="folderModalName" type="text" maxlength="80" required placeholder="Ex : Agence Paris, Serveurs, Comptabilité">
+        <div id="folderModalParentGroup" style="display: none;">
+          <label for="folderModalParentSelect">Dossier parent</label>
+          <select id="folderModalParentSelect"></select>
+        </div>
+        <button id="folderModalSubmitBtn" class="button primary" type="submit" style="margin-top: 8px;">Enregistrer</button>
+        <p id="folderModalMessage" class="message" role="status"></p>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modale : Déplacer un poste vers un dossier -->
+  <dialog id="moveDeviceModal">
+    <form id="moveDeviceForm" method="dialog" class="dialog-card" style="max-width: 480px;">
+      <button id="closeMoveDeviceModal" class="dialog-close" type="button" aria-label="Fermer">×</button>
+      <p class="eyebrow">Organisation du parc</p>
+      <h2>Déplacer le poste</h2>
+      <p class="muted" id="moveDeviceModalDesc" style="font-size: 0.9rem;">Sélectionnez le dossier de destination pour ce poste :</p>
+      <div class="stack" style="margin-top: 10px;">
+        <input type="hidden" id="moveDeviceModalId" value="">
+        <label for="moveDeviceSelect">Dossier de destination</label>
+        <select id="moveDeviceSelect"></select>
+        <button id="moveDeviceSubmitBtn" class="button primary" type="submit" style="margin-top: 8px;">Déplacer le poste</button>
+        <p id="moveDeviceMessage" class="message" role="status"></p>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="../i18n.js?v=20260920-interventions" defer></script>
+  <script src="qrcode.min.js?v=20260911-2fa" defer></script>
+  <script src="subscription-cancellation.js?v=20260912-legal-ui" defer></script>
+  <script src="app.js?v=20260921-legal-crypto-v1" defer></script>
+  <script src="teams.js?v=20260919-prestations" defer></script>
+  <script src="services.js?v=20260919-prestations-legal" defer></script>
+</body>
+</html>

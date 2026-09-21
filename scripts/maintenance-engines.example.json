@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "rustdesk_cargo_lock_sha256": "REMPLACER_PAR_SHA256_DU_CARGO_LOCK_UTILISE_POUR_LES_MOTEURS",
+  "rustdesk_cargo_toml_sha256": "REMPLACER_PAR_SHA256_DU_CARGO_TOML_UTILISE_POUR_LES_MOTEURS",
+  "artifacts": {
+    "linux_deb": {"path": "engines/linux/rustdesk.deb", "sha256": "REMPLACER_PAR_SHA256"},
+    "linux_runner": {"path": "engines/linux/rustdesk", "sha256": "REMPLACER_PAR_SHA256"},
+    "linux_library": {"path": "engines/linux/librustdesk.so", "sha256": "REMPLACER_PAR_SHA256"},
+    "windows_portable": {"path": "engines/windows/portable.exe", "sha256": "REMPLACER_PAR_SHA256"},
+    "windows_native": {"path": "engines/windows/native/rustdesk.exe", "sha256": "REMPLACER_PAR_SHA256"},
+    "windows_sciter": {"path": "engines/windows/native/sciter.dll", "sha256": "REMPLACER_PAR_SHA256"},
+    "windows_virtual_display": {"path": "engines/windows/native/dylib_virtual_display.dll", "sha256": "REMPLACER_PAR_SHA256"}
+  }
+}

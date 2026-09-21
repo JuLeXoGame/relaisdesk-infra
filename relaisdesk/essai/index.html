@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,follow">
+  <meta name="referrer" content="no-referrer">
+  <title>Un mois d'essai gratuit — RelaisDesk</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="icon" type="image/avif" href="/logo.avif">
+  <link rel="stylesheet" href="../client/styles.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js?v=20260921-legal-crypto-v1" defer></script>
+</head>
+<body>
+<main class="trial-layout">
+  <a class="brand" href="../">RelaisDesk</a>
+  <h1>Un mois d'essai gratuit</h1>
+  <p>30 jours pour essayer l'offre de votre choix, avec toutes ses fonctionnalités. Une seule fois par nouveau client ou entreprise, toutes offres confondues.</p>
+  <p>Carte vérifiée chez Stripe. Aucun paiement aujourd'hui. Après l'essai, l'abonnement devient payant automatiquement, sauf annulation préalable dans votre espace client.</p>
+  <p id="message" role="status" aria-live="polite">Vérification de la disponibilité…</p>
+  <p id="mediationNotice" hidden>Information consommateurs : aucun médiateur de la consommation n'est encore désigné. Cette obligation reste à régulariser ; cela ne supprime aucun de vos droits. <a href="../cgv.html">Conditions et réclamations</a>.</p>
+  <section id="verifyPanel" hidden>
+    <h2>Confirmez votre adresse e-mail</h2>
+    <p>Le bouton suivant ouvre la vérification de carte chez Stripe. Le tarif et la reconduction automatique y seront rappelés. L'essai n'est activé qu'après contrôle d'éligibilité.</p>
+    <button id="verifyButton" class="button primary" type="button">Confirmer et continuer chez Stripe</button>
+  </section>
+  <form id="trialForm" class="stack" hidden>
+    <fieldset id="trialFields">
+      <legend>Votre offre après l'essai</legend>
+      <p>L'essai respecte la compatibilité des applications : accès permanent prévu pour Windows avec les services compatibles installés, non disponible sous Linux ou macOS dans les versions actuellement proposées. Il nécessite une autorisation préalable documentée et peut permettre des connexions sans validation interactive à chaque session. Voir les <a href="../cgv.html">conditions d'utilisation</a>.</p>
+      <label for="plan">Offre</label>
+      <select id="plan" name="plan"><option value="starter">Starter — 1 technicien simultané</option><option value="pro">Pro — 5 techniciens simultanés</option><option value="ultra">Personnalisé — 10 à 500 techniciens simultanés</option></select>
+      <div id="capacityField" hidden><label for="technicians">Nombre de techniciens simultanés</label><input id="technicians" name="technicians" type="number" min="10" max="500" step="1" value="10"></div>
+      <label for="billing_cycle">Périodicité du prélèvement après l'essai</label>
+      <select id="billing_cycle" name="billing_cycle"><option value="monthly">Mensuelle</option><option value="annual">Annuelle — totalité du prix annuel prélevée en une fois</option></select>
+      <p id="summary" class="trial-summary" aria-live="polite"></p>
+      <p>L'essai commence à son activation ; la date et l'heure exactes du premier prélèvement seront confirmées par e-mail. La remise annuelle est une réduction de prix, distincte de l'essai.</p>
+      <h2>Vos coordonnées de facturation</h2>
+      <label for="email">Adresse e-mail à confirmer</label><input id="email" name="email" type="email" maxlength="254" autocomplete="email" required>
+      <label for="customer_type">Statut</label><select id="customer_type" name="customer_type"><option value="business">Professionnel / entreprise</option><option value="consumer" id="consumerOption" disabled>Particulier — non ouvert</option></select>
+      <label for="name">Nom complet ou raison sociale</label><input id="name" name="name" maxlength="200" autocomplete="organization" required>
+      <label for="address">Adresse</label><input id="address" name="address" maxlength="500" autocomplete="street-address" required>
+      <label for="postal_code">Code postal</label><input id="postal_code" name="postal_code" maxlength="32" autocomplete="postal-code" required>
+      <label for="city">Ville</label><input id="city" name="city" maxlength="100" autocomplete="address-level2" required>
+      <label for="country">Pays</label><input id="country" name="country" maxlength="100" value="France" autocomplete="country-name" required>
+      <label for="siret">SIRET, si entreprise française</label><input id="siret" name="siret" inputmode="numeric" pattern="[0-9 ]{14,20}" maxlength="20">
+      <label class="check"><input type="checkbox" id="terms" required><span>J'accepte les <a href="../cgv.html" target="_blank" rel="noopener">CGV du 21 septembre 2026</a> et les <a href="conditions.html" target="_blank" rel="noopener">conditions de l'essai et de l'abonnement récurrent, version 2026-09-21-fleet-v2</a>.</span></label>
+      <label class="check"><input type="checkbox" id="recurring" required><span id="recurringText">J'accepte le prélèvement automatique au tarif indiqué après les 30 jours gratuits, puis à chaque échéance, sauf annulation.</span></label>
+      <label class="check" id="immediateLabel" hidden><input type="checkbox" id="immediate"><span>Je demande l'activation immédiate du service pendant le délai de rétractation, sans renoncer à mes droits légaux.</span></label>
+      <p>Prévention des essais répétés : historique du compte et marqueurs pseudonymisés, dont l'empreinte de carte Stripe. Aucun numéro complet de carte ni relevé bancaire n'est transmis à RelaisDesk. <a href="../politique-confidentialite.html">Données et droits</a>. En cas de refus, un examen humain peut être demandé.</p>
+      <button id="submitButton" class="button primary" type="submit">Demander l'essai avec obligation de paiement après 30 jours</button>
+    </fieldset>
+  </form>
+  <p><a href="../client/">Espace client et annulation du renouvellement</a> · <a href="../formulaire-retractation.html">Se rétracter du contrat</a> · <a href="../contact.html">Nous contacter</a> · <a href="../mentions-legales.html">Mentions légales</a></p>
+  <noscript>JavaScript est nécessaire pour vérifier la disponibilité et souscrire. Contactez-nous en cas de difficulté.</noscript>
+</main>
+</body>
+</html>

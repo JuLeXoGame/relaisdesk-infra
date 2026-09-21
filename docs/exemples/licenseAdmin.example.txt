@@ -1,0 +1,3 @@
+# Exemple uniquement — ne placez jamais les vraies valeurs dans le dépôt.
+ADMIN_LICENSE_ID=MP-XXXX-XXXX-XXXX
+ADMIN_LICENSE_KEY=mpsk_REPLACE_WITH_A_RANDOM_32_BYTE_KEY

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <!-- Page d'accueil principale -->
+  <url>
+    <loc>https://relaisdesk.fr/</loc>
+    <lastmod>2026-09-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Page Contact -->
+  <url>
+    <loc>https://relaisdesk.fr/contact.html</loc>
+    <lastmod>2026-09-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Logiciel Libre & Code Source -->
+  <url>
+    <loc>https://relaisdesk.fr/logiciel-libre.html</loc>
+    <lastmod>2026-09-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Conditions Générales de Vente et d'Utilisation -->
+  <url>
+    <loc>https://relaisdesk.fr/cgv.html</loc>
+    <lastmod>2026-09-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <!-- Mentions Légales -->
+  <url>
+    <loc>https://relaisdesk.fr/mentions-legales.html</loc>
+    <lastmod>2026-09-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <!-- Politique de Confidentialité (RGPD) -->
+  <url>
+    <loc>https://relaisdesk.fr/politique-confidentialite.html</loc>
+    <lastmod>2026-09-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <!-- Formulaire de Rétractation Consommateur -->
+  <url>
+    <loc>https://relaisdesk.fr/formulaire-retractation.html</loc>
+    <lastmod>2026-09-06</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+</urlset>

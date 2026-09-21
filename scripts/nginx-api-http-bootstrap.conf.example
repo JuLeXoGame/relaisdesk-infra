@@ -1,0 +1,11 @@
+# Configuration temporaire utilisée uniquement pour obtenir le premier
+# certificat Let's Encrypt de l'API sur Oracle.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name api.relaisdesk.fr;
+
+    location / {
+        return 404;
+    }
+}

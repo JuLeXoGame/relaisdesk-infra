@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logiciel libre et code source | RelaisDesk</title>
+  <meta name="description" content="Licences libres, avis de modification et accès au code source correspondant des forks RelaisDesk basés sur RustDesk.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://relaisdesk.fr/logiciel-libre.html">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://relaisdesk.fr/logiciel-libre.html">
+  <meta property="og:title" content="Logiciel libre et code source | RelaisDesk">
+  <meta property="og:description" content="Licences libres, avis de modification et accès au code source correspondant des forks RelaisDesk basés sur RustDesk.">
+  <meta property="og:image" content="https://relaisdesk.fr/logo.avif">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:site_name" content="RelaisDesk">
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="icon" type="image/avif" href="/logo.avif">
+  <link rel="stylesheet" href="styles.css?v=20260911-legal-fleet-v2">
+</head>
+<body>
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <header class="header">
+    <div class="container nav-container">
+      <a href="/" class="logo-group" aria-label="Accueil RelaisDesk">
+        <img src="logo.avif" alt="" class="logo-img" width="42" height="42">
+        <span>Relais<span class="gradient-text">Desk</span></span>
+      </a>
+      <div class="nav-actions"><a href="/" class="btn btn-secondary btn-sm">Accueil</a></div>
+    </div>
+  </header>
+
+  <main class="legal-wrapper">
+    <div class="container" style="max-width: 900px;">
+      <a href="/" class="back-home-btn">← Retour à l'accueil</a>
+      <article class="legal-card">
+        <header class="legal-header">
+          <div class="badge">GNU AGPLv3</div>
+          <h1>Logiciel libre et code source</h1>
+          <p class="legal-date">Dernière mise à jour : 12 septembre 2026</p>
+        </header>
+        <div class="legal-body">
+          <p>RelaisDesk utilise et modifie les projets RustDesk Community. Le paiement d'un accès RelaisDesk rémunère l'exploitation de l'infrastructure, la configuration et le support. Il ne retire aucun des droits accordés par les licences libres applicables.</p>
+
+          <h2>Versions modifiées</h2>
+          <div class="legal-table-scroll" role="region" tabindex="0" aria-label="Composants et sources correspondantes — tableau défilant">
+          <table>
+            <thead><tr><th>Composant</th><th>Origine</th><th>Avis de modification</th><th>Source correspondante</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Moteur client — version précédente</strong></td>
+                <td>RustDesk Community, révision <code>1d09760ef7c9275555ac512d66fee5af549c5d06</code></td>
+                <td>Modifié par RelaisDesk. Ajout du protocole d'autorisation RelaisDesk, coupure de session, personnalisation graphique et améliorations du mode d'affichage.</td>
+                <td><a href="https://github.com/JuLeXoGame/relaisdesk/tree/72d1d638e56d6f2dd4f357263000738144633660" target="_blank" rel="noopener" style="color: var(--border-focus);">source du moteur précédent — commit <code>72d1d638e</code></a></td>
+              </tr>
+              <tr>
+                <td><strong>Serveur RelaisDesk</strong></td>
+                <td>RustDesk Server Community, révision <code>a7736be5e40f85bfc141120dce587e836e5d4b80</code></td>
+                <td>Modifié par RelaisDesk depuis le 24 août 2026. Ajout de jetons Ed25519, preuves de possession, protection anti-rejeu, séparation des rôles et contrôle de capacité. Version de sécurité du 19 septembre 2026, fondée sur la révision <code>9b784dfa</code> avec le verrouillage Rustls corrigé.</td>
+                <td><a href="https://api.relaisdesk.fr/sources/rustdesk-server-security-20260919.tar.gz" style="color: var(--border-focus);">sources exactes du serveur du 19 septembre 2026, sous-module et instructions de construction inclus</a></td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+
+          <h2>Identifier la version effectivement téléchargée</h2>
+          <p>Au contrôle du 12 septembre 2026, le serveur de téléchargement propose le lot <strong>1.0.2 daté du 11 septembre à 10:22:39 UTC</strong>. Le <a href="https://api.relaisdesk.fr/api/v1/public/releases/latest">manifeste public signé</a> indique les noms, tailles et empreintes SHA-256 ; il peut évoluer après ce contrôle. Une autre préparation locale porte aussi le numéro 1.0.2 avec des empreintes différentes : le numéro seul ne permet donc pas d'identifier une source. La version Windows 1.0.3 est un lot de test local, non publié lors de ce contrôle.</p>
+          <p><strong>Technicien Windows portable du lot public contrôlé :</strong> SHA-256 <code>0479b842bed81c13e250a0b6922ba93d5e2e9b508bb9ffd82824aaba4e22da43</code>. Le moteur embarqué a été retrouvé à l'identique dans ce fichier : empreinte <code>86a2132b04743e3c2199cc20a86e158412bcb549e4e9ab247427a9a463f326c0</code>, associé au <a href="https://github.com/JuLeXoGame/relaisdesk/tree/e34c8bab932791961b2406bac5d0256b744b40b1" target="_blank" rel="noopener">commit client <code>e34c8bab</code></a> par le compte rendu de construction. Cette référence identifie le moteur, pas à elle seule les sources des lanceurs ni les scripts de l'ensemble des paquets. Elle ne doit pas être extrapolée à un fichier portant une autre empreinte.</p>
+          <p><strong>Accès permanent :</strong> il n'est pas disponible sous Linux ou macOS dans les versions proposées. L'assistance ponctuelle Linux est distincte.</p>
+
+          <p>Versions serveur précédentes : sources des commits <a href="https://github.com/JuLeXoGame/rustdesk-server/tree/d998a326afc32bbd26614e84f2b3332e8fdd10ab" target="_blank" rel="noopener" style="color: var(--border-focus);"><code>d998a326</code></a> et <a href="https://github.com/JuLeXoGame/rustdesk-server/tree/57318afae9c19935c75e47700a4d69275b71cce8" target="_blank" rel="noopener" style="color: var(--border-focus);"><code>57318afa</code></a>, conservées pour les versions précédemment exploitées.</p>
+
+          <h2>Licence et étendue de la publication</h2>
+          <p>Ces forks restent distribués sous la <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener" style="color: var(--border-focus);">GNU Affero General Public License version 3</a>. Le code source correspondant doit inclure la forme préférée pour effectuer des modifications, les dépendances ou sous-modules modifiés, les scripts de construction et d'installation nécessaires, les avis de copyright conservés et l'identification du commit exact utilisé pour chaque binaire.</p>
+          <p>Pour le serveur modifié accessible par réseau, les utilisateurs doivent pouvoir obtenir gratuitement le code source correspondant à la version effectivement exploitée. Pour chaque binaire distribué, la source proposée doit correspondre exactement au binaire, et non uniquement à la version amont de RustDesk.</p>
+
+          <h2>État de publication</h2>
+          <p>Les liens de cette page identifient les sources des moteurs et du serveur. Les applications sont proposées dans la rubrique <a href="/#downloads">Téléchargements</a>. Leur distribution n'est pas conditionnée à SignPath. Le manifeste et les empreintes SHA-256 servent à contrôler l'intégrité des téléchargements ; leur signature Ed25519 est distincte d'une signature Windows Authenticode. Un exécutable non signé peut afficher un éditeur inconnu ou un avertissement Windows. Aucune signature Authenticode n'est revendiquée pour un fichier qui n'en possède pas.</p>
+          <p>Lors de chaque mise à jour, les sources correspondant aux versions distribuées et exploitées doivent rester accessibles. La correspondance complète de chaque paquet, le périmètre des lanceurs et la disponibilité de tous les scripts nécessaires restent à vérifier et à compléter. Les dépôts cités ne contiennent pas les sources Go des lanceurs commerciaux. Cette page ne présente donc pas le seul lien vers le moteur comme une livraison complète de sources des paquets. Une promesse de communication ultérieure ne remplace pas les obligations de mise à disposition des composants couverts par l'AGPL.</p>
+          <h2>Récupération et construction des sources publiées</h2>
+          <p>Pour le serveur exploité depuis le 19 septembre 2026, télécharger l'archive de sources ci-dessus et suivre <code>BUILD-RELAISDESK-20260919.md</code>. Elle inclut le sous-module <code>hbb_common 90fcb583f87d6cde8fe4666c9767b9646a95a43b</code> et le fichier <code>Cargo.lock</code> effectivement utilisé ; aucun secret ni aucune base de production n'est nécessaire. SHA-256 de l'archive : <code>c43e26f7700120127a877c0972cd801b85e39599142421f1772942001d355f72</code>. Les références ci-dessous sont historiques.</p>
+          <p>Les <a href="https://github.com/JuLeXoGame/relaisdesk/blob/e34c8bab932791961b2406bac5d0256b744b40b1/docs/RELAISDESK_BUILD.md" target="_blank" rel="noopener">instructions de construction du client</a> et les <a href="https://github.com/JuLeXoGame/rustdesk-server/blob/d998a326afc32bbd26614e84f2b3332e8fdd10ab/RELAISDESK_FORK.md" target="_blank" rel="noopener">informations de construction du serveur</a> accompagnent les forks. Le client <code>e34c8bab</code> utilise le sous-module <a href="https://github.com/JuLeXoGame/hbb_common/tree/924efac1e2d1002dcad3de51938481bd29d7e46a" target="_blank" rel="noopener"><code>hbb_common 924efac1</code></a> ; le serveur <code>d998a326</code> utilise <a href="https://github.com/JuLeXoGame/hbb_common/tree/4890b540ceffd2b68305a99bd2aff3df6fb307e3" target="_blank" rel="noopener"><code>hbb_common 4890b540</code></a>. Un clone récursif avec le commit indiqué est nécessaire : le ZIP GitHub du dépôt principal n'inclut pas à lui seul le contenu de ses sous-modules. Les références historiques sont conservées pour les anciennes versions.</p>
+
+          <h2>Marques et absence d'affiliation</h2>
+          <p>RustDesk et ses signes distinctifs appartiennent à leurs titulaires respectifs. RelaisDesk est un fork indépendant. L'accès au code source et la licence AGPLv3 n'accordent aucun droit d'utiliser les marques d'un tiers d'une manière créant une confusion sur l'origine ou une affiliation.</p>
+
+          <h2>Demande de source</h2>
+          <p>Une difficulté d'accès à la source correspondant à une version distribuée ou exploitée peut être signalée gratuitement via notre <a href="contact.html" style="color: var(--border-focus);">formulaire de contact</a>, en indiquant la version, la plateforme et, si possible, le hachage SHA-256 du binaire concerné.</p>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <p>&copy; 2026 RelaisDesk. Tous droits réservés. Les composants tiers restent soumis à leurs licences et copyrights respectifs.</p>
+      </div>
+    </div>
+  </footer>
+  <script src="app.js"></script>
+</body>
+</html>

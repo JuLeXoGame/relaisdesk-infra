@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RelaisDesk — Dashboard Administrateur</title>
+  <meta name="description" content="Panneau d'administration pour la gestion des accès RelaisDesk.">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src 'self' https://api.relaisdesk.fr http://localhost:* http://127.0.0.1:*; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
+  <meta name="theme-color" content="#0b0f19">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="icon" type="image/avif" href="logo.avif">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css?v=2">
+</head>
+<body>
+
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <!-- ===================================================================== -->
+  <!-- 1. ÉCRAN DE CONNEXION ADMIN                                           -->
+  <!-- ===================================================================== -->
+  <div id="authScreen" class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <img src="logo.avif" alt="Logo RelaisDesk" width="42" height="42">
+        <span>Relais<span class="gradient-text">Desk</span></span>
+      </div>
+      <div class="badge-admin">Espace Administrateur</div>
+      <h2>Authentification</h2>
+      <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1.25rem;">
+        Accédez à la console de gestion sécurisée RelaisDesk.
+      </p>
+
+      <!-- Tabs de sélection du mode d'authentification -->
+      <div class="auth-tabs" id="authModeTabs" role="tablist" aria-label="Mode de connexion administrateur">
+        <button type="button" class="auth-tab-btn active" id="tabEmailMode" role="tab" aria-selected="true">
+          ✉️ E-mail & Mot de passe
+        </button>
+        <button type="button" class="auth-tab-btn" id="tabLicenseMode" role="tab" aria-selected="false">
+          🔑 Licence / Clé
+        </button>
+      </div>
+
+      <form id="adminLoginForm" class="auth-form">
+        <!-- 1. Mode E-mail & Mot de passe (Actif par défaut) -->
+        <div id="emailAuthFields">
+          <div class="form-group">
+            <label for="adminEmail">Adresse E-mail Admin</label>
+            <input type="email" id="adminEmail" class="form-input" placeholder="admin@monentreprise.fr" autocomplete="email" required>
+          </div>
+
+          <div class="form-group" style="margin-top: 1rem;">
+            <label for="adminPassword">Mot de passe</label>
+            <input type="password" id="adminPassword" class="form-input" placeholder="••••••••••••" autocomplete="current-password" required>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; margin-top: 0.4rem;">
+            <button type="button" class="auth-helper-link" data-action="open-modal" data-modal="setupPasswordModal">
+              Première connexion ? Définir le mot de passe
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Mode Licence / Clé / Token (Optionnel / rétro-compatibilité) -->
+        <div id="licenseAuthFields" style="display: none;">
+          <div class="form-group">
+            <label for="adminLicenseId">Identifiant Licence Admin</label>
+            <input type="text" id="adminLicenseId" class="form-input" placeholder="MP-1CE6-0489-5AF5" autocomplete="off">
+          </div>
+
+          <div class="form-group" style="margin-top: 1rem;">
+            <label for="adminLicenseKey">Clé de Licence Admin</label>
+            <input type="password" id="adminLicenseKey" class="form-input" placeholder="mpsk_..." autocomplete="current-password">
+          </div>
+
+          <div class="form-group" style="margin-top: 0.5rem;">
+            <details style="font-size: 0.82rem; color: var(--text-muted);">
+              <summary style="cursor: pointer;">Ou utiliser un Token Secret (ADMIN_TOKEN)</summary>
+              <input type="password" id="adminSecretToken" class="form-input" placeholder="Token secret serveur" style="margin-top: 0.5rem;">
+            </details>
+          </div>
+        </div>
+
+        <!-- 3. Écran de validation 2FA (affiché dynamiquement si TOTP requis) -->
+        <div id="admin2FAFields" style="display: none;">
+          <div class="auth-2fa-banner">
+            <strong>🔒 Double facteur requis (2FA)</strong>
+            <p style="margin-top: 0.25rem; font-size: 0.82rem; color: var(--text-secondary);">
+              Votre compte administrateur est protégé par validation TOTP. Ouvrez votre application d'authentification (Google Authenticator, Microsoft Authenticator, etc.) et saisissez votre code à 6 chiffres.
+            </p>
+          </div>
+
+          <input type="hidden" id="admin2FAChallengeToken">
+
+          <div class="form-group" style="margin-top: 0.5rem;">
+            <label for="admin2FACode">Code de sécurité à 6 chiffres</label>
+            <input type="text" id="admin2FACode" class="form-input" placeholder="123456" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" style="font-size: 1.25rem; letter-spacing: 0.25em; text-align: center; font-weight: 700;">
+          </div>
+
+          <button type="button" id="adminCancel2FABtn" class="btn btn-secondary btn-block" style="margin-top: 0.5rem; font-size: 0.85rem;">
+            ← Revenir aux identifiants
+          </button>
+        </div>
+
+        <div id="rememberMeContainer" class="form-group" style="flex-direction: row; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+          <input type="checkbox" id="rememberMe" style="width: auto; cursor: pointer;">
+          <label for="rememberMe" style="cursor: pointer; font-size: 0.85rem; margin-bottom: 0;">Se souvenir de moi sur cet appareil</label>
+        </div>
+
+        <button type="submit" id="loginBtn" class="btn btn-primary btn-block">
+          🔐 Accéder au Dashboard
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 2. APPLICATION PRINCIPALE DASHBOARD ADMIN                             -->
+  <!-- ===================================================================== -->
+  <div id="appScreen" class="app-container" style="display: none;">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <a href="/admin/" class="sidebar-logo" aria-label="Accueil de l’administration RelaisDesk">
+          <img src="logo.avif" alt="" width="42" height="42">
+          <span>Relais<span class="gradient-text">Desk</span></span>
+        </a>
+      </div>
+
+      <ul class="sidebar-menu">
+        <li>
+          <a class="nav-item active" data-tab="overview">
+            <span class="nav-item-icon">📊</span>
+            <span>Vue d'ensemble</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-tab="licenses">
+            <span class="nav-item-icon">🔑</span>
+            <span>Licences Techniciens</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-tab="create">
+            <span class="nav-item-icon">➕</span>
+            <span>Créer une Licence</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-tab="orders">
+            <span class="nav-item-icon">🛒</span>
+            <span>Commandes & Virements</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-tab="invoices">
+            <span class="nav-item-icon">🧾</span>
+            <span>Factures</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-tab="alerts">
+            <span class="nav-item-icon">🚨</span>
+            <span>Alertes Sécurité</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <div class="admin-badge-info">
+          👤 Connecté en tant qu'administrateur<br>
+          <span id="adminEmailDisplay" style="color: var(--border-focus); font-weight: 600;">admin</span>
+        </div>
+        <button type="button" id="logoutBtn" class="btn btn-secondary btn-sm btn-block">
+          🚪 Déconnexion
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <div class="top-bar">
+        <div class="page-title">
+          <h1 id="tabTitle">Vue d'ensemble</h1>
+          <p id="tabSubtitle">Supervision globale de l'infrastructure et des licences RelaisDesk</p>
+        </div>
+
+        <div class="top-actions">
+          <span id="apiStatusPill" class="status-pill">🟢 API En Ligne</span>
+          <button type="button" id="refreshBtn" class="btn btn-secondary btn-sm">
+            🔄 Actualiser
+          </button>
+        </div>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- TAB 1 : VUE D'ENSEMBLE (STATS)                                      -->
+      <!-- =================================================================== -->
+      <section id="tabOverview" class="tab-pane active">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-header">
+              <span>TOTAL LICENCES</span>
+              <span>📜</span>
+            </div>
+            <div class="stat-value" id="statTotal">0</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span>LICENCES ACTIVES</span>
+              <span>✅</span>
+            </div>
+            <div class="stat-value" id="statActive" style="color: var(--success);">0</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span>LICENCES EXPIRÉES</span>
+              <span>⏳</span>
+            </div>
+            <div class="stat-value" id="statExpired" style="color: var(--warning);">0</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span>LICENCES RÉVOQUÉES</span>
+              <span>🛑</span>
+            </div>
+            <div class="stat-value" id="statRevoked" style="color: var(--danger);">0</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span>QUOTA TEMPS RÉEL</span>
+              <span>⚡</span>
+            </div>
+            <div class="stat-value" id="statConnections" style="color: var(--border-focus);">0</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>🩺 État des services</h2>
+              <p style="color: var(--text-secondary); font-size: 0.88rem;">Contrôle direct de la base, de hbbs, de hbbr, des autorisations signées et du SMTP.</p>
+            </div>
+          </div>
+          <div id="systemStatusComponents" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+            <span style="color: var(--text-muted);">Contrôle des services en cours...</span>
+          </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- ANALYSE FINANCIÈRE & BÉNÉFICES (MICRO-ENTREPRISE / RÉGIME RÉEL TVA) -->
+        <!-- =================================================================== -->
+        <div class="card">
+          <div class="card-header" style="align-items: flex-start;">
+            <div>
+              <h2>💰 Chiffre d'Affaires & Bénéfices Nets</h2>
+              <p style="color: var(--text-secondary); font-size: 0.88rem;">
+                Suivi des ventes réelles, calcul des cotisations sociales et estimation du bénéfice net en poche.
+              </p>
+            </div>
+
+            <!-- Fiscal Mode Switcher -->
+            <div class="fiscal-switcher-box">
+              <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-right: 0.25rem;">Régime fiscal :</span>
+              <div class="segmented-control">
+                <button type="button" class="segment-btn active" id="modeMicroBtn" data-action="set-fiscal-mode" data-mode="micro">
+                  🇫🇷 Micro-Entreprise (0% TVA)
+                </button>
+                <button type="button" class="segment-btn" id="modeVatBtn" data-action="set-fiscal-mode" data-mode="vat">
+                  🏢 Assujetti TVA (20%)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notice banner -->
+          <div id="fiscalNoticeBanner" class="fiscal-banner">
+            <span id="fiscalBannerIcon" style="font-size: 1.2rem;">🇫🇷</span>
+            <span id="fiscalBannerText">
+              <strong>Régime Micro-Entreprise (Franchise en base de TVA - Art. 293 B du CGI)</strong> : Vous ne facturez pas de TVA (TVA 0%). Vos cotisations URSSAF sont calculées à 21,2% sur votre Chiffre d'Affaires brut encaissé.
+            </span>
+          </div>
+
+          <!-- Financial 4-cards grid -->
+          <div class="financial-grid">
+            <div class="fin-card">
+              <div class="fin-label">CHIFFRE D'AFFAIRES ENCAISSÉ</div>
+              <div class="fin-value" id="finTotalRevenue">0.00 €</div>
+              <div class="fin-sub" id="finSubRev">Total des ventes réelles payées</div>
+            </div>
+
+            <div class="fin-card">
+              <div class="fin-label" id="finTvaLabel">TVA COLLECTÉE</div>
+              <div class="fin-value" id="finTvaValue" style="color: var(--success);">0.00 €</div>
+              <div class="fin-sub" id="finSubTva">0.00 % (Franchise Art. 293 B)</div>
+            </div>
+
+            <div class="fin-card">
+              <div class="fin-label" id="finChargesLabel">CHARGES & COTISATIONS</div>
+              <div class="fin-value" id="finChargesValue" style="color: var(--warning);">0.00 €</div>
+              <div class="fin-sub" id="finSubCharges">URSSAF (21.2%) + Frais (1.5%)</div>
+            </div>
+
+            <div class="fin-card fin-card-highlight">
+              <div class="fin-label">BÉNÉFICE NET ESTIMÉ</div>
+              <div class="fin-value" id="finNetProfit" style="color: #34d399;">0.00 €</div>
+              <div class="fin-sub" id="finSubNet">Revenu net réel disponible</div>
+            </div>
+          </div>
+
+          <!-- Interactive Chart & Parameters -->
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;" class="fin-chart-row">
+            <!-- Chart Container -->
+            <div class="chart-container-box">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="font-size: 1rem; font-weight: 700;">📈 Évolution CA vs Bénéfice Net</h3>
+                <div style="display: flex; gap: 0.75rem; font-size: 0.8rem;">
+                  <span style="display: inline-flex; align-items: center; gap: 0.3rem;"><span style="width: 10px; height: 10px; border-radius: 2px; background: #38bdf8; display: inline-block;"></span> CA</span>
+                  <span style="display: inline-flex; align-items: center; gap: 0.3rem;"><span style="width: 10px; height: 10px; border-radius: 2px; background: #10b981; display: inline-block;"></span> Bénéfice Net</span>
+                </div>
+              </div>
+              <div style="position: relative; height: 230px; width: 100%;">
+                <canvas id="revenueChart" style="width: 100%; height: 100%;"></canvas>
+              </div>
+            </div>
+
+            <!-- Parameters & Simulator -->
+            <div class="simulator-box">
+              <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem;">⚙️ Paramètres & Simulateur</h3>
+              
+              <div class="form-group" style="margin-bottom: 0.85rem;">
+                <label style="font-size: 0.82rem;">Taux cotisations URSSAF : <span id="urssafRateDisplay" style="color: var(--border-focus); font-weight: 700;">21.2 %</span></label>
+                <input type="range" id="urssafSlider" min="0" max="45" step="0.1" value="21.2" style="width: 100%;">
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0.85rem;" id="vatRateGroup">
+                <label style="font-size: 0.82rem;">Taux de TVA : <span id="vatRateDisplay" style="color: var(--border-focus); font-weight: 700;">20.0 %</span></label>
+                <input type="range" id="vatSlider" min="0" max="30" step="0.5" value="20" style="width: 100%;">
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0.85rem;">
+                <label style="font-size: 0.82rem;">Frais de transaction moyens : <span id="feesRateDisplay" style="color: var(--border-focus); font-weight: 700;">1.5 %</span></label>
+                <input type="range" id="feesSlider" min="0" max="5" step="0.1" value="1.5" style="width: 100%;">
+              </div>
+
+              <div style="background: rgba(0,0,0,0.35); padding: 0.75rem; border-radius: var(--radius-sm); font-size: 0.8rem; color: var(--text-secondary);">
+                ⚡ <em>Revenu Mensuel Récurrent (MRR) :</em> <strong id="finMrrDisplay" style="color: #38bdf8;">0.00 €</strong> / mois
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick actions in overview -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Actions Rapides</h2>
+          </div>
+          <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary" data-action="switch-tab" data-tab="create">
+              ➕ Générer une nouvelle Licence
+            </button>
+            <button type="button" class="btn btn-secondary" data-action="switch-tab" data-tab="licenses">
+              🔍 Voir toutes les Licences
+            </button>
+            <button type="button" class="btn btn-secondary" data-action="switch-tab" data-tab="orders">
+              💳 Vérifier les Virements en attente
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 2 : LICENCES TECHNICIENS                                        -->
+      <!-- =================================================================== -->
+      <section id="tabLicenses" class="tab-pane" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <h2>Gestion des Licences Techniciens</h2>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <button type="button" id="toggleUnmaskBtn" class="btn btn-secondary btn-sm">
+                👁️ Afficher clés en clair
+              </button>
+            </div>
+          </div>
+
+          <div class="filter-bar">
+            <input type="text" id="licenseSearchInput" class="form-input search-input" placeholder="🔍 Rechercher par email ou ID de licence...">
+            <select id="licenseStatusFilter" class="select-filter">
+              <option value="">Tous les statuts</option>
+              <option value="active">Actives uniquement</option>
+              <option value="expired">Expirées uniquement</option>
+              <option value="revoked">Révoquées uniquement</option>
+            </select>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID Licence</th>
+                  <th>Client / Email</th>
+                  <th>Clé de Licence</th>
+                  <th>Capacité</th>
+                  <th>Expiration</th>
+                  <th>Statut</th>
+                  <th>Plan / Notes</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="licensesTableBody">
+                <tr>
+                  <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                    Chargement des licences...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 3 : CRÉER UNE LICENCE (PLANS COMMERCIAUX)                       -->
+      <!-- =================================================================== -->
+      <section id="tabCreate" class="tab-pane" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <h2>Créer une Licence Technicien</h2>
+            <p style="color: var(--text-secondary); font-size: 0.88rem;">
+              Sélectionnez une formule officielle ou personnalisez selon les besoins du client.
+            </p>
+          </div>
+
+          <!-- Commercial Plans Selection -->
+          <div class="plan-grid">
+            <div class="plan-choice-card selected" data-plan="starter">
+              <div class="plan-choice-title">Starter</div>
+              <div class="plan-choice-price">24,90 € <span style="font-size: 0.8rem; color: var(--text-secondary);">/mois</span></div>
+              <div class="plan-choice-desc">1 technicien connecté<br>Viewers illimités (0 €)</div>
+            </div>
+
+            <div class="plan-choice-card" data-plan="pro">
+              <div class="plan-choice-title">Pro</div>
+              <div class="plan-choice-price">110 € <span style="font-size: 0.8rem; color: var(--text-secondary);">/mois</span></div>
+              <div class="plan-choice-desc">1 à 5 techniciens simultanés<br>Viewers illimités (0 €)</div>
+            </div>
+
+            <div class="plan-choice-card" data-plan="ultra">
+              <div class="plan-choice-title">Personnalisé</div>
+              <div class="plan-choice-price" id="createUltraPriceDisplay">199 € <span style="font-size: 0.8rem; color: var(--text-secondary);">/mois</span></div>
+              <div class="plan-choice-desc">10 à 500 techniciens<br>Calcul dégressif par palier</div>
+            </div>
+
+            <div class="plan-choice-card" data-plan="custom">
+              <div class="plan-choice-title">Sur-Mesure</div>
+              <div class="plan-choice-price">Libre</div>
+              <div class="plan-choice-desc">Durée & connexions libres<br>Notes spéciales</div>
+            </div>
+          </div>
+
+          <!-- Ultra Slider (Shown only when Ultra selected) -->
+          <div id="createUltraOptions" style="display: none; margin-bottom: 1.5rem; background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+            <label style="font-size: 0.9rem; font-weight: 600;">Nombre de techniciens : <span id="createTechCount" class="slider-val">10</span> techniciens</label>
+            <input type="range" id="createTechSlider" min="10" max="500" step="10" value="10" style="width: 100%; margin: 0.75rem 0;">
+            <p style="font-size: 0.82rem; color: var(--text-muted);" id="createUltraFormulaExplanation">
+              199 € pour 10 techniciens (+14 €/tech jusqu'à 50, +10 €/tech jusqu'à 100, +7 €/tech au-delà). Facturation annuelle : 2 mois offerts.
+            </p>
+          </div>
+
+          <!-- Custom Options (Shown only when Custom selected) -->
+          <div id="createCustomOptions" style="display: none; margin-bottom: 1.5rem; background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div class="form-group">
+                <label>Connexions simultanées (Techniciens)</label>
+                <input type="number" id="customConnections" class="form-input" value="5" min="1" max="1000">
+              </div>
+              <div class="form-group">
+                <label>Durée de validité (en jours)</label>
+                <input type="number" id="customDays" class="form-input" value="30" min="1" max="36500">
+              </div>
+            </div>
+          </div>
+
+          <!-- Form Details -->
+          <form id="createLicenseForm" style="display: flex; flex-direction: column; gap: 1rem;">
+            <div class="form-group">
+              <label for="createEmail">Adresse Email du Client / Technicien *</label>
+              <input type="email" id="createEmail" class="form-input" placeholder="client@entreprise.fr" required>
+            </div>
+
+            <div class="form-group">
+              <label for="createNotes">Notes Internes (Optionnel)</label>
+              <input type="text" id="createNotes" class="form-input" placeholder="Ex: Client Entreprise ABC - Facture #1234">
+            </div>
+
+            <button type="submit" id="submitCreateBtn" class="btn btn-primary" style="margin-top: 0.5rem;">
+              ✨ Générer la Licence Immédiatement
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 4 : COMMANDES & VIREMENTS                                       -->
+      <!-- =================================================================== -->
+      <section id="tabOrders" class="tab-pane" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <h2>Commandes & Virements Bancaires</h2>
+            <p style="color: var(--text-secondary); font-size: 0.88rem;">
+              Validez les paiements par virement reçus pour activer automatiquement la licence client et expédier l'email.
+            </p>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>N° Commande</th>
+                  <th>Client / Email</th>
+                  <th>Offre & Techniciens</th>
+                  <th>Montant</th>
+                  <th>Paiement</th>
+                  <th>Statut</th>
+                  <th>Date</th>
+                  <th>Traitement</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody">
+                <tr>
+                  <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                    Chargement des commandes...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 5 : FACTURES & DOCUMENTS                                        -->
+      <!-- =================================================================== -->
+      <section id="tabInvoices" class="tab-pane" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Gestion des Factures</h2>
+              <p style="color: var(--text-secondary); font-size: 0.88rem;">
+                Factures conformes micro-entreprise (art. 293 B du CGI) générées automatiquement et archivées sur le serveur.
+              </p>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button type="button" class="btn btn-secondary btn-sm" data-action="open-test-email">
+                ✉️ Tester SMTP
+              </button>
+              <button type="button" class="btn btn-primary btn-sm" data-action="open-modal" data-modal="uploadInvoiceModal">
+                📤 Uploader une Facture Existante
+              </button>
+            </div>
+          </div>
+
+          <div class="filter-bar">
+            <input type="text" id="invoiceSearchInput" class="form-input search-input" placeholder="🔍 Rechercher par N° facture, nom de client ou email...">
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>N° Facture</th>
+                  <th>Date</th>
+                  <th>Client / Société</th>
+                  <th>Email</th>
+                  <th>Prestation</th>
+                  <th>Montant Net</th>
+                  <th>Statut</th>
+                  <th>Origine</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="invoicesTableBody">
+                <tr>
+                  <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                    Chargement des factures...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 6 : ALERTES DE SÉCURITÉ                                         -->
+      <!-- =================================================================== -->
+      <section id="tabAlerts" class="tab-pane" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <h2>Journal des Alertes de Sécurité</h2>
+            <p style="color: var(--text-secondary); font-size: 0.88rem;">
+              Détection des partages de codes viewers et des tentatives suspectes.
+            </p>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type d'Alerte</th>
+                  <th>Code Concerné</th>
+                  <th>IP Initiale</th>
+                  <th>IP Suspecte</th>
+                  <th>Message</th>
+                </tr>
+              </thead>
+              <tbody id="alertsTableBody">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                    Chargement des alertes...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODALS                                                                -->
+  <!-- ===================================================================== -->
+
+  <!-- Modal Révocation -->
+  <div id="revokeModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="color: #f87171;">🛑 Révoquer la Licence</h3>
+        <button class="modal-close" data-action="close-modal" data-modal="revokeModal">&times;</button>
+      </div>
+      <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem;">
+        Voulez-vous révoquer l'accès pour la licence <strong id="revokeLicenseIdDisplay" style="color: var(--text-primary);"></strong> ?
+      </p>
+      <div class="form-group" style="margin-bottom: 1.5rem;">
+        <label>Motif de la révocation</label>
+        <input type="text" id="revokeReasonInput" class="form-input" placeholder="Ex: Fin d'abonnement, non-paiement, demande client...">
+      </div>
+      <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+        <button type="button" class="btn btn-secondary" data-action="close-modal" data-modal="revokeModal">Annuler</button>
+        <button type="button" id="confirmRevokeBtn" class="btn btn-danger">Confirmer la Révocation</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Prolongation (+30j) -->
+  <div id="extendModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="color: #38bdf8;">🔄 Prolonger la Licence</h3>
+        <button class="modal-close" data-action="close-modal" data-modal="extendModal">&times;</button>
+      </div>
+      <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem;">
+        Prolonger la durée de validité pour la licence <strong id="extendLicenseIdDisplay" style="color: var(--text-primary);"></strong>.
+      </p>
+      <div class="form-group" style="margin-bottom: 1.5rem;">
+        <label>Nombre de jours à ajouter</label>
+        <select id="extendDaysSelect" class="form-input">
+          <option value="30">30 jours (1 mois)</option>
+          <option value="90">90 jours (3 mois)</option>
+          <option value="180">180 jours (6 mois)</option>
+          <option value="365">365 jours (1 an)</option>
+          <option value="36500">À vie (~100 ans)</option>
+        </select>
+      </div>
+      <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+        <button type="button" class="btn btn-secondary" data-action="close-modal" data-modal="extendModal">Annuler</button>
+        <button type="button" id="confirmExtendBtn" class="btn btn-primary">Prolonger la Licence</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Résultat Création Licence -->
+  <div id="createdModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3 style="color: #34d399;">🎉 Licence Créée avec Succès !</h3>
+        <button class="modal-close" data-action="close-modal" data-modal="createdModal">&times;</button>
+      </div>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+        La licence a été générée en base de données. Vous pouvez transmettre ces accès au technicien :
+      </p>
+
+      <div style="background: rgba(0,0,0,0.4); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 0.9rem; line-height: 1.7; margin-bottom: 1.25rem;">
+        • <strong>Identifiant Licence :</strong> <code id="resLicId" style="color: var(--border-focus);"></code><br>
+        • <strong>Clé Secrète :</strong> <code id="resLicKey" style="color: #34d399;"></code><br>
+        • <strong>Client :</strong> <span id="resLicEmail"></span><br>
+        • <strong>Capacité :</strong> <span id="resLicMax"></span> technicien(s)<br>
+        • <strong>Expiration :</strong> <span id="resLicExp"></span>
+      </div>
+
+      <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+        <button type="button" id="copyCreatedLicBtn" class="btn btn-secondary">📋 Copier le Message Client</button>
+        <button type="button" class="btn btn-primary" data-action="close-and-switch" data-modal="createdModal" data-tab="licenses">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Upload Facture Existante -->
+  <div id="uploadInvoiceModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3 style="color: #38bdf8;">📤 Uploader une Facture Existante</h3>
+        <button class="modal-close" data-action="close-modal" data-modal="uploadInvoiceModal">&times;</button>
+      </div>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+        Importez un fichier de facture déjà émis (PDF ou HTML) pour l'archiver sur le serveur et la rattacher à vos clients.
+      </p>
+
+      <form id="uploadInvoiceForm" style="display: flex; flex-direction: column; gap: 0.85rem;">
+        <div class="form-group">
+          <label>Fichier Facture (PDF ou HTML) *</label>
+          <input type="file" id="uploadInvoiceFile" class="form-input" accept=".pdf,.html,.htm" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label>Nom Client / Raison Sociale *</label>
+            <input type="text" id="uploadCustomerName" class="form-input" placeholder="Ex: Société ABC ou M. Dupont" required>
+          </div>
+          <div class="form-group">
+            <label>Email Client *</label>
+            <input type="email" id="uploadCustomerEmail" class="form-input" placeholder="client@domaine.fr" required>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label>Numéro de Facture (Optionnel)</label>
+            <input type="text" id="uploadInvoiceNumber" class="form-input" placeholder="Laisser vide pour auto (FAC-2026-XXXX)">
+          </div>
+          <div class="form-group">
+            <label>Montant Net (€) *</label>
+            <input type="number" id="uploadAmount" class="form-input" step="0.01" min="0" placeholder="Ex: 20.00" required>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label>Offre / Plan</label>
+            <select id="uploadPlan" class="form-input">
+              <option value="Starter">Starter (24,90 € / 1 tech)</option>
+              <option value="Pro" selected>Pro (110 € / 5 techs)</option>
+              <option value="Ultra">Ultra / Personnalisé (10 à 500 techs)</option>
+              <option value="Personnalisé">Personnalisé / Prestation</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Réf. Commande (Optionnel)</label>
+            <input type="text" id="uploadOrderId" class="form-input" placeholder="Ex: ORD-XXXX-XXXX">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label>Adresse postale (Optionnel)</label>
+            <input type="text" id="uploadCustomerAddress" class="form-input" placeholder="Ex: 10 Rue de la Paix">
+          </div>
+          <div class="form-group">
+            <label>Code Postal & Ville</label>
+            <input type="text" id="uploadCustomerCity" class="form-input" placeholder="75001 Paris">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>N° SIRET / TVA Client (Optionnel)</label>
+          <input type="text" id="uploadCustomerSiret" class="form-input" placeholder="Ex: 123 456 789 00012">
+        </div>
+
+        <div class="form-group">
+          <label>Notes / Commentaires (Optionnel)</label>
+          <input type="text" id="uploadNotes" class="form-input" placeholder="Ex: Facture archivée manuelle 2026">
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 0.5rem;">
+          <button type="button" class="btn btn-secondary" data-action="close-modal" data-modal="uploadInvoiceModal">Annuler</button>
+          <button type="submit" id="submitUploadInvoiceBtn" class="btn btn-primary">📤 Enregistrer & Archiver</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Test Connexion SMTP -->
+  <div id="testEmailModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 style="color: #38bdf8;">✉️ Test de Connexion SMTP</h3>
+        <button class="modal-close" data-action="close-modal" data-modal="testEmailModal">&times;</button>
+      </div>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+        Envoyez un email de test immédiat pour valider la configuration SMTP (port 587 STARTTLS / 465 TLS) et vérifier la délivrabilité.
+      </p>
+
+      <form id="testEmailForm" style="display: flex; flex-direction: column; gap: 0.85rem;">
+        <div class="form-group">
+          <label>Adresse email de destination *</label>
+          <input type="email" id="testEmailTarget" class="form-input" placeholder="technicien@entreprise.fr" required>
+          <small style="color: var(--text-muted); font-size: 0.78rem;">L'email contiendra le diagnostic complet de connexion.</small>
+        </div>
+
+        <div id="testEmailResultBox" style="display: none; padding: 0.85rem; border-radius: var(--radius-sm); font-size: 0.85rem; line-height: 1.5; margin-top: 0.25rem;"></div>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 0.5rem;">
+          <button type="button" class="btn btn-secondary" data-action="close-modal" data-modal="testEmailModal">Fermer</button>
+          <button type="submit" id="submitTestEmailBtn" class="btn btn-primary">🚀 Envoyer l'Email de Test</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Configuration Mot de passe Admin -->
+  <div id="setupPasswordModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 style="color: #38bdf8;">🔑 Mot de passe Licence Admin</h3>
+        <button type="button" class="modal-close" data-action="close-modal" data-modal="setupPasswordModal">&times;</button>
+      </div>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+        Si vous possédez une licence Administrateur (licence à vie), renseignez vos identifiants de licence pour définir ou modifier votre mot de passe d'accès direct par e-mail.
+      </p>
+
+      <form id="adminPasswordSetupForm" style="display: flex; flex-direction: column; gap: 0.9rem;">
+        <div class="form-group">
+          <label for="setupAdminLicenseId">Identifiant Licence Admin *</label>
+          <input type="text" id="setupAdminLicenseId" class="form-input" placeholder="MP-1CE6-0489-5AF5" required autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <label for="setupAdminLicenseKey">Clé de Licence Admin *</label>
+          <input type="password" id="setupAdminLicenseKey" class="form-input" placeholder="mpsk_..." required autocomplete="current-password">
+        </div>
+
+        <div class="form-group">
+          <label for="setupAdminNewPassword">Nouveau mot de passe *</label>
+          <input type="password" id="setupAdminNewPassword" class="form-input" placeholder="Minimum 8 caractères" minlength="8" required autocomplete="new-password">
+        </div>
+
+        <div class="form-group">
+          <label for="setupAdminConfirmPassword">Confirmer le mot de passe *</label>
+          <input type="password" id="setupAdminConfirmPassword" class="form-input" placeholder="Confirmez le mot de passe" minlength="8" required autocomplete="new-password">
+        </div>
+
+        <div id="setupPasswordErrorBox" style="display: none; padding: 0.75rem; border-radius: var(--radius-sm); font-size: 0.82rem; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);"></div>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 0.5rem;">
+          <button type="button" class="btn btn-secondary" data-action="close-modal" data-modal="setupPasswordModal">Annuler</button>
+          <button type="submit" id="submitSetupPasswordBtn" class="btn btn-primary">💾 Enregistrer le mot de passe</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="app.js?v=5"></script>
+</body>
+</html>

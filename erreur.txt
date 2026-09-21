@@ -1,0 +1,159 @@
+ 
+GET
+https://api.relaisdesk.fr/api/v1/technician/interventions
+[HTTP/2 401  43ms]
+
+	
+GET
+	https://api.relaisdesk.fr/api/v1/technician/interventions
+État
+401
+VersionHTTP/2
+Transfert707 o (taille 42 o)
+Politique de référentno-referrer
+Résolution DNSSystème
+
+    	
+    access-control-allow-headers
+    	Content-Type, Authorization, Stripe-Signature, Accept, X-Requested-With, Origin
+    access-control-allow-methods
+    	GET, POST, PUT, DELETE, OPTIONS
+    access-control-allow-origin
+    	https://relaisdesk.fr
+    access-control-max-age
+    	86400
+    cache-control
+    	no-store
+    content-length
+    	42
+    content-type
+    	text/plain; charset=utf-8
+    date
+    	Sun, 20 Sep 2026 19:17:41 GMT
+    pragma
+    	no-cache
+    referrer-policy
+    	strict-origin-when-cross-origin
+    server
+    	nginx
+    strict-transport-security
+    	max-age=63072000; includeSubDomains
+    vary
+    	Origin
+    x-content-type-options
+    	nosniff
+    X-Firefox-Spdy
+    	h2
+    x-frame-options
+    	DENY
+    x-xss-protection
+    	1; mode=block
+    	
+    Accept
+    	application/json
+    Accept-Encoding
+    	gzip, deflate, br, zstd
+    Accept-Language
+    	fr,fr-FR;q=0.9,en-US;q=0.8,en;q=0.7
+    Authorization
+    	Bearer null
+    Connection
+    	keep-alive
+    Host
+    	api.relaisdesk.fr
+    Origin
+    	https://relaisdesk.fr
+    Priority
+    	u=4
+    Sec-Fetch-Dest
+    	empty
+    Sec-Fetch-Mode
+    	cors
+    Sec-Fetch-Site
+    	same-site
+    TE
+    	trailers
+    User-Agent
+    	Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0
+
+XHR 
+OPTIONS
+https://api.relaisdesk.fr/api/v1/technician/interventions
+[HTTP/2 200  1239ms]
+
+	
+OPTIONS
+	https://api.relaisdesk.fr/api/v1/technician/interventions
+État
+200
+VersionHTTP/2
+Transfert623 o (taille 0 o)
+Politique de référentno-referrer
+Résolution DNSSystème
+
+    	
+    access-control-allow-headers
+    	Content-Type, Authorization, Stripe-Signature, Accept, X-Requested-With, Origin
+    access-control-allow-methods
+    	GET, POST, PUT, DELETE, OPTIONS
+    access-control-allow-origin
+    	https://relaisdesk.fr
+    access-control-max-age
+    	86400
+    cache-control
+    	no-store
+    content-length
+    	0
+    date
+    	Sun, 20 Sep 2026 19:17:41 GMT
+    pragma
+    	no-cache
+    referrer-policy
+    	strict-origin-when-cross-origin
+    server
+    	nginx
+    strict-transport-security
+    	max-age=63072000; includeSubDomains
+    vary
+    	Origin
+    x-content-type-options
+    	nosniff
+    X-Firefox-Spdy
+    	h2
+    x-frame-options
+    	DENY
+    x-xss-protection
+    	1; mode=block
+    	
+    Accept
+    	*/*
+    Accept-Encoding
+    	gzip, deflate, br, zstd
+    Accept-Language
+    	fr,fr-FR;q=0.9,en-US;q=0.8,en;q=0.7
+    Access-Control-Request-Headers
+    	authorization
+    Access-Control-Request-Method
+    	GET
+    Connection
+    	keep-alive
+    Host
+    	api.relaisdesk.fr
+    Origin
+    	https://relaisdesk.fr
+    Priority
+    	u=4
+    Sec-Fetch-Dest
+    	empty
+    Sec-Fetch-Mode
+    	cors
+    Sec-Fetch-Site
+    	same-site
+    User-Agent
+    	Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0
+
+Uncaught (in promise) TypeError: can't access property "map", d.interventions is undefined
+    <anonymous> debugger eval code:13
+    async* debugger eval code:14
+ 
+debugger eval code:13:37 

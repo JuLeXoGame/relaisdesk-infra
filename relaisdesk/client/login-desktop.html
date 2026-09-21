@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RelaisDesk — Connexion Technicien</title>
+  <meta name="description" content="Connexion Google sécurisée pour l'application RelaisDesk Technicien.">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://*.googleusercontent.com https://ssl.gstatic.com; frame-src https://accounts.google.com/; connect-src 'self' https://api.relaisdesk.fr http://localhost:* http://127.0.0.1:* https://accounts.google.com/; object-src 'none'; base-uri 'self'; form-action 'self';">
+  <meta name="theme-color" content="#0b0f19">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="icon" type="image/avif" href="../logo.avif">
+  <link rel="stylesheet" href="styles.css?v=20260912-titles">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="login-desktop.js" defer></script>
+</head>
+<body>
+  <div class="glow glow-one"></div>
+  <div class="glow glow-two"></div>
+
+  <main id="authScreen" class="auth-shell">
+    <section class="auth-card" aria-labelledby="authTitle" style="max-width: 440px; margin: 0 auto;">
+      <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 12px;">
+        <a class="brand" href="../"><img src="../logo.avif" alt="" width="48" height="48"><span>Relais<span>Desk</span></span></a>
+      </div>
+
+      <div class="auth-header" style="text-align: center; margin-bottom: 24px;">
+        <span class="badge" style="display: inline-block; margin-bottom: 8px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em;">Espace Technicien</span>
+        <h1 id="authTitle" style="font-size: 1.45rem; font-weight: 700; margin: 0 0 6px 0;">Connexion Google</h1>
+        <p class="muted" id="authSubtitle" style="font-size: 0.9rem; margin: 0;">Connectez-vous pour autoriser votre application locale RelaisDesk Technicien.</p>
+      </div>
+
+      <div id="authMessage" class="banner" style="display: none; margin-bottom: 16px;"></div>
+
+      <div id="googleSection" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 50px; margin: 12px 0 20px 0;">
+        <div id="googleSignInBtn"></div>
+      </div>
+
+      <div id="redirectHelp" style="display: none; text-align: center; margin-top: 16px;">
+        <p class="muted" style="font-size: 0.85rem; margin-bottom: 8px;">Si la redirection ne s'effectue pas automatiquement :</p>
+        <a id="fallbackRedirectLink" href="#" class="btn btn-secondary" style="font-size: 0.85rem; padding: 6px 14px; text-decoration: none; display: inline-block;">Finaliser la connexion</a>
+      </div>
+
+      <div class="auth-footer" style="text-align: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08);">
+        <p class="muted" style="font-size: 0.8rem; margin: 0;">Application de téléassistance RelaisDesk sécurisée • Chiffrement de bout en bout</p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

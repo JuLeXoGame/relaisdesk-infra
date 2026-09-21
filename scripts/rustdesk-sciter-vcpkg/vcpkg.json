@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "relaisdesk-rustdesk-sciter-dependencies",
+  "version-string": "1",
+  "builtin-baseline": "120deac3062162151622ca4860575a33844ba10b",
+  "dependencies": [
+    "aom",
+    "libvpx",
+    "libyuv",
+    "opus"
+  ],
+  "vcpkg-configuration": {
+    "overlay-ports": [
+      "../../rustdesk/res/vcpkg"
+    ]
+  }
+}

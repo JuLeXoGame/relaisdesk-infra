@@ -1,0 +1,12 @@
+# Fail2ban jail for RelaisDesk API
+# Banned IPs are blocked at the Linux iptables firewall level for 1 hour after 5 failures in 10 minutes.
+[relaisdesk-api]
+enabled  = true
+port     = http,https
+filter   = relaisdesk-api
+logpath  = /var/log/relaisdesk/api.log
+backend  = auto
+maxretry = 5
+findtime = 600
+bantime  = 3600
+banaction = iptables-multiport

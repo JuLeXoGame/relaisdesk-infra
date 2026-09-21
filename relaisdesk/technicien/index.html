@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RelaisDesk — Espace Technicien</title>
+  <meta name="description" content="Espace Technicien RelaisDesk — Génération de codes d'accès viewers et gestion des sessions d'assistance à distance.">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <meta http-equiv="refresh" content="0; url=../client/#codes">
+  <meta name="theme-color" content="#0b0f19">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="icon" type="image/avif" href="logo.avif">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css?v=1">
+</head>
+<body>
+
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <!-- Redirection Fallback Notice -->
+  <div class="auth-wrapper">
+    <div class="auth-card" style="text-align: center;">
+      <a href="../client/#codes" class="auth-logo">
+        <img src="logo.avif" alt="Logo RelaisDesk" width="42" height="42">
+        <span>Relais<span class="gradient-text">Desk</span></span>
+      </a>
+      <div class="badge-tech">Espace Client & Technicien Unifié</div>
+      <h2 style="margin-top: 1rem;">Redirection en cours…</h2>
+      <p style="color: var(--text-secondary); font-size: 0.95rem; margin: 1rem 0 1.5rem;">
+        L'Espace Technicien est désormais directement intégré au nouvel Espace Client unifié.
+      </p>
+      <a href="../client/#codes" class="btn btn-primary btn-block">
+        🔑 Accéder à la gestion des codes viewers →
+      </a>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 1. ÉCRAN DE CONNEXION TECHNICIEN                                      -->
+  <!-- ===================================================================== -->
+  <div id="authScreen" class="auth-wrapper">
+    <div class="auth-card">
+      <a href="../" class="auth-logo">
+        <img src="logo.avif" alt="Logo RelaisDesk" width="42" height="42">
+        <span>Relais<span class="gradient-text">Desk</span></span>
+      </a>
+      <div class="badge-tech">Espace Technicien</div>
+      <h2>Connexion Technicien</h2>
+      <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1.5rem;">
+        Identifiez-vous avec votre adresse e-mail et votre mot de passe pour accéder à vos outils d'assistance.
+      </p>
+
+      <form id="techLoginForm" class="auth-form">
+        <div class="form-group">
+          <label for="techLicenseId">Adresse e-mail (ou Identifiant de Licence)</label>
+          <input type="text" id="techLicenseId" class="form-input" placeholder="vous@entreprise.fr" autocomplete="username" required>
+        </div>
+
+        <div class="form-group">
+          <label for="techLicenseKey">Mot de passe (ou Clé Secrète)</label>
+          <input type="password" id="techLicenseKey" class="form-input" placeholder="••••••••" autocomplete="current-password" required>
+        </div>
+
+        <div class="form-group" style="flex-direction: row; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+          <input type="checkbox" id="rememberMe" checked style="width: auto; cursor: pointer;">
+          <label for="rememberMe" style="cursor: pointer; font-size: 0.85rem; margin-bottom: 0;">Se souvenir de moi sur cet appareil</label>
+        </div>
+
+        <button type="submit" id="loginBtn" class="btn btn-primary btn-block" style="margin-top: 1rem;">
+          🚀 Accéder à mon Espace Technicien
+        </button>
+
+        <div style="margin-top: 1.25rem; text-align: center;">
+          <a href="../#pricing" style="color: var(--text-muted); font-size: 0.82rem; text-decoration: none;">
+            Pas encore de licence ? <strong>Commander une offre</strong>
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 2. APPLICATION DASHBOARD TECHNICIEN                                   -->
+  <!-- ===================================================================== -->
+  <div id="appScreen" class="app-container" style="display: none;">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="../" class="sidebar-logo">
+          <img src="logo.avif" alt="" width="42" height="42">
+          <span>Relais<span class="gradient-text">Desk</span></span>
+        </a>
+      </div>
+
+      <ul class="sidebar-menu">
+        <li>
+          <a class="nav-item active" data-tab="overview">
+            <span class="nav-item-icon">📊</span>
+            <span>Vue d'ensemble</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-tab="codes">
+            <span class="nav-item-icon">🔑</span>
+            <span>Sessions & Codes</span>
+          </a>
+        </li>
+		<li>
+		  <a class="nav-item" data-tab="interventions">
+			<span class="nav-item-icon">🗂️</span>
+			<span>Historique</span>
+		  </a>
+		</li>
+        <li>
+          <a class="nav-item" data-tab="config">
+            <span class="nav-item-icon">⚙️</span>
+            <span>Configuration Relais</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-tab="downloads">
+            <span class="nav-item-icon">📥</span>
+            <span>Téléchargements</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <div class="tech-profile">
+          <span class="tech-email" id="sidebarTechEmail">technicien@relaisdesk.fr</span>
+          <span class="tech-license" id="sidebarTechLicense">MP-XXXX-XXXX-XXXX</span>
+        </div>
+        <button id="sidebarLogoutBtn" class="btn btn-secondary btn-sm btn-block">
+          🚪 Déconnexion
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="top-bar">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <button class="mobile-nav-toggle" id="mobileMenuBtn" aria-label="Menu Mobile">☰</button>
+          <h1 class="page-title" id="pageTitle">Tableau de Bord Technicien</h1>
+        </div>
+
+        <div class="top-actions">
+          <div class="status-pill">
+            <span class="status-dot"></span>
+            <span>Relais Connecté</span>
+          </div>
+          <button id="refreshBtn" class="btn btn-secondary btn-sm" title="Actualiser les données">
+            🔄 Actualiser
+          </button>
+        </div>
+      </header>
+
+      <div class="content-body">
+        <!-- =============================================================== -->
+        <!-- TAB 1 : VUE D'ENSEMBLE                                         -->
+        <!-- =============================================================== -->
+        <section id="tab-overview" class="tab-pane active">
+          <!-- Stats Summary -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon">📊</div>
+              <div class="stat-info">
+                <span class="stat-label">Total Codes Générés</span>
+                <span class="stat-value" id="statTotalCodes">0</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon green">🟢</div>
+              <div class="stat-info">
+                <span class="stat-label">Codes Actifs (Clients)</span>
+                <span class="stat-value" id="statActiveCodes">0</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon amber">⏳</div>
+              <div class="stat-info">
+                <span class="stat-label">Codes Expirés / Révoqués</span>
+                <span class="stat-value" id="statExpiredCodes">0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Code Generator Card -->
+          <div class="generator-card">
+            <div class="generator-header">
+              <h3>✨ Générateur de Session Client</h3>
+              <p>Générez un code temporaire unique (valable 12 heures) à transmettre à votre client pour démarrer l'assistance.</p>
+            </div>
+
+            <form id="generateCodeForm">
+              <div class="gen-form-inline">
+                <div class="form-group">
+                  <label for="clientEmailInput">Nom ou E-mail du client (Optionnel) :</label>
+                  <input type="text" id="clientEmailInput" class="form-input" placeholder="Ex: client@entreprise.fr ou M. Dupont">
+                </div>
+                <div style="padding-top: 1.55rem;">
+                  <button type="submit" id="generateBtn" class="btn btn-primary">
+                    ⚡ Générer le Code d'Accès
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            <!-- Dynamic Result Box -->
+            <div id="genResultBox" class="gen-result-box" style="display: none;">
+              <div class="gen-code-display">
+                <span style="font-weight: 600; font-size: 0.95rem;">Code Client :</span>
+                <span class="gen-code-text" id="generatedCodeDisplay">----</span>
+              </div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button id="copyGenCodeBtn" class="btn btn-primary btn-sm">📋 Copier le Code</button>
+                <button id="copyGenMessageBtn" class="btn btn-secondary btn-sm">📩 Copier Message Client</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Codes Preview -->
+          <div class="table-card">
+            <div class="table-header-bar">
+              <h3>🔑 Codes d'Accès Récents</h3>
+              <button class="btn btn-secondary btn-sm" data-action="switch-tab" data-tab="codes">Voir Tous les Codes →</button>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Client</th>
+                    <th>Statut</th>
+                    <th>Date d'expiration</th>
+                    <th style="text-align: right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="overviewCodesTbody">
+                  <tr>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                      Chargement des sessions...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+		<!-- =============================================================== -->
+		<!-- HISTORIQUE PROFESSIONNEL DES INTERVENTIONS                      -->
+		<!-- =============================================================== -->
+		<section id="tab-interventions" class="tab-pane">
+		  <div class="table-card">
+			<div class="table-header-bar">
+			  <div>
+				<h3 style="font-size: 1.25rem;">Historique professionnel des interventions</h3>
+				<p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.2rem;">Une fiche est créée avec chaque code viewer. Démarrez-la au début de l'assistance, puis clôturez-la avec un compte rendu.</p>
+			  </div>
+			</div>
+			<div style="overflow-x: auto;">
+			  <table class="custom-table">
+				<thead><tr><th>Référence</th><th>Client</th><th>Objet</th><th>Compte rendu</th><th>Statut</th><th>Début</th><th>Durée</th><th style="text-align:right;">Actions</th></tr></thead>
+				<tbody id="interventionsTbody"><tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:2rem;">Chargement de l'historique...</td></tr></tbody>
+			  </table>
+			</div>
+		  </div>
+		</section>
+
+        <!-- =============================================================== -->
+        <!-- TAB 2 : SESSIONS & CODES                                       -->
+        <!-- =============================================================== -->
+        <section id="tab-codes" class="tab-pane">
+          <div class="table-card">
+            <div class="table-header-bar">
+              <div>
+                <h3 style="font-size: 1.25rem;">Gestion des Codes d'Accès & Interventions</h3>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.2rem;">
+                  Consultez, copiez ou révoquez les accès temporaires de vos clients.
+                </p>
+              </div>
+
+              <div class="table-filters">
+                <div class="search-input-wrap">
+                  <span class="search-icon">🔍</span>
+                  <input type="text" id="codesSearchInput" class="form-input" placeholder="Rechercher code, client...">
+                </div>
+
+                <select id="codesFilterStatus" class="filter-select">
+                  <option value="all">Tous les statuts</option>
+                  <option value="active">Actifs uniquement</option>
+                  <option value="expired">Expirés</option>
+                  <option value="revoked">Révoqués</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Code d'Accès</th>
+                    <th>Client Assisté</th>
+                    <th>Statut</th>
+                    <th>Créé le</th>
+                    <th>Expire le</th>
+                    <th style="text-align: right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="allCodesTbody">
+                  <tr>
+                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                      Chargement des données...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- TAB 3 : CONFIGURATION RELAIS                                   -->
+        <!-- =============================================================== -->
+        <section id="tab-config" class="tab-pane">
+          <div class="config-grid">
+            <!-- Relais Server Settings -->
+            <div class="info-card">
+              <h3>🔒 Paramètres Serveur Relais RustDesk</h3>
+              <p style="color: var(--text-secondary); font-size: 0.88rem;">
+                Ces paramètres sont automatiquement configurés dans votre logiciel Technicien. Si vous utilisez un client RustDesk standard, vous pouvez les appliquer manuellement :
+              </p>
+
+              <div class="param-list">
+                <div class="param-item">
+                  <span class="param-label">Serveur ID / Rendezvous (ID Server)</span>
+                  <span class="param-val" id="cfgServerIP">api.relaisdesk.fr</span>
+                </div>
+                <div class="param-item">
+                  <span class="param-label">Port Rendezvous (ID Port)</span>
+                  <span class="param-val" id="cfgRendezvousPort">21116</span>
+                </div>
+                <div class="param-item">
+                  <span class="param-label">Port Relais (Relay Port)</span>
+                  <span class="param-val" id="cfgRelayPort">21117</span>
+                </div>
+                <div class="param-item" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+                  <span class="param-label">Clé Publique du Serveur (Key)</span>
+                  <span class="param-val" id="cfgPublicKey" style="word-break: break-all; font-size: 0.8rem; background: rgba(0,0,0,0.5); padding: 0.4rem; border-radius: 4px; width: 100%;">Chargement...</span>
+                </div>
+              </div>
+
+              <button id="copyFullConfigBtn" class="btn btn-secondary btn-block" style="margin-top: 1.25rem;">
+                📋 Copier la Chaîne de Configuration Complète
+              </button>
+            </div>
+
+            <!-- License Info Card -->
+            <div class="info-card">
+              <h3>📜 Détails de votre Licence</h3>
+              <div class="param-list">
+                <div class="param-item">
+                  <span class="param-label">E-mail Titulaire</span>
+                  <span class="param-val" id="infoTechEmail">-</span>
+                </div>
+                <div class="param-item">
+                  <span class="param-label">Identifiant Licence</span>
+                  <span class="param-val" id="infoTechLicenseId">-</span>
+                </div>
+                <div class="param-item">
+                  <span class="param-label">Validité & Expiration</span>
+                  <span class="param-val" id="infoTechExpiresAt" style="color: #34d399;">-</span>
+                </div>
+                <div class="param-item">
+                  <span class="param-label">Viewers Clients</span>
+                  <span class="param-val" style="color: #60a5fa;">Illimités & Gratuits</span>
+                </div>
+              </div>
+
+              <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.25); border-radius: var(--radius-md);">
+                <p style="font-size: 0.85rem; color: var(--text-secondary);">
+                  💡 <strong>Besoin d'aide ?</strong> Vous pouvez joindre le support technique via notre <a href="../contact.html" style="color: #60a5fa;">formulaire de contact</a>.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- TAB 4 : TÉLÉCHARGEMENTS                                        -->
+        <!-- =============================================================== -->
+        <section id="tab-downloads" class="tab-pane">
+          <div class="config-grid">
+            <!-- Logiciel Technicien -->
+            <div class="info-card">
+              <h3>🛠️ Logiciel Technicien Officiel</h3>
+              <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1.25rem;">
+                Application de bureau avec configuration automatique de RustDesk et gestion des sessions :
+              </p>
+
+              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Setup_1.0.0.exe" class="download-link-btn">
+                  <div>
+                    <strong style="display: block;">📦 Installeur Windows (.exe)</strong>
+                    <span style="font-size: 0.78rem; color: var(--text-muted);">Installation complète avec raccourcis Bureau</span>
+                  </div>
+                  <span>⬇️</span>
+                </a>
+
+                <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Portable.exe" class="download-link-btn">
+                  <div>
+                    <strong style="display: block;">⚡ Version Portative Windows (.exe)</strong>
+                    <span style="font-size: 0.78rem; color: var(--text-muted);">Autonome sans installation requise</span>
+                  </div>
+                  <span>⬇️</span>
+                </a>
+
+                <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien.deb" class="download-link-btn">
+                  <div>
+                    <strong style="display: block;">🐧 Paquet Debian / Ubuntu (.deb)</strong>
+                    <span style="font-size: 0.78rem; color: var(--text-muted);">Pour distributions Linux Debian, Ubuntu, Mint</span>
+                  </div>
+                  <span>⬇️</span>
+                </a>
+
+                <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Linux" class="download-link-btn">
+                  <div>
+                    <strong style="display: block;">🐧 Exécutable Linux Autonome</strong>
+                    <span style="font-size: 0.78rem; color: var(--text-muted);">Binaire portable toutes distributions (Fedora, Arch, etc.)</span>
+                  </div>
+                  <span>⬇️</span>
+                </a>
+              </div>
+            </div>
+
+            <!-- Client Viewer -->
+            <div class="info-card">
+              <h3>👁️ Applications Viewer pour Clients</h3>
+              <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1.25rem;">
+                Liens à transmettre à vos clients pour installer ou lancer le Viewer léger :
+              </p>
+
+              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Setup.exe" class="download-link-btn">
+                  <div>
+                    <strong style="display: block;">📦 Installeur Viewer Windows (.exe)</strong>
+                    <span style="font-size: 0.78rem; color: var(--text-muted);">Installeur client léger</span>
+                  </div>
+                  <span>⬇️</span>
+                </a>
+
+                <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Portable.exe" class="download-link-btn">
+                  <div>
+                    <strong style="display: block;">⚡ Viewer Portable Windows (.exe)</strong>
+                    <span style="font-size: 0.78rem; color: var(--text-muted);">Exécution immédiate en 1 clic</span>
+                  </div>
+                  <span>⬇️</span>
+                </a>
+
+                <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_viewer.deb" class="download-link-btn">
+                  <div>
+                    <strong style="display: block;">🐧 Viewer Linux (.deb)</strong>
+                    <span style="font-size: 0.78rem; color: var(--text-muted);">Paquet client pour Linux</span>
+                  </div>
+                  <span>⬇️</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODALES & DIALOGUES                                                   -->
+  <!-- ===================================================================== -->
+
+  <!-- Modal Confirmation Suppression / Révocation -->
+  <div id="deleteConfirmModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="deleteModalTitle">Confirmer la suppression</h3>
+      </div>
+      <div class="modal-body" id="deleteModalBody">
+        Voulez-vous vraiment supprimer ce code d'accès ?
+      </div>
+      <div class="modal-actions">
+        <button id="cancelDeleteBtn" class="btn btn-secondary">Annuler</button>
+        <button id="confirmDeleteBtn" class="btn btn-danger">Confirmer la suppression</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Message Client -->
+  <div id="clientMsgModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📩 Instructions pour votre client</h3>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 0.75rem;">Voici le message prêt à copier et envoyer à votre client par email, SMS ou messagerie :</p>
+        <textarea id="clientMsgTextarea" class="form-input" style="height: 140px; font-size: 0.85rem; font-family: sans-serif; resize: none;" readonly></textarea>
+      </div>
+      <div class="modal-actions">
+        <button id="closeClientMsgBtn" class="btn btn-secondary">Fermer</button>
+        <button id="copyClientMsgModalBtn" class="btn btn-primary">📋 Copier le Message</button>
+      </div>
+    </div>
+  </div>
+
+	<!-- Modal de clôture d'intervention -->
+	<div id="completeInterventionModal" class="modal-overlay">
+	  <div class="modal-content">
+		<div class="modal-header"><h3>Clôturer l'intervention</h3></div>
+		<form id="completeInterventionForm">
+		  <div class="modal-body">
+			<div class="form-group"><label for="completeClientReference">Référence client</label><input id="completeClientReference" class="form-input" maxlength="254"></div>
+			<div class="form-group"><label for="completeTitle">Objet</label><input id="completeTitle" class="form-input" maxlength="160" required></div>
+			<div class="form-group"><label for="completeSummary">Compte rendu professionnel</label><textarea id="completeSummary" class="form-input" maxlength="4000" style="height:130px;resize:vertical;" placeholder="Travaux réalisés, résultat et recommandations..."></textarea></div>
+			<p style="font-size:.78rem;color:var(--text-muted);">Ne saisissez aucun mot de passe ni donnée inutilement sensible.</p>
+		  </div>
+		  <div class="modal-actions"><button id="cancelCompleteInterventionBtn" type="button" class="btn btn-secondary">Annuler</button><button type="submit" class="btn btn-primary">Clôturer</button></div>
+		</form>
+	  </div>
+	</div>
+
+  <!-- Toasts Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- App Script -->
+  <script src="app.js?v=20260920-interventions"></script>
+</body>
+</html>

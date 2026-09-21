@@ -1,0 +1,30 @@
+FROM ubuntu:24.04@sha256:1e0a86e57d247923571b75e0aaf48a1449cf8c543d51fb3e07a4a7d7bfa79316
+
+LABEL org.opencontainers.image.title="RelaisDesk Server" \
+      org.opencontainers.image.description="RelaisDesk hbbs/hbbr release binaries" \
+      org.opencontainers.image.licenses="AGPL-3.0-only" \
+      org.opencontainers.image.vendor="Julien BELLOT EI — RelaisDesk" \
+      org.opencontainers.image.url="https://relaisdesk.fr/logiciel-libre.html" \
+      org.opencontainers.image.source="https://github.com/JuLeXoGame/rustdesk-server" \
+      org.opencontainers.image.revision="d998a326afc32bbd26614e84f2b3332e8fdd10ab"
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates libgcc-s1 libsodium23 libsqlite3-0 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 rustdesk \
+    && useradd --uid 10001 --gid rustdesk --home-dir /data --no-create-home --shell /usr/sbin/nologin rustdesk \
+    && install -d -o 10001 -g 10001 -m 0700 /data
+
+COPY hbbs /usr/local/bin/hbbs
+COPY hbbr /usr/local/bin/hbbr
+RUN printf '%s\n' \
+      '64d0bb019610c8cb9588e583894db857de61e347621965221aa65449d859a503  /usr/local/bin/hbbs' \
+      'ba899e46733bcccde1d9d7166c13627b7b6ec3bae6a0ef1b89b75c33e5c17e96  /usr/local/bin/hbbr' \
+      | sha256sum --check --strict \
+    && chmod 0755 /usr/local/bin/hbbs /usr/local/bin/hbbr
+
+USER 10001:10001
+WORKDIR /data
+VOLUME ["/data"]
+EXPOSE 21115/tcp 21116/tcp 21116/udp 21117/tcp
+STOPSIGNAL SIGTERM

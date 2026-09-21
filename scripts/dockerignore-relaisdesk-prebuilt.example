@@ -1,0 +1,5 @@
+*
+!.dockerignore
+!Dockerfile.relaisdesk-prebuilt-amd64
+!hbbs
+!hbbr

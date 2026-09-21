@@ -1,0 +1,6 @@
+# Tâche cron pour le renouvellement du certificat Let's Encrypt du domaine
+# À ajouter à la crontab de l'utilisateur root (sudo crontab -e)
+
+# Exécute la vérification de renouvellement tous les jours à 4h00. Certbot ne
+# renouvelle que lorsqu'une échéance le nécessite.
+0 4 * * * certbot renew --quiet --deploy-hook /etc/letsencrypt/renewal-hooks/deploy/relaisdesk.sh >> /var/log/relaisdesk/certbot.log 2>&1

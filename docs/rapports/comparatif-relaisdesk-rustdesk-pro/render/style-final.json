@@ -1,0 +1,170 @@
+{
+  "input": "C:\\Users\\Administrator\\Documents\\Projets\\projet\\rapports\\comparatif-relaisdesk-rustdesk-pro\\Comparatif_RelaisDesk_RustDesk_Pro_2026-08-26.docx",
+  "fonts_by_char_count": {
+    "Calibri": 6027
+  },
+  "direct_run_formatting_runs": 176,
+  "direct_paragraph_formatting_paragraphs": 66,
+  "heading_like_paragraphs_not_heading_style": [
+    {
+      "para_index": 1,
+      "text": "COMPARATIF STRAT\u00c9GIQUE",
+      "style": "Normal"
+    },
+    {
+      "para_index": 2,
+      "text": "RelaisDesk face aux offres payantes RustDesk",
+      "style": "Normal"
+    },
+    {
+      "para_index": 4,
+      "text": "Objet : D\u00e9finir ce que RelaisDesk apporte r\u00e9ellement de plus",
+      "style": "Normal"
+    },
+    {
+      "para_index": 6,
+      "text": "Statut : Analyse de pr\u00e9production \u2014 d\u00e9cision de positionnement",
+      "style": "Normal"
+    },
+    {
+      "para_index": 91,
+      "text": "S1 \u2014 Tarification et FAQ commerciale. Consulter la source officielle",
+      "style": "Normal"
+    },
+    {
+      "para_index": 92,
+      "text": "S2 \u2014 Vue d\u2019ensemble de RustDesk Server Pro. Consulter la source officielle",
+      "style": "Normal"
+    },
+    {
+      "para_index": 93,
+      "text": "S3 \u2014 Console Web. Consulter la source officielle",
+      "style": "Normal"
+    },
+    {
+      "para_index": 94,
+      "text": "S4 \u2014 Configuration et g\u00e9n\u00e9ration de clients. Consulter la source officielle",
+      "style": "Normal"
+    },
+    {
+      "para_index": 95,
+      "text": "S5 \u2014 Param\u00e8tres avanc\u00e9s, dont register-device=N. Consulter la source officielle",
+      "style": "Normal"
+    },
+    {
+      "para_index": 96,
+      "text": "S6 \u2014 D\u00e9ploiement des clients. Consulter la source officielle",
+      "style": "Normal"
+    },
+    {
+      "para_index": 97,
+      "text": "S7 \u2014 Authentification 2FA. Consulter la source officielle",
+      "style": "Normal"
+    },
+    {
+      "para_index": 98,
+      "text": "S8 \u2014 Contr\u00f4le d\u2019acc\u00e8s. Consulter la source officielle",
+      "style": "Normal"
+    },
+    {
+      "para_index": 99,
+      "text": "S9 \u2014 R\u00f4les de contr\u00f4le. Consulter la source officielle",
+      "style": "Normal"
+    },
+    {
+      "para_index": 100,
+      "text": "S10 \u2014 Strat\u00e9gies centralis\u00e9es. Consulter la source officielle",
+      "style": "Normal"
+    },
+    {
+      "para_index": 101,
+      "text": "S11 \u2014 LDAP. Consulter la source officielle",
+      "style": "Normal"
+    },
+    {
+      "para_index": 102,
+      "text": "S12 \u2014 D\u00e9finitions de licence et casual support. Consulter la source officielle",
+      "style": "Normal"
+    },
+    {
+      "para_index": 103,
+      "text": "S13 \u2014 R\u00e9ponse officielle sur Customized V2. Consulter la source officielle",
+      "style": "Normal"
+    },
+    {
+      "para_index": 112,
+      "text": "Domaine",
+      "style": "Table Header"
+    },
+    {
+      "para_index": 113,
+      "text": "RelaisDesk",
+      "style": "Table Header"
+    },
+    {
+      "para_index": 114,
+      "text": "RustDesk Pro",
+      "style": "Table Header"
+    }
+  ],
+  "examples": {
+    "direct_paragraph_formatting": [
+      {
+        "para_index": 1,
+        "text": "COMPARATIF STRAT\u00c9GIQUE",
+        "style": "Normal"
+      },
+      {
+        "para_index": 2,
+        "text": "RelaisDesk face aux offres payantes RustDesk",
+        "style": "Normal"
+      },
+      {
+        "para_index": 3,
+        "text": "Avantages r\u00e9els, limites concurrentielles et positionnement recommand\u00e9",
+        "style": "Normal"
+      },
+      {
+        "para_index": 4,
+        "text": "Objet : D\u00e9finir ce que RelaisDesk apporte r\u00e9ellement de plus",
+        "style": "Normal"
+      },
+      {
+        "para_index": 5,
+        "text": "P\u00e9rim\u00e8tre : Projet local actuel vs. documentation officielle RustDesk consult\u00e9e le 26 ao\u00fbt 2026",
+        "style": "Normal"
+      }
+    ],
+    "direct_run_formatting": [
+      {
+        "para_index": 1,
+        "run_text": "COMPARATIF STRAT\u00c9GIQUE",
+        "style": "Normal"
+      },
+      {
+        "para_index": 2,
+        "run_text": "RelaisDesk face aux offres payantes RustDesk",
+        "style": "Normal"
+      },
+      {
+        "para_index": 3,
+        "run_text": "Avantages r\u00e9els, limites concurrentielles et positionnement recommand\u00e9",
+        "style": "Normal"
+      },
+      {
+        "para_index": 4,
+        "run_text": "Objet : ",
+        "style": "Normal"
+      },
+      {
+        "para_index": 4,
+        "run_text": "D\u00e9finir ce que RelaisDesk apporte r\u00e9ellement de plus",
+        "style": "Normal"
+      }
+    ]
+  },
+  "notes": [
+    "Direct formatting is not always wrong, but it often causes inconsistent output when templates change.",
+    "Heading-like paragraphs not using Heading styles can break TOC and accessibility."
+  ]
+}

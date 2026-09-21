@@ -1,0 +1,177 @@
+CONDITIONS GÉNÉRALES DE VENTE ET D'UTILISATION RELAISDESK
+Version contractuelle 2026-08-25
+
+VENDEUR
+Julien BELLOT, entrepreneur individuel (EI)
+Noms commerciaux : Informatique A Domicile 03 / RelaisDesk
+SIREN : 940 747 108 — SIRET : 940 747 108 00014 — Code APE : 9511Z
+2 Chemin de Lonzais, 03170 Bizeneuille, France
+E-mail : contact@relaisdesk.fr
+Téléphone : 06 62 85 59 30
+TVA non applicable, art. 293 B du CGI
+
+Les présentes conditions régissent les commandes du service RelaisDesk par un
+professionnel ou un consommateur. Le client choisit son statut lors de la
+commande et garantit l'exactitude de cette déclaration.
+
+1. OBJET ET CARACTÉRISTIQUES ESSENTIELLES
+
+RelaisDesk fournit, pendant la période achetée, un droit d'accès à une
+infrastructure de rendez-vous, de relais et d'autorisation destinée à
+l'assistance informatique à distance. Selon l'offre choisie, le service
+comprend un nombre déterminé de connexions technicien simultanées, la
+génération de codes Viewer temporaires valables douze heures, la mise à
+disposition des applications Technicien et Viewer pour les systèmes annoncés
+et les mises à jour ou le support annoncés pour l'offre.
+
+Une connexion Internet, un système compatible et les droits nécessaires à
+l'installation sont requis. Les performances dépendent notamment des réseaux,
+équipements et systèmes des participants. Le client vérifie la compatibilité
+avant l'achat.
+
+2. LOGICIEL LIBRE ET INDÉPENDANCE
+
+Les applications et serveurs RelaisDesk comprennent des versions modifiées de
+RustDesk distribuées sous GNU AGPLv3. Le prix rémunère l'accès au service
+exploité, son infrastructure, sa configuration et son support. Il ne transforme
+pas le logiciel libre en logiciel propriétaire et ne restreint pas les droits
+accordés par l'AGPLv3. Le code source correspondant, les avis de modification
+et les instructions de construction sont accessibles depuis :
+https://relaisdesk.fr/logiciel-libre.html
+
+RelaisDesk est indépendant et n'est ni affilié à RustDesk ni approuvé par ses
+titulaires, sauf indication écrite contraire.
+
+3. PRIX
+
+Les prix sont en euros et constituent les montants nets à payer. TVA non
+applicable, art. 293 B du CGI. Les tarifs affichés au récapitulatif avant la
+commande prévalent : Starter, 10 euros pour 30 jours et un technicien
+simultané ; Pro, 20 euros pour 30 jours et jusqu'à dix techniciens simultanés ;
+Ultra, prix calculé selon la capacité sélectionnée et affiché avant validation.
+Aucun prélèvement récurrent ni aucune reconduction tacite n'est effectué. Le
+client peut préparer un renouvellement depuis son espace client, mais chaque
+nouvelle période nécessite son action expresse et la confirmation du paiement.
+Après cette confirmation, la licence existante est automatiquement prolongée
+de trente jours et ses identifiants restent inchangés. Les rappels d'échéance
+peuvent être désactivés dans l'espace client.
+
+4. COMMANDE ET PREUVE
+
+Avant le paiement, le client peut vérifier l'offre, la capacité, le prix, son
+statut et ses coordonnées. La commande n'est transmise qu'après acceptation non
+précochée des présentes conditions et activation du bouton « Commande avec
+obligation de paiement ». Le vendeur conserve la version acceptée, le statut
+déclaré, la date d'acceptation et, pour le consommateur demandant une activation
+immédiate, sa demande expresse. Ces éléments et les courriels transactionnels
+peuvent constituer des moyens de preuve, sous réserve de toute preuve contraire.
+
+5. PAIEMENT, CONFIRMATION ET ACTIVATION
+
+Le paiement par carte est traité par Stripe ; RelaisDesk ne conserve pas les
+données complètes de carte. Pour un virement, la commande reste en attente
+jusqu'à la réception et l'identification des fonds. Après confirmation du
+paiement, l'identifiant et la clé d'accès sont envoyés à l'adresse électronique
+fournie. L'activation intervient normalement sans délai pour la carte et après
+validation des fonds pour le virement.
+
+6. DURÉE
+
+Chaque commande ouvre une période de 30 jours à compter de l'activation. À
+l'échéance, les fonctions nécessitant un accès actif sont suspendues. Les
+fichiers installés ne sont pas supprimés à distance. La fin de l'accès au
+service n'affecte pas les droits conférés par les licences libres.
+
+7. DROIT DE RÉTRACTATION DU CONSOMMATEUR
+
+Le consommateur dispose de quatorze jours à compter de la conclusion du
+contrat pour se rétracter sans motif. Il peut utiliser la fonctionnalité :
+https://relaisdesk.fr/formulaire-retractation.html
+ou adresser une déclaration non ambiguë à contact@relaisdesk.fr ou à l'adresse
+postale du vendeur.
+
+Lorsque le consommateur demande expressément l'activation avant la fin du délai
+puis se rétracte, il peut rester redevable du montant proportionnel au service
+fourni jusqu'à sa décision, conformément à l'article L. 221-25 du Code de la
+consommation. La seule activation d'un service de trente jours n'emporte pas
+renonciation générale au droit de rétractation. Le remboursement dû intervient
+au plus tard dans les quatorze jours suivant la réception de la décision, par
+le même moyen de paiement sauf accord exprès contraire et sans frais.
+
+Modèle : « Je vous notifie ma rétractation du contrat RelaisDesk commandé le
+[date], référence [commande]. Nom : [nom]. Adresse : [adresse]. Date : [date]. »
+
+8. GARANTIE LÉGALE DU CONSOMMATEUR
+
+Le consommateur bénéficie de la garantie légale de conformité applicable aux
+contenus et services numériques, dans les conditions des articles
+L. 224-25-12 et suivants du Code de la consommation. En cas de défaut, il peut
+demander la mise en conformité sans frais et dans un délai raisonnable puis,
+lorsque les conditions légales sont réunies, une réduction du prix ou la
+résolution du contrat. Ces droits s'exercent auprès du vendeur et sont
+indépendants de toute garantie commerciale.
+
+9. UTILISATION AUTORISÉE ET SÉCURITÉ
+
+Le client s'engage à n'accéder qu'aux appareils pour lesquels il dispose d'une
+autorisation valable, à informer la personne assistée, à recueillir son accord
+avant la prise en main et à respecter la loi. Identifiants, clés et codes
+temporaires restent confidentiels. Toute compromission doit être signalée sans
+délai. Le vendeur peut suspendre les accès strictement nécessaires à la
+protection du service, des utilisateurs ou des tiers en cas d'abus, d'attaque,
+de fraude vraisemblable ou d'obligation légale. Les droits légaux du
+consommateur restent réservés.
+
+10. DISPONIBILITÉ ET RESPONSABILITÉ
+
+Le vendeur est tenu d'une obligation de moyens, sans disponibilité permanente
+garantie. Des interruptions peuvent résulter de la maintenance, d'une faille de
+sécurité, des réseaux publics, d'un hébergeur ou d'un cas de force majeure. Le
+client reste responsable de ses interventions, sauvegardes, autorisations et
+usages. Aucune clause ne limite les responsabilités qui ne peuvent légalement
+l'être. Entre professionnels seulement, dans la mesure permise par la loi, les
+dommages indirects sont exclus et la responsabilité totale au titre d'un
+événement est limitée aux sommes versées pendant les douze mois précédents.
+
+11. DONNÉES PERSONNELLES
+
+Les traitements nécessaires aux commandes, paiements, accès, sécurité et
+demandes de droits sont décrits dans :
+https://relaisdesk.fr/politique-confidentialite.html
+
+Lorsqu'un client professionnel traite des données de tiers via le service, il
+reste responsable de la licéité de ses interventions. Les rôles RGPD et les
+instructions de sous-traitance doivent être précisés dans un accord adapté si
+RelaisDesk traite ces données pour son compte.
+
+12. SUPPORT, RÉCLAMATIONS ET MÉDIATION
+
+Les demandes sont adressées à contact@relaisdesk.fr. Le consommateur doit
+d'abord adresser une réclamation écrite au vendeur. À défaut de solution
+amiable, il peut recourir gratuitement au médiateur de la consommation dont les
+coordonnées doivent être affichées sur le site avant l'ouverture des ventes
+B2C. Tant que cette désignation n'est pas réalisée, les ventes B2C ne doivent
+pas être ouvertes.
+
+13. RETARD DE PAIEMENT DES PROFESSIONNELS
+
+Pour un client professionnel, toute somme impayée à l'échéance porte intérêt au
+taux de refinancement de la Banque centrale européenne le plus récent majoré de
+dix points, sans être inférieur à trois fois le taux d'intérêt légal. Une
+indemnité forfaitaire de 40 euros pour frais de recouvrement est due. Ces
+dispositions ne s'appliquent pas au consommateur.
+
+14. DROIT APPLICABLE ET LITIGES
+
+Le contrat est soumis au droit français. Le consommateur bénéficie des règles
+impératives protectrices applicables et peut saisir les juridictions
+territorialement compétentes prévues par la loi. Entre commerçants uniquement,
+après tentative amiable, les tribunaux du ressort du siège du vendeur sont
+compétents lorsque cette attribution est valablement opposable.
+
+15. INTÉGRALITÉ ET VERSION
+
+La nullité d'une clause n'affecte pas les autres. La version applicable est
+celle acceptée lors de la commande, identifiée par le numéro 2026-08-25 et
+jointe au courriel de confirmation. Toute modification ultérieure ne s'applique
+pas rétroactivement à la commande déjà conclue.

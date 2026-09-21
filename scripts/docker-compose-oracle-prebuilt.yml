@@ -1,0 +1,68 @@
+services:
+  hbbs:
+    container_name: rustdesk-hbbs
+    image: relaisdesk/rustdesk-server:d998a32-security-amd64
+    command: ["hbbs", "-r", "api.relaisdesk.fr:21117"]
+    environment:
+      RELAISDESK_AUTH_REQUIRED: "${RELAISDESK_AUTH_REQUIRED:?authorization mode is required}"
+      RELAISDESK_AUTH_PUBLIC_KEYS: "${RELAISDESK_AUTH_PUBLIC_KEYS:?authorization public key is required}"
+      RELAISDESK_SOURCE_URL: "${SERVER_SOURCE_URL:?public corresponding source URL is required by AGPLv3}"
+    ports:
+      - "21115:21115/tcp"
+      - "21116:21116/tcp"
+      - "21116:21116/udp"
+    volumes:
+      - ./data:/data
+    networks:
+      - rustdesk-net
+    depends_on:
+      - hbbr
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    stop_grace_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    restart: unless-stopped
+
+  hbbr:
+    container_name: rustdesk-hbbr
+    image: relaisdesk/rustdesk-server:d998a32-security-amd64
+    command: ["hbbr"]
+    environment:
+      RELAISDESK_AUTH_REQUIRED: "${RELAISDESK_AUTH_REQUIRED:?authorization mode is required}"
+      RELAISDESK_AUTH_PUBLIC_KEYS: "${RELAISDESK_AUTH_PUBLIC_KEYS:?authorization public key is required}"
+      RELAISDESK_SOURCE_URL: "${SERVER_SOURCE_URL:?public corresponding source URL is required by AGPLv3}"
+    ports:
+      - "21117:21117/tcp"
+    volumes:
+      - ./data:/data
+    networks:
+      - rustdesk-net
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    stop_grace_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    restart: unless-stopped
+
+networks:
+  rustdesk-net:
+    external: false

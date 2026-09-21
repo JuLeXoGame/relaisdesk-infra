@@ -1,0 +1,27 @@
+[Unit]
+Description=Sauvegarde SQLite chiffree RelaisDesk vers Google Drive
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=relaisdesk
+Group=relaisdesk
+ExecStart=/usr/bin/python3 -B /opt/relaisdesk/backup-tools/backup_google_drive.py
+TimeoutStartSec=2h
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+ReadWritePaths=/data/relaisdesk /var/backups/relaisdesk /etc/relaisdesk/rclone
+UMask=0077
+Nice=10
+IOSchedulingClass=idle
+MemoryMax=256M
+TasksMax=64

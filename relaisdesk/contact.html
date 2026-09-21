@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contactez-nous | RelaisDesk</title>
+  <meta name="description" content="Formulaire de contact direct avec l'équipe RelaisDesk pour toute demande d'information, commerciale ou technique.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://relaisdesk.fr/contact.html">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://relaisdesk.fr/contact.html">
+  <meta property="og:title" content="Contactez-nous | RelaisDesk">
+  <meta property="og:description" content="Formulaire de contact direct avec l'équipe RelaisDesk pour toute demande d'information, commerciale ou technique.">
+  <meta property="og:image" content="https://relaisdesk.fr/logo.avif">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:site_name" content="RelaisDesk">
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="icon" type="image/avif" href="/logo.avif">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    @media (min-width: 768px) {
+      .contact-grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+    }
+    .contact-info-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color, #334155);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-top: 2rem;
+    }
+    .contact-info-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .contact-info-item:last-child {
+      margin-bottom: 0;
+    }
+    .contact-info-icon {
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+    .hp-field {
+      opacity: 0;
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 0;
+      width: 0;
+      z-index: -1;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <header class="header">
+    <div class="container nav-container">
+      <a href="/" class="logo-group" aria-label="Accueil RelaisDesk">
+        <img src="logo.avif" alt="" class="logo-img" width="42" height="42">
+        <span>Relais<span class="gradient-text">Desk</span></span>
+      </a>
+      <nav class="nav-menu" aria-label="Navigation principale">
+        <a href="/" class="nav-link">Accueil</a>
+        <a href="/#pricing" class="nav-link">Tarifs</a>
+        <a href="/#downloads" class="nav-link">Téléchargements</a>
+        <a href="/client/" class="nav-link">Espace Client</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="/" class="btn btn-secondary btn-sm">Accueil</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="legal-wrapper">
+    <div class="container" style="max-width: 780px;">
+      <a href="/" class="back-home-btn">← Retour à l'accueil</a>
+      <article class="legal-card">
+        <header class="legal-header">
+          <div class="badge">Assistance & Support</div>
+          <h1>Contactez-nous</h1>
+          <p class="legal-date">Formulaire de contact direct en ligne</p>
+        </header>
+        <div class="legal-body">
+          <p>Vous avez une question commerciale, technique, ou souhaitez un accompagnement sur mesure ? Remplissez le formulaire ci-dessous. Notre équipe vous répond dans les plus brefs délais.</p>
+
+          <form id="contactForm" style="margin-top: 1.5rem;">
+            <!-- Honeypot anti-spam (invisible aux utilisateurs) -->
+            <input type="text" name="website" id="contactWebsite" class="hp-field" tabindex="-1" autocomplete="off">
+
+            <div class="contact-grid-2">
+              <div class="form-group">
+                <label class="form-label" for="contactName">Votre nom et prénom *</label>
+                <input type="text" id="contactName" class="input-text" style="width: 100%;" placeholder="Ex: Jean Dupont" autocomplete="name" required maxlength="100">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="contactEmail">Votre adresse e-mail *</label>
+                <input type="email" id="contactEmail" class="input-text" style="width: 100%;" placeholder="jean.dupont@entreprise.fr" autocomplete="email" required maxlength="254">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="contactSubject">Objet de votre demande</label>
+              <input type="text" id="contactSubject" class="input-text" style="width: 100%;" placeholder="Ex: Question sur l'offre Ultra / Support technique" maxlength="200">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="contactMessage">Votre message *</label>
+              <textarea id="contactMessage" class="input-text" style="width: 100%; min-height: 150px; resize: vertical;" placeholder="Décrivez votre besoin ou votre question en quelques lignes..." required maxlength="5000"></textarea>
+            </div>
+
+            <div id="contactErrorMessage" role="alert" style="display: none; color: var(--danger, #f87171); background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem;"></div>
+            <div id="contactSuccessMessage" role="status" style="display: none; color: #34d399; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;"></div>
+
+            <button type="submit" id="contactSubmitBtn" class="btn btn-primary btn-block" style="font-size: 1rem; padding: 0.85rem;">✉️ Envoyer mon message</button>
+          </form>
+
+          <div class="contact-info-card">
+            <h3 style="margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: #38bdf8;">Autres coordonnées utiles</h3>
+            <p><strong>Adresse électronique :</strong> <span data-legal-email="4844455f4a485f6b594e474a42584f4e5840054d59"><a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#99;&#111;&#110;&#116;&#97;&#99;&#116;&#64;&#114;&#101;&#108;&#97;&#105;&#115;&#100;&#101;&#115;&#107;&#46;&#102;&#114;">&#99;&#111;&#110;&#116;&#97;&#99;&#116;&#64;&#114;&#101;&#108;&#97;&#105;&#115;&#100;&#101;&#115;&#107;&#46;&#102;&#114;</a></span>. Vous pouvez écrire directement ou utiliser le formulaire ci-dessus.</p>
+            <div class="contact-info-item">
+              <span class="contact-info-icon">📞</span>
+              <div>
+                <strong>Téléphone :</strong><br>
+                <a href="tel:+33662855930" style="color: var(--border-focus, #38bdf8);">06 62 85 59 30</a> (du lundi au vendredi, 9h-18h)
+              </div>
+            </div>
+            <div class="contact-info-item">
+              <span class="contact-info-icon">🏢</span>
+              <div>
+                <strong>Adresse & Courrier :</strong><br>
+                RelaisDesk<br>
+                2 Chemin de Lonzais, 03170 Bizeneuille, France
+              </div>
+            </div>
+            <div class="contact-info-item">
+              <span class="contact-info-icon">🔒</span>
+              <div>
+                <strong>Sécurité & Confidentialité :</strong><br>
+                Vos coordonnées sont utilisées pour traiter votre demande, avec nos prestataires techniques dans la limite de leurs missions, et ne sont pas revendues. Consultez notre <a href="politique-confidentialite.html" style="color: var(--border-focus, #38bdf8);">politique de confidentialité</a>.
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/" class="logo-group">
+            <img src="logo.avif" alt="" class="logo-img" width="36" height="36">
+            <span>Relais<span class="gradient-text">Desk</span></span>
+          </a>
+          <p>Plateforme de prise en main à distance avec infrastructure hébergée en France.</p>
+        </div>
+        <div>
+          <h4>Solutions</h4>
+          <ul class="footer-links">
+            <li><a href="/#pricing">Offres & Tarifs</a></li>
+            <li><a href="/#downloads">Téléchargements</a></li>
+            <li><a href="/client/">Espace Client</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Informations</h4>
+          <ul class="footer-links">
+            <li><a href="logiciel-libre.html">Code Source & Licence</a></li>
+            <li><a href="mentions-legales.html">Mentions Légales</a></li>
+            <li><a href="cgv.html">Conditions Générales de Vente</a></li>
+            <li><a href="politique-confidentialite.html">Politique de Confidentialité</a></li>
+            <li><a href="formulaire-retractation.html">Droit de Rétractation</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Support</h4>
+          <ul class="footer-links">
+            <li><a href="contact.html">Formulaire de Contact</a></li>
+            <li><a href="tel:+33662855930">06 62 85 59 30</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 RelaisDesk. Tous droits réservés.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+  <script src="legal-email.js" defer></script>
+</body>
+</html>

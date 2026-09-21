@@ -1,0 +1,16 @@
+[Unit]
+Description=Sauvegarde SQLite chiffrée RelaisDesk
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=relaisdesk
+Group=relaisdesk
+EnvironmentFile=/etc/relaisdesk/backup.env
+ExecStart=/opt/relaisdesk/api/relaisdesk-backup create
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/data/relaisdesk /var/backups/relaisdesk -/mnt/relaisdesk-backups
+UMask=0077

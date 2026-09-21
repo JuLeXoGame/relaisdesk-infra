@@ -1,0 +1,10 @@
+# Robots.txt pour RelaisDesk (https://relaisdesk.fr)
+User-agent: *
+Allow: /
+
+# Les pages privées restent explorables afin que leur balise meta noindex soit lue.
+# Bloquer uniquement les artefacts binaires de téléchargement.
+Disallow: /downloads/
+
+# Sitemap officiel
+Sitemap: https://relaisdesk.fr/sitemap.xml

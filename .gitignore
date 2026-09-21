@@ -1,0 +1,51 @@
+# Secrets and local configuration
+.secrets/
+*.ppk
+*.pfx
+*.p12
+*.key
+*.bak
+client_secret*.json
+.env
+*.env
+!*.env.example
+licenseAdmin.txt
+dns token(important).txt
+
+# Runtime data
+*.db
+*.db-shm
+*.db-wal
+data/
+invoices/
+*.log
+
+# Build and test artifacts
+.cache/
+.tools/
+update/
+archives/
+output/
+/backup/
+/prebuilt/
+bin/
+*.exe
+*-linux
+installer/build/
+installer/nsis/*.exe
+relaisdesk/downloads/
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+__pycache__/
+
+# Forks versionnés séparément (ont leur propre .git : committer dans chaque fork)
+/rustdesk/
+/rustdesk-server/
+
+# Restes d'anciens systèmes de version (aucun outil hg/sl/eden installé)
+/.hg/
+/.sl/
+/.eden/

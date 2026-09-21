@@ -1,0 +1,125 @@
+name: Build RelaisDesk macOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version de RelaisDesk (ex: 1.0.0)'
+        required: true
+        default: '1.0.0'
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+    strategy:
+      matrix:
+        arch: [aarch64-apple-darwin]
+        include:
+          - arch: aarch64-apple-darwin
+            target: aarch64-apple-darwin
+            rustdesk_target: aarch64-apple-darwin
+            goarch: arm64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Install macOS build tools
+        run: |
+          brew install create-dmg nasm pkg-config
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: '3.24.5'
+
+      - name: Build RustDesk Core for macOS
+        run: |
+          cd rustdesk
+          cargo build --release --target ${{ matrix.target }}
+          mkdir -p flutter/build/macos/Build/Products/Release
+          # Build Flutter desktop shell
+          cd flutter
+          flutter build macos --release
+
+      - name: Build RelaisDesk Viewer macOS Launcher
+        run: |
+          cd installer/viewer
+          export GOOS=darwin
+          export GOARCH=${{ matrix.goarch }}
+          go build -trimpath -ldflags "-s -w -X main.APIURL=https://api.relaisdesk.fr" -o RelaisDesk_Viewer_mac .
+
+      - name: Build RelaisDesk Technicien macOS Launcher
+        run: |
+          cd installer/configurator
+          export GOOS=darwin
+          export GOARCH=${{ matrix.goarch }}
+          go build -trimpath -ldflags "-s -w -X main.APIURL=https://api.relaisdesk.fr" -o RelaisDesk_Technicien_mac .
+
+      - name: Package RelaisDesk Viewer (.app & .dmg)
+        run: |
+          mkdir -p build/RelaisDesk.app/Contents/MacOS
+          mkdir -p build/RelaisDesk.app/Contents/Resources
+          cp installer/viewer/RelaisDesk_Viewer_mac build/RelaisDesk.app/Contents/MacOS/RelaisDesk
+          chmod +x build/RelaisDesk.app/Contents/MacOS/RelaisDesk
+          
+          # Copie des binaires RustDesk dans le bundle
+          if [ -d "rustdesk/flutter/build/macos/Build/Products/Release/RustDesk.app" ]; then
+            cp -R rustdesk/flutter/build/macos/Build/Products/Release/RustDesk.app/Contents/Frameworks build/RelaisDesk.app/Contents/ || true
+          fi
+
+          # Création du DMG Viewer
+          create-dmg \
+            --volname "RelaisDesk Installer" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --app-drop-link 420 185 \
+            "RelaisDesk_Mac.dmg" \
+            "build/RelaisDesk.app" || true
+
+      - name: Package RelaisDesk Technicien (.app & .dmg)
+        run: |
+          mkdir -p build_tech/RelaisDesk_Technicien.app/Contents/MacOS
+          mkdir -p build_tech/RelaisDesk_Technicien.app/Contents/Resources
+          cp installer/configurator/RelaisDesk_Technicien_mac build_tech/RelaisDesk_Technicien.app/Contents/MacOS/RelaisDesk_Technicien
+          chmod +x build_tech/RelaisDesk_Technicien.app/Contents/MacOS/RelaisDesk_Technicien
+
+          # Création du DMG Technicien
+          create-dmg \
+            --volname "RelaisDesk Technicien" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --app-drop-link 420 185 \
+            "RelaisDesk_Technicien_Mac.dmg" \
+            "build_tech/RelaisDesk_Technicien.app" || true
+
+      - name: Compute SHA-256 Checksums
+        run: |
+          shasum -a 256 RelaisDesk_Mac.dmg RelaisDesk_Technicien_Mac.dmg > SHA256SUMS-macos.txt
+          cat SHA256SUMS-macos.txt
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: relaisdesk-macos-dmg
+          path: |
+            RelaisDesk_Mac.dmg
+            RelaisDesk_Technicien_Mac.dmg
+            SHA256SUMS-macos.txt

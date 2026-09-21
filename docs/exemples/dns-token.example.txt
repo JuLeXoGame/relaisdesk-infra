@@ -1,0 +1,2 @@
+# Exemple uniquement — injecter le jeton réel via l'environnement du serveur.
+DNS_API_TOKEN=replace_with_provider_token

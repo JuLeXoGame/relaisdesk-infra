@@ -1,0 +1,204 @@
+CONDITIONS GÉNÉRALES DE VENTE ET D'UTILISATION RELAISDESK
+Version contractuelle 2026-09-09
+
+Les présentes conditions régissent les commandes du service RelaisDesk par un professionnel ou un consommateur. Le vendeur est Julien BELLOT, entrepreneur individuel (EI), exerçant sous le nom commercial RelaisDesk, SIREN 940 747 108, SIRET 940 747 108 00014, 2 Chemin de Lonzais, 03170 Bizeneuille, France, joignable via le formulaire de contact en ligne (https://relaisdesk.fr/contact.html) et au 06 62 85 59 30 (ci-après le « Vendeur »).
+
+Le « Client professionnel » agit à des fins entrant dans le cadre de son activité. Le « Consommateur » est une personne physique agissant à des fins qui n'entrent pas dans le cadre de son activité professionnelle. Le Client choisit son statut lors de la commande et garantit l'exactitude de cette déclaration.
+
+Adresse électronique du Vendeur : contact@relaisdesk.fr. Le formulaire de contact reste disponible en complément.
+
+Clients professionnels et consommateurs : les parcours disponibles indiquent les offres ouvertes à chaque catégorie. Les droits impératifs du Client dépendent de sa situation réelle, pas uniquement du statut coché. Aucun médiateur de la consommation n'est encore désigné : cette obligation reste à régulariser et l'ouverture des ventes ne constitue pas une affirmation de conformité sur ce point.
+
+Article 1 — Objet et caractéristiques essentielles
+
+RelaisDesk fournit, pendant la période achetée, un droit d'accès à une infrastructure de rendez-vous, de relais et d'autorisation destinée à l'assistance informatique à distance. Selon l'offre choisie, le service comprend :
+
+- un nombre déterminé de connexions technicien simultanées ;
+- la génération de codes Viewer temporaires, valables douze heures, dans les limites techniques et de sécurité du service ;
+- la mise à disposition d'applications Technicien et Viewer pour les systèmes annoncés sur le site ;
+- les mises à jour et le support éventuellement annoncés pour l'offre pendant sa durée.
+
+L'application Technicien peut être installée sur plusieurs ordinateurs sans que ces installations soient décomptées. Seuls les appareils techniciens enregistrés simultanément auprès du service consomment la capacité de l'offre ; un créneau redevient disponible après leur déconnexion ou l'expiration de leur présence réseau.
+
+Une connexion Internet, un système compatible et les droits nécessaires à l'installation sont requis. Les performances dépendent notamment des réseaux, équipements et systèmes des participants. Le Client vérifie la compatibilité avant l'achat et peut contacter le Vendeur en cas de doute.
+
+Article 2 — Logiciel libre et indépendance du service
+
+Les applications et serveurs RelaisDesk comprennent des versions modifiées de RustDesk distribuées sous GNU AGPLv3. Le paiement porte sur l'accès au service exploité, son infrastructure, sa configuration et son support ; il ne transforme pas le logiciel libre en logiciel propriétaire et ne restreint pas les droits que l'AGPLv3 accorde au Client.
+
+Le code source correspondant aux versions distribuées et exploitées, les avis de modification et les instructions de construction sont accessibles depuis la page Logiciel libre et code source (https://relaisdesk.fr/logiciel-libre.html). RelaisDesk est indépendant et n'est ni affilié à RustDesk ni approuvé par ses titulaires, sauf indication écrite contraire.
+
+Article 3 — Prix
+
+Les prix sont indiqués en euros et constituent les montants nets à payer. TVA non applicable, art. 293 B du CGI. Les tarifs affichés au récapitulatif immédiatement avant la commande prévalent :
+
+- Starter : 24,90 € pour 30 jours ou 239,00 € pour 365 jours — 1 technicien simultané ;
+- Pro : 110,00 € pour 30 jours ou 1 100,00 € pour 365 jours — jusqu'à 5 techniciens simultanés ;
+- Personnalisé (Ultra) : de 10 à 500 techniciens simultanés ; à partir de 199,00 € pour 30 jours ou 1 990,00 € pour 365 jours pour 10 techniciens. Le prix correspondant à la capacité sélectionnée est affiché avant validation.
+
+Pour les achats prépayés hors parcours d'essai, les appellations « mensuel » et « annuel » désignent respectivement des périodes de 30 et 365 jours, payées en une fois, sans prélèvement récurrent ni reconduction tacite. Leur renouvellement nécessite une nouvelle validation expresse et la confirmation du paiement ; il prolonge la licence de la durée indiquée au récapitulatif, à partir de son échéance si elle est encore active ou de l'activation du renouvellement sinon. Ses identifiants restent inchangés. Les rappels de ces achats prépayés peuvent être désactivés dans l'espace client. Pour le parcours d'essai, les conditions particulières de l'essai et de l'abonnement récurrent, version 2026-09-09-trial-v2 (https://relaisdesk.fr/essai/conditions.html) prévoient au contraire 30 jours gratuits, puis une facturation automatique mensuelle ou annuelle expressément acceptée, avec annulation possible.
+
+Article 4 — Commande et preuve de l'acceptation
+
+Avant le paiement, le Client peut vérifier l'offre, la capacité, le prix, son statut professionnel ou consommateur et ses coordonnées. La commande n'est transmise qu'après acceptation non précochée des présentes CGV/CGU et activation du bouton « Commande avec obligation de paiement ».
+
+Le Vendeur conserve avec la commande la version des conditions acceptées, le statut déclaré, la date d'acceptation et, pour le Consommateur demandant une activation immédiate, sa demande expresse. Ces éléments et les courriels transactionnels peuvent constituer des moyens de preuve, sans priver le Client de la possibilité d'apporter toute preuve contraire.
+
+Une copie durable des conditions acceptées, comprenant l'annexe de sous-traitance applicable, est jointe aux courriels contractuels. Le prix, la capacité et la durée de la commande figurent au récapitulatif ; aucune mise à jour de cette page ne modifie rétroactivement une commande.
+
+Article 5 — Paiement, confirmation et activation
+
+- Carte bancaire : paiement traité par Stripe. Les données complètes de carte ne sont pas enregistrées par RelaisDesk.
+- Virement : la commande demeure en attente jusqu'à la réception et l'identification des fonds. La référence communiquée doit figurer dans le libellé.
+
+Après confirmation du paiement, l'identifiant et la clé d'accès sont envoyés à l'adresse électronique fournie. L'activation intervient normalement sans délai pour la carte et après validation des fonds pour le virement. Le Client doit signaler rapidement toute erreur d'adresse ou absence de réception.
+
+Article 6 — Durée et fin de l'accès
+
+Chaque première commande ouvre, à compter de l'activation, une période de 30 jours pour l'offre mensuelle ou 365 jours pour l'offre annuelle, selon le choix confirmé avant paiement. Le renouvellement suit l'article 3. À l'échéance, les fonctions nécessitant un accès actif sont suspendues. Les fichiers déjà installés ne sont pas supprimés à distance. La fin de l'accès au service est sans effet sur les droits conférés par les licences libres applicables au logiciel.
+
+Article 7 — Droit de rétractation des consommateurs
+
+Le Consommateur dispose de quatorze jours à compter de la conclusion du contrat pour se rétracter sans avoir à motiver sa décision. Il peut utiliser la fonction de rétractation en ligne (https://relaisdesk.fr/formulaire-retractation.html), le modèle figurant en annexe ou adresser toute déclaration non ambiguë via notre formulaire de contact en ligne (https://relaisdesk.fr/contact.html).
+
+Lorsque le Consommateur demande expressément l'activation avant la fin de ce délai puis se rétracte, il peut rester redevable du montant proportionnel au service fourni jusqu'à la communication de sa décision, conformément à l'article L. 221-25 du Code de la consommation. La seule activation du service n'emporte pas, par elle-même, renonciation générale au droit de rétractation.
+
+Le remboursement des sommes dues intervient au plus tard dans les quatorze jours suivant la réception de la décision, par le même moyen de paiement sauf accord exprès pour un autre moyen et sans frais supplémentaire.
+
+Annexe — Modèle de rétractation
+
+À l'attention de Julien BELLOT EI / RelaisDesk — Service Client, 2 Chemin de Lonzais, 03170 Bizeneuille, France ; courriel : contact@relaisdesk.fr (le formulaire de contact est également disponible) :
+
+Je vous notifie par la présente ma rétractation du contrat portant sur le service RelaisDesk commandé le [date], référence [numéro de commande]. Nom : [nom]. Adresse : [adresse]. Date : [date]. Signature uniquement en cas d'envoi sur papier.
+
+Article 8 — Garantie légale applicable aux consommateurs
+
+Le Consommateur bénéficie de la garantie légale de conformité applicable aux contenus et services numériques, dans les conditions des articles L. 224-25-12 et suivants du Code de la consommation. En cas de défaut, il peut demander la mise en conformité sans frais et dans un délai raisonnable puis, lorsque les conditions légales sont réunies, une réduction du prix ou la résolution du contrat. Ces droits s'exercent auprès du Vendeur aux coordonnées indiquées en tête des présentes conditions et sont indépendants de toute garantie commerciale.
+
+Le consommateur a droit à la mise en œuvre de la garantie légale de conformité en cas d'apparition d'un défaut de conformité durant un délai de 30 jours pour l'offre mensuelle ou 365 jours pour l'offre annuelle à compter de la fourniture du contenu numérique ou du service numérique. Durant ce délai, le consommateur n'est tenu d'établir que l'existence du défaut de conformité et non la date d'apparition de celui-ci.
+
+La garantie légale de conformité emporte obligation de fournir toutes les mises à jour nécessaires au maintien de la conformité du contenu numérique ou du service numérique durant 30 jours pour l'offre mensuelle ou 365 jours pour l'offre annuelle.
+
+La garantie légale de conformité donne au consommateur droit à la mise en conformité du contenu numérique ou du service numérique sans retard injustifié suivant sa demande, sans frais et sans inconvénient majeur pour lui.
+
+Le consommateur peut obtenir une réduction du prix en conservant le contenu numérique ou le service numérique, ou il peut mettre fin au contrat en se faisant rembourser intégralement contre renoncement au contenu numérique ou au service numérique, si :
+
+- Le professionnel refuse de mettre le contenu numérique ou le service numérique en conformité ;
+- La mise en conformité du contenu numérique ou du service numérique est retardée de manière injustifiée ;
+- La mise en conformité du contenu numérique ou du service numérique ne peut intervenir sans frais imposés au consommateur ;
+- La mise en conformité du contenu numérique ou du service numérique occasionne un inconvénient majeur pour le consommateur ;
+- La non-conformité du contenu numérique ou du service numérique persiste en dépit de la tentative de mise en conformité du professionnel restée infructueuse.
+
+Le consommateur a également droit à une réduction du prix ou à la résolution du contrat lorsque le défaut de conformité est si grave qu'il justifie que la réduction du prix ou la résolution du contrat soit immédiate. Le consommateur n'est alors pas tenu de demander la mise en conformité du contenu numérique ou du service numérique au préalable.
+
+Dans les cas où le défaut de conformité est mineur, le consommateur n'a droit à l'annulation du contrat que si le contrat ne prévoit pas le paiement d'un prix.
+
+Toute période d'indisponibilité du contenu numérique ou du service numérique en vue de sa remise en conformité suspend la garantie qui restait à courir jusqu'à la fourniture du contenu numérique ou du service numérique de nouveau conforme.
+
+Ces droits résultent de l'application des articles L. 224-25-1 à L. 224-25-31 du code de la consommation.
+
+Le professionnel qui fait obstacle de mauvaise foi à la mise en œuvre de la garantie légale de conformité encourt une amende civile d'un montant maximal de 300 000 euros, qui peut être porté jusqu'à 10 % du chiffre d'affaires moyen annuel (article L. 242-18-1 du code de la consommation).
+
+Le consommateur bénéficie également de la garantie légale des vices cachés en application des articles 1641 à 1649 du code civil, pendant une durée de deux ans à compter de la découverte du défaut. Cette garantie donne droit à une réduction de prix si le contenu numérique ou le service numérique est conservé, ou à un remboursement intégral contre renonciation au contenu numérique ou au service numérique.
+
+Source de l'encadré : annexe à l'article D. 211-4 du Code de la consommation (https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045981322). Pour chaque renouvellement, la garantie couvre la nouvelle période de fourniture.
+
+Article 9 — Utilisation autorisée et sécurité
+
+Le Client s'engage à n'accéder qu'à des appareils pour lesquels il dispose d'une autorisation valable, à informer la personne assistée, à recueillir son accord avant toute prise en main et à respecter les lois applicables, notamment en matière de données personnelles, de secret des correspondances et d'accès frauduleux à un système.
+
+Les identifiants, clés et codes temporaires doivent rester confidentiels. Le Client signale sans délai toute compromission. Le Vendeur peut suspendre les accès strictement nécessaires à la protection du service, des utilisateurs ou des tiers en cas d'abus, d'attaque, de fraude vraisemblable ou d'obligation légale. Lorsque la situation le permet, le Client est informé et peut présenter ses observations. Les droits légaux du Consommateur, dont un éventuel remboursement, demeurent réservés.
+
+Article 10 — Disponibilité, maintenance et responsabilité
+
+Le Vendeur est tenu d'une obligation de moyens concernant la fourniture de l'infrastructure logicielle et réseau, sans garantie de disponibilité permanente ininterrompue. Des suspensions temporaires peuvent résulter d'opérations de maintenance, d'impératifs de sécurité, de pannes des réseaux de télécommunication tiers, d'un incident chez un sous-traitant d'hébergement ou d'un cas de force majeure.
+
+Délimitation des responsabilités : le Vendeur fournit le logiciel et l'infrastructure décrits au contrat. Sauf prestation distincte expressément convenue, il n'exécute pas le dépannage réalisé par le Client technicien. Celui-ci répond de ses propres interventions, de ses autorisations et de la vérification des sauvegardes nécessaires. Cette répartition n'exclut ni la responsabilité du Vendeur pour ses propres fautes ou manquements, ni les garanties légales.
+
+Les limitations des terminaux, antivirus, pare-feux et connexions Internet des participants peuvent affecter le fonctionnement. Le Vendeur reste tenu de l'information sur la compatibilité annoncée et des obligations qui lui incombent. Aucune exclusion ne s'applique à un dommage qui lui est légalement imputable au seul motif qu'il survient pendant une session.
+
+Entre professionnels uniquement, et dans la mesure permise par la loi, les dommages indirects tels que perte de chiffre d'affaires, de clientèle ou d'opportunité sont exclus ; la responsabilité totale du Vendeur au titre d'un événement est plafonnée aux sommes effectivement versées par le Client pour le service au cours des douze mois précédant l'événement générateur.
+
+Ce plafond ne s'applique pas aux consommateurs, au dol, à la faute lourde, aux dommages corporels, ni lorsqu'il priverait une obligation essentielle de sa substance ou limiterait une responsabilité que la loi interdit de limiter. Aucune clause ne réduit les droits impératifs des personnes concernées par un traitement de données.
+
+Article 11 — Données personnelles, chiffrement et sous-traitance RGPD
+
+Les traitements nécessaires aux commandes, paiements, gestion des licences et sécurité sont décrits dans la politique de confidentialité (https://relaisdesk.fr/politique-confidentialite.html).
+
+Chiffrement et hébergement : les applications utilisent le chiffrement du protocole RustDesk, notamment XSalsa20-Poly1305 via libsodium pour le transport chiffré des sessions. Le relais transmet ces flux sans les déchiffrer ; cette protection ne signifie pas que les métadonnées, comptes et fiches d'intervention sont chiffrés de bout en bout. L'API est accessible en HTTPS. Le site reste chez OVHcloud ; l'API et les serveurs RustDesk sont exploités dans la région commerciale Oracle Cloud Infrastructure France Sud (Marseille), eu-marseille-1, distincte de l'offre Oracle EU Sovereign Cloud. Aucune certification ANSSI ou garantie de sécurité absolue n'est revendiquée.
+
+Sous-traitance au sens de l'article 28 du RGPD : pour les données que le Client professionnel confie au service pour son compte, y compris les fiches d'intervention, l'annexe de sous-traitance RGPD, version 2026-09-09 (https://relaisdesk.fr/sous-traitance-rgpd.html), fait partie intégrante des présentes conditions. Les traitements de gestion commerciale et de sécurité réalisés pour les finalités propres du Vendeur relèvent de la politique de confidentialité.
+
+Article 12 — Conditions propres aux professionnels
+
+Les CGV peuvent être communiquées à tout acheteur professionnel qui en fait la demande. Sauf accord écrit, le paiement est exigible avant l'activation. Lorsqu'un délai de paiement est exceptionnellement accordé, tout retard entraîne, dès le lendemain de l'échéance et sans rappel préalable, des pénalités au taux de refinancement de la Banque centrale européenne applicable au semestre concerné majoré de dix points, sans être inférieur à trois fois le taux d'intérêt légal, ainsi que l'indemnité forfaitaire légale de 40 € pour frais de recouvrement. Une indemnisation complémentaire peut être demandée sur justificatifs si les frais dépassent ce montant. Ces dispositions ne s'appliquent pas aux consommateurs.
+
+Article 13 — Réclamations, médiation et litiges
+
+Toute réclamation doit d'abord être adressée via le formulaire de contact en ligne (https://relaisdesk.fr/contact.html) ou par courrier à l'adresse du Vendeur.
+
+Médiation de la consommation : aucun médiateur de la consommation n'est encore désigné pour RelaisDesk. Il s'agit d'une obligation restant à régulariser ; le formulaire de contact et cette information ne remplacent pas l'accès à un médiateur. Aucun Client ne renonce à ses droits du fait de cette situation. Les réclamations peuvent être adressées au Vendeur par courriel, formulaire ou courrier. Les coordonnées du médiateur seront publiées après sa désignation effective.
+
+Le droit français s'applique, sans priver le Consommateur des dispositions impératives plus protectrices de son pays de résidence. Le Consommateur peut saisir les juridictions compétentes selon les règles légales. Entre professionnels ayant tous la qualité de commerçant, toute attribution territoriale au ressort du siège du Vendeur ne s'applique que dans la mesure où elle est valablement convenue et autorisée par la loi.
+
+Article 14 — Évolution des conditions
+
+La version acceptée au moment de la commande reste applicable à cette commande. Une nouvelle version ne s'applique qu'aux commandes ultérieures, sauf modification imposée par la loi ou acceptée expressément par le Client.
+
+ANNEXE DE SOUS-TRAITANCE RGPD
+Version 2026-09-09
+
+La présente annexe fait partie des CGV version 2026-09-09. Elle lie le Client professionnel identifié dans la commande et Julien BELLOT, entrepreneur individuel (EI), SIRET 940 747 108 00014, 2 Chemin de Lonzais, 03170 Bizeneuille, France (« RelaisDesk »). Contact : contact@relaisdesk.fr ; téléphone : 06 62 85 59 30 ; formulaire : contact RelaisDesk (https://relaisdesk.fr/contact.html).
+
+1. Objet, rôles et instructions
+
+RelaisDesk traite les données confiées par le Client pour fournir l'assistance à distance et l'historique professionnel des interventions. Le Client agit comme responsable de traitement ou, lorsqu'il agit lui-même pour un donneur d'ordre, comme sous-traitant autorisé à recruter RelaisDesk en qualité de sous-traitant ultérieur. Il détermine les finalités de ses interventions et dispose des autorisations nécessaires.
+
+Les instructions documentées sont le contrat, les paramètres et actions autorisées du Client dans le service, ainsi que ses demandes écrites compatibles avec le contrat. RelaisDesk ne traite ces données que sur ces instructions, y compris pour les transferts internationaux, sauf obligation légale ; il informe alors le Client préalablement, sauf interdiction légale. Il informe immédiatement le Client lorsqu'une instruction lui paraît contraire au droit applicable et suspend l'instruction litigieuse le temps de la clarifier.
+
+La gestion des propres clients, paiements, factures, réclamations et finalités de sécurité de RelaisDesk est distincte et décrite dans la politique de confidentialité (https://relaisdesk.fr/politique-confidentialite.html). La qualification des rôles dépend du traitement réel et non de la seule dénomination contractuelle.
+
+2. Description et durée des traitements confiés
+
+- Personnes concernées : techniciens, utilisateurs assistés, contacts et personnes mentionnées dans les fiches par le Client.
+- Données : identifiants techniques, codes temporaires, adresses IP, dates, durées, volumes, courriel facultatif de la personne assistée, référence client, titre, objet, statut et compte rendu des interventions ; flux de session chiffrés lorsqu'ils transitent par le relais.
+- Opérations et finalités : collecte, enregistrement, consultation, organisation, transmission, export et effacement des métadonnées et fiches, pour mettre en relation les participants et suivre les interventions ; acheminement des flux chiffrés sans déchiffrement par le relais.
+- Durée : pendant la fourniture du service, puis pendant les opérations de restitution ou d'effacement et les durées résiduelles légalement nécessaires. Le chiffrement des flux n'est pas un chiffrement de bout en bout des fiches et métadonnées conservées par l'API.
+
+Le service n'est pas destiné à recevoir des mots de passe, secrets, dossiers médicaux ou autres données sensibles dans les fiches. Le Client limite les données à celles nécessaires à son intervention. L'absence d'enregistrement des écrans par RelaisDesk n'interdit pas que le poste ou le technicien les traite sous sa propre responsabilité.
+
+3. Confidentialité et sécurité
+
+RelaisDesk limite les accès aux personnes autorisées qui en ont besoin et les soumet à une obligation de confidentialité. Il met en œuvre et réexamine des mesures techniques et organisationnelles proportionnées au risque, conformément à l'article 32 du RGPD : authentification, séparation logique des comptes, contrôle de capacité et d'accès, HTTPS, protections contre les abus, gestion des correctifs et secrets, journalisation limitée, sauvegarde et restauration contrôlées. Aucune sécurité absolue ni certification non obtenue n'est promise.
+
+Les sauvegardes sont réservées à la restauration et à la continuité. Après une restauration, les demandes d'effacement déjà traitées sont réappliquées. Les opérations de sauvegarde, les droits d'accès et les essais de restauration font l'objet d'une procédure interne.
+
+4. Sous-traitants ultérieurs et localisation
+
+Le Client autorise généralement le recours aux prestataires suivants pour les seules missions confiées : Oracle Cloud Infrastructure pour l'API, la base, le rendez-vous et le relais, dans la région commerciale France Sud (Marseille), eu-marseille-1 ; OVHcloud (OVH SAS) pour le site et la messagerie transactionnelle. L'offre Oracle utilisée n'est pas Oracle EU Sovereign Cloud. Stripe intervient pour les paiements, selon les rôles décrits dans la politique de confidentialité ; il ne reçoit pas les comptes rendus d'intervention pour traiter les paiements.
+
+RelaisDesk impose contractuellement à ses sous-traitants ultérieurs les obligations de protection des données applicables à leur mission et demeure responsable de leur exécution à l'égard du Client dans les conditions de l'article 28. Il communique sur demande l'identité contractuelle, la mission, la localisation et les garanties pertinentes de chaque prestataire.
+
+Tout ajout ou remplacement concernant les traitements confiés est annoncé au Client par écrit au moins trente jours avant sa mise en œuvre. Le Client peut présenter durant ce délai une objection motivée relative à la protection des données. Les parties recherchent une solution ; à défaut, le Client peut mettre fin aux traitements concernés avant le changement, avec restitution des données et remboursement de la période prépayée non fournie correspondante.
+
+La localisation française des serveurs n'exclut pas les accès internationaux d'un groupe fournisseur. Un transfert hors EEE n'est effectué que sur instruction documentée et sous un mécanisme valable du chapitre V du RGPD (décision d'adéquation ou garanties appropriées telles que les clauses contractuelles types, avec analyse et mesures complémentaires lorsque nécessaires). RelaisDesk met à disposition les informations permettant au Client d'apprécier les garanties effectivement applicables ; une affiliation à un groupe international n'est pas présentée comme une certification de conformité.
+
+5. Assistance et violations de données
+
+RelaisDesk assiste le Client, compte tenu de la nature du traitement et des informations disponibles, pour les demandes d'accès, rectification, effacement, limitation, opposition et portabilité, ainsi que pour ses obligations de sécurité, analyses d'impact, consultations et notifications. Toute demande reçue directement et concernant les traitements confiés est transmise au Client sans réponse sur le fond hors de ses instructions ou d'une obligation légale.
+
+RelaisDesk notifie au Client toute violation des données confiées sans retard injustifié après en avoir pris connaissance. Il communique, au besoin progressivement, la nature de la violation, les catégories et volumes approximatifs concernés, les conséquences probables, les mesures prises ou proposées et le contact de suivi. Il conserve la chronologie et coopère à la remédiation. Cette notification ne dispense pas le Client de ses propres obligations envers la CNIL ou les personnes concernées.
+
+6. Restitution, suppression et fin du contrat
+
+Sur instruction du Client, notamment à la fin du service, RelaisDesk restitue les données confiées dans un format couramment utilisable ou les supprime, puis supprime les copies, sauf conservation imposée par la loi. Les exports disponibles dans l'espace professionnel peuvent être complétés par une demande au contact indiqué ci-dessus. La fin de la licence n'empêche pas une demande de restitution ou d'exercice de droits.
+
+Les durées ordinaires maximales sont celles de la politique de confidentialité : en particulier trente jours après expiration pour les enregistrements techniques Viewer et cinq ans après la dernière mise à jour pour les fiches terminées ou annulées. Elles ne font pas obstacle à une instruction d'effacement antérieure légalement possible. Les éventuelles données conservées pour une obligation légale ou un contentieux identifié sont isolées, leur accès limité et le motif communiqué au Client lorsque la loi le permet. Les copies de sauvegarde sont purgées selon leur cycle documenté et ne sont pas réutilisées à d'autres fins.
+
+7. Documentation et audits
+
+RelaisDesk tient les informations nécessaires pour démontrer le respect de la présente annexe et permet les audits, y compris les inspections, par le Client ou un auditeur mandaté soumis à confidentialité. Les modalités pratiques sont convenues pour protéger la sécurité, les secrets et les données d'autres clients, sans neutraliser le droit d'audit ni les pouvoirs des autorités. Les demandes urgentes liées à un incident ou à une autorité ne sont pas soumises à un préavis ordinaire.
+
+8. Portée et responsabilités
+
+La présente annexe prévaut sur les dispositions générales pour les traitements confiés. Elle ne réduit pas les droits des personnes ni les responsabilités impératives prévues par le RGPD. Toute modification substantielle est portée à la connaissance du Client et ne modifie pas rétroactivement les engagements acceptés.
