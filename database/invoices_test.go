@@ -93,7 +93,7 @@ func TestInvoicesCRUDAndNumbering(t *testing.T) {
 	}
 
 	// 5. List invoices
-	list, err := ListInvoices(db, "")
+	list, err := ListInvoices(db, "", 0, 0)
 	if err != nil {
 		t.Fatalf("ListInvoices failed: %v", err)
 	}
@@ -225,28 +225,22 @@ func TestDeleteInvoiceAndDecoupling(t *testing.T) {
 		t.Fatalf("expected order invoice_number %s, got %s", inv.InvoiceNumber, ord.InvoiceNumber)
 	}
 
-	// Delete invoice
-	pdfPath, err := DeleteInvoice(db, inv.InvoiceNumber)
-	if err != nil {
-		t.Fatalf("DeleteInvoice failed: %v", err)
-	}
-	if pdfPath != "/some/path/FAC.pdf" {
-		t.Fatalf("expected pdfPath /some/path/FAC.pdf, got %s", pdfPath)
+	// Invoice deletion is forbidden: invoices are issued fiscal documents,
+	// corrections go through credit notes.
+	if _, err := DeleteInvoice(db, inv.InvoiceNumber); err == nil {
+		t.Fatal("expected DeleteInvoice to be refused")
 	}
 
-	// Verify invoice is gone
-	_, err = GetInvoiceByNumber(db, inv.InvoiceNumber)
-	if err == nil {
-		t.Fatal("expected invoice to be deleted")
+	// Verify invoice is intact and the order link untouched
+	if _, err := GetInvoiceByNumber(db, inv.InvoiceNumber); err != nil {
+		t.Fatalf("expected invoice to be kept: %v", err)
 	}
-
-	// Verify order still exists and invoice_number is cleared
 	ordAfter, err := GetOrderByID(db, order.OrderID)
 	if err != nil {
 		t.Fatalf("expected order to still exist: %v", err)
 	}
-	if ordAfter.InvoiceNumber != "" {
-		t.Fatalf("expected order invoice_number to be cleared, got %s", ordAfter.InvoiceNumber)
+	if ordAfter.InvoiceNumber != inv.InvoiceNumber {
+		t.Fatalf("expected order invoice_number %s, got %s", inv.InvoiceNumber, ordAfter.InvoiceNumber)
 	}
 }
 
@@ -302,3 +296,36 @@ func TestCreditNoteCreation(t *testing.T) {
 	}
 }
 
+func TestCreditNoteKeepsMentionWhenNotesNull(t *testing.T) {
+	db, err := InitDatabase(t.TempDir() + "/credit_note_null.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	inv, err := CreateInvoice(db, &Invoice{
+		CustomerEmail: "nullnotes@example.com",
+		CustomerName:  "Entreprise Nulle",
+		Plan:          "Starter",
+		Technicians:   1,
+		AmountHT:      50.0,
+		AmountTTC:     50.0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE invoices SET notes = NULL WHERE invoice_number = ?`, inv.InvoiceNumber); err != nil {
+		t.Fatal(err)
+	}
+	creditNote, err := CreateCreditNote(db, inv.InvoiceNumber, "Erreur de facturation")
+	if err != nil {
+		t.Fatalf("CreateCreditNote failed: %v", err)
+	}
+	var notes *string
+	if err := db.QueryRow(`SELECT notes FROM invoices WHERE invoice_number = ?`, inv.InvoiceNumber).Scan(&notes); err != nil {
+		t.Fatal(err)
+	}
+	if notes == nil || *notes != "Avoir "+creditNote.InvoiceNumber+" émis" {
+		t.Fatalf("expected mention of %s in original notes, got %+v", creditNote.InvoiceNumber, notes)
+	}
+}

@@ -3,13 +3,24 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"api/mailer"
+)
+
+const (
+	// backupStaleAfter is the age beyond which the latest declared backup
+	// raises an admin alert on the supervision panel.
+	backupStaleAfter   = 36 * time.Hour
+	backupManifestFile = "manifest.json"
 )
 
 type SystemComponentStatus struct {
@@ -50,7 +61,7 @@ func probeSystemComponents(ctx context.Context, db *sql.DB, settings ServerSetti
 	type result struct {
 		component SystemComponentStatus
 	}
-	results := make(chan result, 5)
+	results := make(chan result, 6)
 
 	go func() {
 		started := time.Now()
@@ -84,21 +95,82 @@ func probeSystemComponents(ctx context.Context, db *sql.DB, settings ServerSetti
 		}
 		results <- result{probeTCPComponent(ctx, "smtp", mail.Host, mail.Port)}
 	}()
+	go func() {
+		results <- result{probeBackupComponent()}
+	}()
 
-	components := make([]SystemComponentStatus, 0, 5)
-	for len(components) < 5 {
+	components := make([]SystemComponentStatus, 0, 6)
+	for len(components) < 6 {
 		select {
 		case item := <-results:
 			components = append(components, item.component)
 		case <-ctx.Done():
 			components = append(components, SystemComponentStatus{Name: "probe_timeout", Status: "unhealthy", Message: "délai de supervision dépassé"})
-			for len(components) < 5 {
+			for len(components) < 6 {
 				components = append(components, SystemComponentStatus{Name: fmt.Sprintf("unknown_%d", len(components)), Status: "unhealthy", Message: "contrôle interrompu"})
 			}
 		}
 	}
 	sort.Slice(components, func(i, j int) bool { return components[i].Name < components[j].Name })
 	return components
+}
+
+// probeBackupComponent reads the manifest written by relaisdesk-backup and
+// alerts when backups are missing or stale. It reports counts and ages only,
+// never file paths.
+func probeBackupComponent() SystemComponentStatus {
+	status := SystemComponentStatus{Name: "backups", Status: "healthy"}
+	started := time.Now()
+	defer func() { status.LatencyMS = time.Since(started).Milliseconds() }()
+
+	dir := strings.TrimSpace(os.Getenv("BACKUP_DIR"))
+	if dir == "" {
+		dir = "/var/backups/relaisdesk"
+	}
+	raw, err := os.ReadFile(filepath.Join(dir, backupManifestFile))
+	if err != nil {
+		status.Status = "unhealthy"
+		status.Message = "manifeste de sauvegarde introuvable"
+		return status
+	}
+	var manifest struct {
+		Backups []struct {
+			CreatedAt string `json:"created_at"`
+		} `json:"backups"`
+	}
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		status.Status = "unhealthy"
+		status.Message = "manifeste de sauvegarde illisible"
+		return status
+	}
+	if len(manifest.Backups) == 0 {
+		status.Status = "unhealthy"
+		status.Message = "aucune sauvegarde déclarée"
+		return status
+	}
+	var latest time.Time
+	for _, entry := range manifest.Backups {
+		created, err := time.Parse(time.RFC3339, strings.TrimSpace(entry.CreatedAt))
+		if err != nil {
+			continue
+		}
+		if created.After(latest) {
+			latest = created
+		}
+	}
+	if latest.IsZero() {
+		status.Status = "unhealthy"
+		status.Message = "manifeste de sauvegarde illisible"
+		return status
+	}
+	age := time.Since(latest)
+	if age > backupStaleAfter {
+		status.Status = "unhealthy"
+		status.Message = fmt.Sprintf("dernière sauvegarde il y a %d h", int(age.Hours()))
+		return status
+	}
+	status.Message = fmt.Sprintf("%d sauvegarde(s), dernière il y a %d h", len(manifest.Backups), int(age.Hours()))
+	return status
 }
 
 func probeTCPComponent(ctx context.Context, name, host string, port int) SystemComponentStatus {

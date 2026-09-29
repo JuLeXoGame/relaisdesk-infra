@@ -154,7 +154,7 @@ func TestPermanentAccessTermsDoNotRewriteFleetV1(t *testing.T) {
 		if err != nil || !strings.Contains(name, version) {
 			t.Fatalf("current attachment: %s, %v", name, err)
 		}
-		for _, clause := range []string{"autorisation préalable documentée", "sans validation interactive", "procédure manuelle", "Version contractuelle 2026-09-21", "Linux ou macOS", "ne désinstalle pas"} {
+		for _, clause := range []string{"autorisation préalable documentée", "sans validation interactive", "procédure manuelle", "Version contractuelle 2026-09-27", "Linux ou macOS", "ne désinstalle pas", "Engagement de disponibilité (SLA)"} {
 			if !bytes.Contains(body, []byte(clause)) {
 				t.Fatalf("%s missing clause %q", version, clause)
 			}

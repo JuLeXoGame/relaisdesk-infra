@@ -151,7 +151,11 @@ func CustomerLoginVerifyHandler(db *sql.DB) http.HandlerFunc {
 		session, email, err := dbpkg.ConsumeCustomerLoginToken(db, request.Token, request.Code)
 		if err != nil {
 			if errors.Is(err, dbpkg.ErrMFARequired) {
-				writeJSON(w, http.StatusUnauthorized, map[string]any{"error": err.Error(), "requires_2fa": true})
+				// 200 like every other 2FA challenge (password, Google,
+				// admin): this is a legitimate next step, not a failure,
+				// and 401 here would burn the IP-ban budget on each MFA
+				// login (StrictAuthLimiter counts 401/403).
+				writeJSON(w, http.StatusOK, map[string]any{"requires_2fa": true})
 				return
 			}
 			writeJSONError(w, "Lien invalide ou expiré", http.StatusUnauthorized)
@@ -548,8 +552,8 @@ func CustomerRenewLicenseHandler(db *sql.DB, cfg *config.Config, mail *mailer.Ma
 			return
 		}
 		request.PaymentMethod = strings.ToLower(strings.TrimSpace(request.PaymentMethod))
-		if request.PaymentMethod != "stripe" && request.PaymentMethod != "bank_transfer" {
-			writeJSONError(w, "Méthode de paiement invalide", http.StatusBadRequest)
+		if !dbpkg.ValidPaymentMethod(request.PaymentMethod) {
+			writeJSONError(w, "Méthode de paiement invalide (choix: stripe, bank_transfer, crypto_btc, crypto_xrp)", http.StatusBadRequest)
 			return
 		}
 		if !request.TermsAccepted || request.TermsVersion != publicTermsVersion {
@@ -588,6 +592,10 @@ func CustomerRenewLicenseHandler(db *sql.DB, cfg *config.Config, mail *mailer.Ma
 				return
 			}
 			writeJSON(w, http.StatusCreated, map[string]any{"order_id": order.OrderID, "checkout_url": checkoutURL})
+			return
+		}
+		if request.PaymentMethod == "crypto_btc" || request.PaymentMethod == "crypto_xrp" {
+			writeCryptoOrder(w, r, db, cfg, order)
 			return
 		}
 		if err := EnqueueBankInstructionsEmail(db, order.OrderID); err != nil {
@@ -729,6 +737,37 @@ func CustomerDownloadInvoiceHandler(db *sql.DB, cfg *config.Config) http.Handler
 		w.Header().Set("Content-Type", "application/pdf")
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filepath.Base(filePath)))
 		http.ServeFile(w, r, filePath)
+	}
+}
+
+// CustomerDownloadInvoiceCIIHandler serves the Factur-X BASIC (CII XML)
+// e-invoicing document for one of the customer's invoices.
+func CustomerDownloadInvoiceCIIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		identity, ok := customerIdentity(r)
+		if !ok {
+			writeJSONError(w, "Session client invalide", http.StatusUnauthorized)
+			return
+		}
+		invoiceNumber := customerPathID(r.URL.Path, "/api/v1/customer/invoices/", "/cii")
+		if invoiceNumber == "" || !invoiceNumberPattern.MatchString(invoiceNumber) {
+			writeJSONError(w, "Facture introuvable", http.StatusNotFound)
+			return
+		}
+		inv, err := dbpkg.GetInvoiceForCustomerID(db, invoiceNumber, identity.ID)
+		if err != nil {
+			writeJSONError(w, "Facture introuvable", http.StatusNotFound)
+			return
+		}
+		out, err := invoice.GenerateInvoiceCII(inv)
+		if err != nil {
+			writeJSONError(w, "Document de facture indisponible", http.StatusNotFound)
+			return
+		}
+		log.Printf("[AUDIT CUSTOMER INVOICE CII] Facture %s (CII) téléchargée par son titulaire", invoiceNumber)
+		w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", invoiceNumber+".xml"))
+		_, _ = w.Write(out)
 	}
 }
 

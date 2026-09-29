@@ -16,8 +16,20 @@ func CreateLicense(db *sql.DB, email string, days int, maxConnections int, notes
 	return dbpkg.CreateLicense(db, email, days, maxConnections, notes)
 }
 
+// AddServerKey records a RustDesk server public key as active. Fresh
+// databases need at least one row so technician and viewer logins can
+// return the key; the latest active row wins.
+func AddServerKey(db *sql.DB, publicKey string) error {
+	publicKey = strings.TrimSpace(publicKey)
+	if publicKey == "" || len(publicKey) > 256 || strings.ContainsAny(publicKey, "\x00\r\n") {
+		return fmt.Errorf("clé publique serveur invalide")
+	}
+	_, err := db.Exec(`INSERT INTO server_keys(public_key,is_active) VALUES(?,1)`, publicKey)
+	return err
+}
+
 func ListLicenses(db *sql.DB, statusFilter, emailFilter string) error {
-	licences, err := dbpkg.ListLicenses(db, statusFilter, emailFilter)
+	licences, err := dbpkg.ListLicenses(db, statusFilter, emailFilter, "", 0, 0)
 	if err != nil {
 		return err
 	}
@@ -83,7 +95,7 @@ func PrintStats(db *sql.DB) error {
 }
 
 func ExportCSV(db *sql.DB, filename string) error {
-	licences, err := dbpkg.ListLicenses(db, "", "")
+	licences, err := dbpkg.ListLicenses(db, "", "", "", 0, 0)
 	if err != nil {
 		return err
 	}

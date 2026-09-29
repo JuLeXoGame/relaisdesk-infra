@@ -15,7 +15,59 @@ const (
 	customer2FAEmailCodeLifetime  = 15 * time.Minute
 	customerTrustedDeviceLifetime = 30 * 24 * time.Hour
 	max2FAAttempts                = 5
+	// Per-account password throttle: complements the per-IP
+	// StrictAuthLimiter against distributed guessing. Only the password
+	// path is throttled; magic-link login stays available.
+	maxCustomerPasswordAttempts = 10
+	customerPasswordLockout     = 15 * time.Minute
 )
+
+// customerPasswordLocked reports whether the account is inside a password
+// lockout window. An expired lockout releases the account with a clean
+// slate. Unknown accounts are never locked. Errors fail closed.
+// All throttle statements run inside the caller's transaction: separate
+// pool writes would hit SQLITE_BUSY while it is open.
+func customerPasswordLocked(tx *sql.Tx, email string) (bool, error) {
+	var lockedUntil sql.NullString
+	err := tx.QueryRow("SELECT password_locked_until FROM customer_accounts WHERE email=? COLLATE NOCASE", email).Scan(&lockedUntil)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	if !lockedUntil.Valid || lockedUntil.String == "" {
+		return false, nil
+	}
+	until, err := ParseSQLiteTime(lockedUntil.String)
+	if err != nil {
+		return false, err
+	}
+	if time.Now().UTC().Before(until) {
+		return true, nil
+	}
+	return false, resetCustomerPasswordFailures(tx, email)
+}
+
+func recordCustomerPasswordFailure(tx *sql.Tx, email string) error {
+	var attempts int
+	if err := tx.QueryRow("SELECT failed_password_attempts FROM customer_accounts WHERE email=? COLLATE NOCASE", email).Scan(&attempts); err != nil {
+		return err
+	}
+	attempts++
+	if attempts >= maxCustomerPasswordAttempts {
+		_, err := tx.Exec("UPDATE customer_accounts SET failed_password_attempts = ?, password_locked_until = ? WHERE email=? COLLATE NOCASE",
+			attempts, time.Now().UTC().Add(customerPasswordLockout).Format(time.RFC3339), email)
+		return err
+	}
+	_, err := tx.Exec("UPDATE customer_accounts SET failed_password_attempts = ? WHERE email=? COLLATE NOCASE", attempts, email)
+	return err
+}
+
+func resetCustomerPasswordFailures(tx *sql.Tx, email string) error {
+	_, err := tx.Exec("UPDATE customer_accounts SET failed_password_attempts = 0, password_locked_until = NULL WHERE email=? COLLATE NOCASE", email)
+	return err
+}
 
 type CustomerPasswordAuthResult struct {
 	SessionToken   string `json:"session_token,omitempty"`
@@ -51,8 +103,24 @@ func ValidateCustomerPasswordWith2FA(db *sql.DB, email, plainPassword string, de
 	if !res.HasPassword {
 		return res, errors.New("aucun mot de passe n'a été défini pour ce compte")
 	}
+	if locked, err := customerPasswordLocked(tx, email); err != nil {
+		return res, err
+	} else if locked {
+		return res, errors.New("compte temporairement verrouillé, réessayez plus tard")
+	}
 	if !checkPassword(pwHash.String, plainPassword) {
+		if err := recordCustomerPasswordFailure(tx, email); err != nil {
+			return res, err
+		}
+		// Persist the throttle counter: the error paths below roll the
+		// transaction back, which would silently drop it.
+		if err := tx.Commit(); err != nil {
+			return res, err
+		}
 		return res, errors.New("mot de passe incorrect")
+	}
+	if err := resetCustomerPasswordFailures(tx, email); err != nil {
+		return res, err
 	}
 	enabled, _, _, _, err := getMFAConfigTx(tx, "", email)
 	if err != nil {

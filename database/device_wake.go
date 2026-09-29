@@ -130,8 +130,21 @@ func PopPendingDeviceWakes(tx *sql.Tx, licenseID string) ([]string, error) {
 }
 
 // UpdateDeviceMAC updates the MAC address of a device.
-func UpdateDeviceMAC(db *sql.DB, deviceID, mac string) error {
+func UpdateDeviceMAC(db *sql.DB, deviceID, mac string, customerID int64, licenseID string) error {
 	if db == nil {
+		return ErrDeviceAuthorization
+	}
+	dev, err := GetDeviceByID(db, strings.TrimSpace(deviceID))
+	if err != nil {
+		return err
+	}
+	// Tenant scoping (same convention as QueueDeviceWake): at least one
+	// owner check must pass so a device ID alone never authorizes a
+	// cross-tenant write.
+	if customerID > 0 && dev.CustomerID != customerID {
+		return ErrDeviceAuthorization
+	}
+	if licenseID != "" && !strings.EqualFold(dev.LicenseID, licenseID) {
 		return ErrDeviceAuthorization
 	}
 	norm := NormalizeMAC(mac)

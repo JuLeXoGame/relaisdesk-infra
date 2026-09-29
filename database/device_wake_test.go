@@ -121,11 +121,21 @@ func TestDeviceWakeAndNetworkLifecycle(t *testing.T) {
 
 	// 5. Test UpdateDeviceMAC
 	newMAC := "11:22:33:44:55:66"
-	if err := UpdateDeviceMAC(db, dev1.DeviceID, newMAC); err != nil {
+	if err := UpdateDeviceMAC(db, dev1.DeviceID, newMAC, cust.ID, ""); err != nil {
 		t.Fatalf("UpdateDeviceMAC failed: %v", err)
 	}
 	updatedDev, err := GetDeviceByID(db, dev1.DeviceID)
 	if err != nil || updatedDev.MACAddress != newMAC {
 		t.Fatalf("expected updated MAC %s, got %s (err: %v)", newMAC, updatedDev.MACAddress, err)
+	}
+	// Cross-tenant MAC writes must be rejected.
+	if err := UpdateDeviceMAC(db, dev1.DeviceID, newMAC, cust.ID+999, ""); err != ErrDeviceAuthorization {
+		t.Fatalf("foreign customer MAC write = %v, want ErrDeviceAuthorization", err)
+	}
+	if err := UpdateDeviceMAC(db, dev1.DeviceID, newMAC, 0, "FOREIGN-LIC"); err != ErrDeviceAuthorization {
+		t.Fatalf("foreign license MAC write = %v, want ErrDeviceAuthorization", err)
+	}
+	if err := UpdateDeviceMAC(db, dev1.DeviceID, newMAC, 0, lic.LicenseID); err != nil {
+		t.Fatalf("license-scoped MAC write failed: %v", err)
 	}
 }

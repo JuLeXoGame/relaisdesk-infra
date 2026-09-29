@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"api/config"
+	"api/cryptopay"
 	"api/mailer"
 )
 
@@ -21,6 +22,21 @@ type AdminOrderView struct {
 	LicenseEmailSent bool `json:"license_email_sent"`
 	InvoiceEmailSent bool `json:"invoice_email_sent"`
 	FulfillmentDone  bool `json:"fulfillment_done"`
+	// Crypto summarizes the latest quote of a crypto order (nil otherwise)
+	// so the operator can reconcile OKX deposits manually when needed.
+	Crypto *AdminCryptoView `json:"crypto,omitempty"`
+}
+
+// AdminCryptoView is the operator-facing summary of a crypto quote.
+type AdminCryptoView struct {
+	Asset        string  `json:"asset"`
+	AmountCrypto string  `json:"amount_crypto"`
+	RateEUR      string  `json:"rate_eur"`
+	PayAddress   string  `json:"pay_address"`
+	DestTag      *uint32 `json:"dest_tag,omitempty"`
+	Status       string  `json:"status"`
+	ExpiresAt    string  `json:"expires_at"`
+	TxID         string  `json:"txid,omitempty"`
 }
 
 // AdminListOrdersHandler lists orders with filters.
@@ -28,8 +44,37 @@ func AdminListOrdersHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		status := r.URL.Query().Get("status")
 		email := r.URL.Query().Get("email")
+		page, limit := paginationParams(r, 0)
 
-		orders, err := dbpkg.ListOrders(db, status, email)
+		orders, err := dbpkg.ListOrders(db, status, email, limit, (page-1)*limit)
+		if err != nil {
+			writeJSONError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		total, err := dbpkg.CountOrders(db, status, email)
+		if err != nil {
+			writeJSONError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Batch lookups: a few queries instead of N+1.
+		ids := make([]string, 0, len(orders))
+		var cryptoIDs []string
+		for i := range orders {
+			if orders[i].OrderID == "" {
+				continue
+			}
+			ids = append(ids, orders[i].OrderID)
+			if _, err := cryptopay.AssetForPaymentMethod(orders[i].PaymentMethod); err == nil {
+				cryptoIDs = append(cryptoIDs, orders[i].OrderID)
+			}
+		}
+		emailStatuses, err := dbpkg.GetOrderEmailStatusBatch(db, ids)
+		if err != nil {
+			writeJSONError(w, "Impossible de lire l'état de livraison des commandes", http.StatusInternalServerError)
+			return
+		}
+		quotes, err := dbpkg.GetCryptoQuotesByOrderIDs(db, cryptoIDs)
 		if err != nil {
 			writeJSONError(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -37,11 +82,7 @@ func AdminListOrdersHandler(db *sql.DB) http.HandlerFunc {
 
 		views := make([]AdminOrderView, 0, len(orders))
 		for _, order := range orders {
-			emailStatus, err := dbpkg.GetOrderEmailStatus(db, order.OrderID)
-			if err != nil {
-				writeJSONError(w, "Impossible de lire l'état de livraison des commandes", http.StatusInternalServerError)
-				return
-			}
+			emailStatus := emailStatuses[order.OrderID]
 			view := AdminOrderView{
 				Order:            order,
 				PaymentComplete:  order.Status == "paid",
@@ -52,12 +93,21 @@ func AdminListOrdersHandler(db *sql.DB) http.HandlerFunc {
 			}
 			view.FulfillmentDone = view.PaymentComplete && view.LicenseCreated && view.InvoiceCreated &&
 				view.LicenseEmailSent && view.InvoiceEmailSent
+			if quote := quotes[order.OrderID]; quote != nil {
+				view.Crypto = &AdminCryptoView{
+					Asset: quote.Asset, AmountCrypto: quote.AmountCrypto, RateEUR: quote.RateEUR,
+					PayAddress: quote.PayAddress, DestTag: quote.DestTag, Status: quote.Status,
+					ExpiresAt: quote.ExpiresAt.UTC().Format(time.RFC3339), TxID: quote.TxID,
+				}
+			}
 			views = append(views, view)
 		}
 
 		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"orders": views,
-			"total":  len(views),
+			"total":  total,
+			"page":   page,
+			"limit":  limit,
 		})
 	}
 }
@@ -161,4 +211,3 @@ func AdminDeleteOrderHandler(db *sql.DB) http.HandlerFunc {
 		})
 	}
 }
-

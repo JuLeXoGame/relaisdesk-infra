@@ -4,6 +4,7 @@ import (
 	dbpkg "database"
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	netmail "net/mail"
 	"strconv"
@@ -111,11 +112,12 @@ func AdminLoginHandler(db *sql.DB, adminToken string) http.HandlerFunc {
 			authRes, lic, err := dbpkg.ValidateAdminEmailPassword(db, req.Email, req.Password)
 			if err != nil {
 				time.Sleep(350 * time.Millisecond)
-				status := http.StatusUnauthorized
-				if strings.Contains(err.Error(), "aucune licence") {
-					status = http.StatusForbidden
-				}
-				writeJSON(w, status, map[string]string{"error": err.Error()})
+				// Uniform 401 with a generic message: distinguishing valid
+				// credentials without admin rights (403) from invalid ones
+				// would let an attacker oracle credential validity, and the
+				// raw error leaks internal account states.
+				log.Printf("[Admin Login] échec mode email: %v", err)
+				writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Identifiants incorrects"})
 				return
 			}
 
@@ -163,7 +165,9 @@ func AdminLoginHandler(db *sql.DB, adminToken string) http.HandlerFunc {
 			}
 
 			time.Sleep(350 * time.Millisecond)
-			writeJSON(w, http.StatusForbidden, map[string]string{"error": "Cette licence ne dispose pas des droits administrateur"})
+			// Uniform 401 (see Mode 2): a distinct 403 would oracle license
+			// credential validity.
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Identifiants incorrects"})
 			return
 		}
 
@@ -250,6 +254,10 @@ func AdminFinancialsHandler(db *sql.DB) http.HandlerFunc {
 				})
 			}
 		}
+		if err := rows.Err(); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
 
 		// 2. Calculate Monthly Recurring Revenue (MRR) from active licenses
 		licRows, err := db.Query(`
@@ -283,6 +291,10 @@ func AdminFinancialsHandler(db *sql.DB) http.HandlerFunc {
 						mrr += 24.90
 					}
 				}
+			}
+			if err := licRows.Err(); err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+				return
 			}
 		}
 
@@ -455,12 +467,12 @@ func AdminCreateLicenseHandler(db *sql.DB) http.HandlerFunc {
 			case "starter":
 				req.MaxConnections = 1
 				if req.Notes == "" {
-					req.Notes = "Plan Starter (10€/mois)"
+					req.Notes = "Plan Starter (24,90€/mois)"
 				}
 			case "pro":
-				req.MaxConnections = 10
+				req.MaxConnections = 5
 				if req.Notes == "" {
-					req.Notes = "Plan Pro (20€/mois)"
+					req.Notes = "Plan Pro (110€/mois)"
 				}
 			case "ultra":
 				techs := req.Technicians
@@ -500,33 +512,22 @@ func AdminListLicensesHandler(db *sql.DB) http.HandlerFunc {
 		status := r.URL.Query().Get("status")
 		email := r.URL.Query().Get("email")
 		unmask := r.URL.Query().Get("unmask") == "true"
-		page := intQuery(r, "page", 1)
-		limit := intQuery(r, "limit", 100)
-		if limit <= 0 || limit > 1000 {
-			limit = 100
-		}
-		if page <= 0 {
-			page = 1
-		}
+		search := r.URL.Query().Get("q")
+		page, limit := paginationParams(r, 100)
 
-		licences, err := dbpkg.ListLicenses(db, status, email)
+		licences, err := dbpkg.ListLicenses(db, status, email, search, limit, (page-1)*limit)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+		total, err := dbpkg.CountLicenses(db, status, email, search)
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 			return
 		}
 
-		total := len(licences)
-		start := (page - 1) * limit
-		if start > total {
-			start = total
-		}
-		end := start + limit
-		if end > total {
-			end = total
-		}
-
-		items := make([]map[string]any, 0, end-start)
-		for _, lic := range licences[start:end] {
+		items := make([]map[string]any, 0, len(licences))
+		for _, lic := range licences {
 			items = append(items, licensePayload(lic, !unmask))
 		}
 
@@ -569,6 +570,26 @@ func intQuery(r *http.Request, key string, fallback int) int {
 		return fallback
 	}
 	return parsed
+}
+
+// paginationParams reads page/limit query params shared by admin list
+// endpoints. limit <= 0 (or absent with a zero default) means "no pagination".
+func paginationParams(r *http.Request, defaultLimit int) (page, limit int) {
+	page = intQuery(r, "page", 1)
+	if page <= 0 {
+		page = 1
+	}
+	limit = defaultLimit
+	if raw := r.URL.Query().Get("limit"); raw != "" {
+		limit = intQuery(r, "limit", defaultLimit)
+	}
+	if limit < 0 {
+		limit = 0
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
+	return page, limit
 }
 
 func licensePayload(lic dbpkg.License, maskKey bool) map[string]any {

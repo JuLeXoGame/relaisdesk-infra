@@ -105,6 +105,34 @@ func TestPricingCalculation(t *testing.T) {
 	}
 }
 
+func TestAddServerKey(t *testing.T) {
+	db, err := dbpkg.InitDatabase(filepath.Join(t.TempDir(), "licences.db"))
+	if err != nil {
+		t.Fatalf("InitDatabase failed: %v", err)
+	}
+	defer db.Close()
+
+	if err := AddServerKey(db, "recette-server-key"); err != nil {
+		t.Fatalf("AddServerKey failed: %v", err)
+	}
+	got, err := dbpkg.GetActiveServerPublicKey(db)
+	if err != nil || got != "recette-server-key" {
+		t.Fatalf("GetActiveServerPublicKey = %q, %v", got, err)
+	}
+	if err := AddServerKey(db, "  "); err == nil {
+		t.Fatal("expected error for empty server key")
+	}
+}
+
+func TestCalculatePlanRejectsOutOfRange(t *testing.T) {
+	if _, err := CalculatePlan("ultra", 501); err == nil {
+		t.Error("expected error for ultra with 501 technicians")
+	}
+	if _, err := CalculatePlan("unknown-plan", 1); err == nil {
+		t.Error("expected error for unknown plan")
+	}
+}
+
 func TestCustomPricingMatchesServerEveryCapacity(t *testing.T) {
 	for capacity := 10; capacity <= 500; capacity++ {
 		price, _, _, err := dbpkg.CalculateServerPrice("ultra", capacity)

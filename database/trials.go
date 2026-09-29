@@ -13,7 +13,7 @@ import (
 )
 
 const TrialDays = 30
-const TrialTermsVersion = "2026-09-21-fleet-v2"
+const TrialTermsVersion = "2026-09-24-fleet-v3"
 
 var ErrTrialUsed = errors.New("essai déjà utilisé ou compte déjà client")
 var ErrTrialUnavailable = errors.New("demande d'essai invalide ou expirée")

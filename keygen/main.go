@@ -242,13 +242,34 @@ func main() {
 		}
 		fmt.Printf("\033[32mCode %s revoqué avec succès.\033[0m\n", *code)
 
+	case "server-key":
+		cmd := flag.NewFlagSet("server-key", flag.ExitOnError)
+		add := cmd.String("add", "", "Clé publique serveur à activer")
+		dbPath := cmd.String("db", defaultDB, "chemin vers la base SQLite")
+		cmd.Parse(commandArgs)
+
+		if *add == "" {
+			fail("add requis")
+		}
+
+		db := initDB(*dbPath)
+		defer db.Close()
+
+		if err := AddServerKey(db, *add); err != nil {
+			fail(err.Error())
+		}
+		fmt.Printf("\033[32mClé publique serveur activée.\033[0m\n")
+
 	case "pricing":
 		pricingCmd := flag.NewFlagSet("pricing", flag.ExitOnError)
 		techs := pricingCmd.Int("technicians", 0, "Calculer le tarif Ultra pour un nombre specifique de techniciens")
 		pricingCmd.Parse(commandArgs)
 
 		if *techs > 0 {
-			planInfo, _ := CalculatePlan("ultra", *techs)
+			planInfo, err := CalculatePlan("ultra", *techs)
+			if err != nil {
+				fail(err.Error())
+			}
 			fmt.Printf("Plan Ultra (%d techniciens) : %.2f € / mois (viewers illimites)\n", planInfo.Technicians, planInfo.MonthlyPrice)
 		} else {
 			PrintPricingGrid()
@@ -296,7 +317,7 @@ func fail(message string) {
 func printUsage() {
 	fmt.Println("Usage: keygen [--db /data/relaisdesk/licences.db] <commande> [options]")
 	fmt.Println("Commandes:")
-	fmt.Println("  pricing       Afficher la grille tarifaire (Starter 10€, Pro 20€, Ultra 20€+)")
+	fmt.Println("  pricing       Afficher la grille tarifaire (Starter 24,90€, Pro 110€, Ultra 199€+)")
 	fmt.Println("  generate      Generer une licence (--plan starter|pro|ultra --technicians N)")
 	fmt.Println("  list          Lister les licences")
 	fmt.Println("  revoke        Revoquer une licence")
@@ -307,4 +328,5 @@ func printUsage() {
 	fmt.Println("  viewer-code   Generer un code viewer")
 	fmt.Println("  viewer-codes  Lister les codes viewer")
 	fmt.Println("  viewer-revoke Revoquer un code viewer")
+	fmt.Println("  server-key    Activer une clé publique serveur (--add CLE)")
 }

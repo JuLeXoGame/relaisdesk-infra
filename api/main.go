@@ -94,6 +94,7 @@ func main() {
 	jobContext, stopJobs := context.WithCancel(context.Background())
 	defer stopJobs()
 	go handlers.RunJobWorker(jobContext, db, cfg, mail)
+	go handlers.RunOKXDepositWatcher(jobContext, db, cfg)
 
 	go func() {
 		ticker := time.NewTicker(1 * time.Hour)
@@ -111,9 +112,17 @@ func main() {
 				log.Printf("[Retention] purge: viewers=%d connexions=%d alertes=%d commandes=%d rétractations=%d interventions=%d travaux=%d bans=%d",
 					purged.ViewerCodes, purged.ConnectionLogs, purged.SecurityAlerts, purged.UnpaidOrders, purged.WithdrawalRecords, purged.Interventions, purged.CompletedJobs, purged.AuthBans)
 			}
+			if carts, cartErr := handlers.QueueCartReminders(db, time.Now().UTC()); cartErr != nil {
+				log.Printf("[Carts] relances indisponibles: %v", cartErr)
+			} else if carts > 0 {
+				log.Printf("[Carts] %d relance(s) panier mise(s) en file", carts)
+			}
 			reminders, reminderErr := handlers.ProcessRenewalReminders(db, cfg, mail, time.Now().UTC())
 			if err := handlers.QueueTrialReminders(db, time.Now().UTC()); err != nil {
 				log.Printf("[Trials] rappels indisponibles: %v", err)
+			}
+			if err := handlers.QueueTrialNurture(db, time.Now().UTC()); err != nil {
+				log.Printf("[Trials] nurturing indisponible: %v", err)
 			}
 			if err := handlers.QueueSubscriptionRenewalNotices(db, time.Now().UTC()); err != nil {
 				log.Printf("[Subscriptions] rappels annuels : %v", err)
@@ -141,11 +150,14 @@ func main() {
 
 	// Routes publiques (Site web relaisdesk.fr)
 	mux.HandleFunc("/api/v1/public/pricing", method(http.MethodGet, handlers.PublicPricingHandler()))
+	mux.HandleFunc("/api/v1/public/payment-methods", method(http.MethodGet, handlers.PublicPaymentMethodsHandler(cfg)))
 	mux.HandleFunc("/api/v1/public/trials", method(http.MethodGet, handlers.TrialAvailabilityHandler(cfg)))
+	mux.Handle("/api/v1/public/status", middleware.RateLimit(60, time.Minute)(http.HandlerFunc(method(http.MethodGet, handlers.PublicStatusHandler(db, settings, mail)))))
 	mux.Handle("/api/v1/public/trials/request", middleware.RateLimit(5, time.Hour)(http.HandlerFunc(method(http.MethodPost, handlers.PublicTrialRequestHandler(db, cfg)))))
 	mux.Handle("/api/v1/public/trials/verify", middleware.StrictAuthLimiter(10, time.Hour, db)(http.HandlerFunc(method(http.MethodPost, handlers.PublicTrialVerifyHandler(db, cfg)))))
 	mux.HandleFunc("/api/v1/public/releases/latest", method(http.MethodGet, handlers.PublicReleaseManifestHandler(cfg)))
 	mux.Handle("/api/v1/public/order", middleware.RateLimit(20, time.Hour)(http.HandlerFunc(method(http.MethodPost, handlers.PublicOrderHandler(db, cfg, mail)))))
+	mux.Handle("/api/v1/public/crypto/quote", middleware.RateLimit(20, time.Hour)(http.HandlerFunc(method(http.MethodPost, handlers.CryptoQuoteRefreshHandler(db, cfg)))))
 	mux.Handle("/api/v1/public/withdrawal", middleware.RateLimit(10, time.Hour)(http.HandlerFunc(method(http.MethodPost, handlers.PublicWithdrawalHandler(db, mail)))))
 	mux.Handle("/api/v1/public/trials/withdraw", middleware.RateLimit(10, time.Hour)(http.HandlerFunc(method(http.MethodPost, handlers.PublicTrialWithdrawalHandler(db)))))
 	mux.Handle("/api/v1/public/contact", middleware.RateLimit(10, time.Hour)(http.HandlerFunc(method(http.MethodPost, handlers.PublicContactHandler(mail, cfg)))))
@@ -230,6 +242,10 @@ func main() {
 			handlers.AdminDownloadInvoiceHandler(db, cfg)(w, r)
 			return
 		}
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/cii") {
+			handlers.AdminDownloadInvoiceCIIHandler(db)(w, r)
+			return
+		}
 		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/send-email") {
 			handlers.AdminSendInvoiceEmailHandler(db, cfg, mail)(w, r)
 			return
@@ -270,6 +286,7 @@ func main() {
 	mux.Handle("/api/v1/customer/team/members/", customerAuth(middleware.RateLimit(60, time.Hour)(http.HandlerFunc(handlers.CustomerTeamMemberHandler(db)))))
 	mux.Handle("/api/v1/customer/team/technician-session", customerAuth(middleware.RateLimit(30, time.Hour)(http.HandlerFunc(method(http.MethodPost, handlers.CustomerTeamTechnicianSessionHandler(db))))))
 	mux.Handle("/api/v1/customer/subscriptions/cancel", customerAuth(middleware.RateLimit(20, time.Hour)(http.HandlerFunc(method(http.MethodPost, handlers.CustomerCancelSubscriptionHandler(db, cfg))))))
+	mux.Handle("/api/v1/customer/billing-portal", customerAuth(middleware.RateLimit(20, time.Hour)(http.HandlerFunc(method(http.MethodPost, handlers.CustomerBillingPortalHandler(db, cfg))))))
 	mux.Handle("/api/v1/customer/dashboard", customerAuth(http.HandlerFunc(method(http.MethodGet, handlers.CustomerDashboardHandler(db)))))
 	mux.Handle("/api/v1/customer/preferences", customerAuth(http.HandlerFunc(method(http.MethodPut, handlers.CustomerPreferencesHandler(db)))))
 	mux.Handle("/api/v1/customer/preferences/password", customerAuth(http.HandlerFunc(method(http.MethodPost, handlers.CustomerChangePasswordHandler(db)))))
@@ -283,6 +300,10 @@ func main() {
 	mux.Handle("/api/v1/customer/invoices/", customerAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/download") {
 			handlers.CustomerDownloadInvoiceHandler(db, cfg)(w, r)
+			return
+		}
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/cii") {
+			handlers.CustomerDownloadInvoiceCIIHandler(db)(w, r)
 			return
 		}
 		methodNotAllowed(w)

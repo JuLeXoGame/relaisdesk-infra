@@ -55,7 +55,7 @@ func TestPublicOrdersAndWebhookFlow(t *testing.T) {
 		"postal_code":    "75001",
 		"city":           "Paris",
 		"customer_type":  "business",
-		"terms_version":  "2026-09-21",
+		"terms_version":  "2026-09-27",
 		"terms_accepted": true,
 	})
 
@@ -141,7 +141,7 @@ func TestPublicOrdersAndWebhookFlow(t *testing.T) {
 		"postal_code":    "75001",
 		"city":           "Paris",
 		"customer_type":  "business",
-		"terms_version":  "2026-09-21",
+		"terms_version":  "2026-09-27",
 		"terms_accepted": true,
 	})
 	stripeReq := httptest.NewRequest(http.MethodPost, "/api/v1/public/order", bytes.NewReader(stripeReqBody))

@@ -74,8 +74,8 @@ func PublicOrderHandler(db *sql.DB, cfg *config.Config, mail *mailer.Mailer) htt
 		}
 
 		paymentMethod := strings.ToLower(strings.TrimSpace(req.PaymentMethod))
-		if paymentMethod != "stripe" && paymentMethod != "bank_transfer" {
-			writeJSONError(w, "Méthode de paiement invalide (choix: stripe, bank_transfer)", http.StatusBadRequest)
+		if !dbpkg.ValidPaymentMethod(paymentMethod) {
+			writeJSONError(w, "Méthode de paiement invalide (choix: stripe, bank_transfer, crypto_btc, crypto_xrp)", http.StatusBadRequest)
 			return
 		}
 		if paymentMethod == "stripe" && cfg.StripeSecretKey == "" && !(cfg.DevHTTP && cfg.StripeMock) {
@@ -159,6 +159,11 @@ func PublicOrderHandler(db *sql.DB, cfg *config.Config, mail *mailer.Mailer) htt
 				"checkout_url":   checkoutURL,
 				"session_id":     sessionID,
 			})
+			return
+		}
+
+		if paymentMethod == "crypto_btc" || paymentMethod == "crypto_xrp" {
+			writeCryptoOrder(w, r, db, cfg, order)
 			return
 		}
 
@@ -270,6 +275,20 @@ func PublicPricingHandler() http.HandlerFunc {
 				"viewers":                              "illimités (0 €)",
 				"description":                          "Solution sur-mesure de 10 à 500 techniciens simultanés",
 			},
+		})
+	}
+}
+
+// PublicPaymentMethodsHandler reports which prepaid payment methods the site
+// may offer. A crypto asset appears only when globally enabled AND its OKX
+// deposit configuration is complete, mirroring the CGV clause
+// "lorsqu'ils sont proposés au récapitulatif".
+func PublicPaymentMethodsHandler(cfg *config.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"bank_transfer": cfg.BankTransferConfigured(),
+			"crypto_btc":    cfg.CryptoAssetConfigured("BTC"),
+			"crypto_xrp":    cfg.CryptoAssetConfigured("XRP"),
 		})
 	}
 }

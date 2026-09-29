@@ -142,6 +142,9 @@ func TestOrderLifecycle(t *testing.T) {
 	}
 
 	// 6. Test DeleteOrder
+	if err := DeleteOrder(db, paidOrder.OrderID); err == nil {
+		t.Errorf("Expected refusal when deleting a paid order")
+	}
 	if err := DeleteOrder(db, expiredOrder.OrderID); err != nil {
 		t.Fatalf("DeleteOrder failed: %v", err)
 	}
@@ -150,6 +153,28 @@ func TestOrderLifecycle(t *testing.T) {
 	}
 	if err := DeleteOrder(db, "ORD-NON-EXISTENT"); err == nil {
 		t.Errorf("Expected error when deleting non-existent order")
+	}
+}
+
+func TestGenerateOrderID(t *testing.T) {
+	seen := make(map[string]bool, 1000)
+	for i := 0; i < 1000; i++ {
+		id, err := GenerateOrderID()
+		if err != nil {
+			t.Fatalf("GenerateOrderID failed: %v", err)
+		}
+		if len(id) != 21 || id[:4] != "ORD-" || id[12] != '-' {
+			t.Fatalf("bad order ID format: %q", id)
+		}
+		for _, c := range id[4:12] + id[13:] {
+			if (c < '0' || c > '9') && (c < 'A' || c > 'F') {
+				t.Fatalf("non-hex order ID: %q", id)
+			}
+		}
+		if seen[id] {
+			t.Fatalf("duplicate order ID: %q", id)
+		}
+		seen[id] = true
 	}
 }
 
@@ -207,5 +232,30 @@ func TestAnnualOrderFulfillment(t *testing.T) {
 	totalDuration := renewedLic.ExpiresAt.Sub(lic.CreatedAt)
 	if totalDuration < 729*24*time.Hour || totalDuration > 731*24*time.Hour {
 		t.Errorf("Expected ~730 days total validity after renewal, got %v", totalDuration)
+	}
+}
+
+func TestCreateOrderWithBillingReturnsTermsAcceptedAt(t *testing.T) {
+	db, err := InitDatabase(filepath.Join(t.TempDir(), "orders-terms.db"))
+	if err != nil {
+		t.Fatalf("InitDatabase failed: %v", err)
+	}
+	defer db.Close()
+	order, err := CreateOrderWithBilling(db, "terms@example.com", "pro", 5, "bank_transfer", "", "", &BillingDetails{
+		Name: "Entreprise", City: "Paris", Country: "France", CustomerType: "business",
+		TermsVersion: "2026-09", TermsAccepted: true,
+	})
+	if err != nil {
+		t.Fatalf("CreateOrderWithBilling failed: %v", err)
+	}
+	if order.TermsAcceptedAt == nil {
+		t.Fatal("expected TermsAcceptedAt on returned order")
+	}
+	fetched, err := GetOrderByID(db, order.OrderID)
+	if err != nil {
+		t.Fatalf("GetOrderByID failed: %v", err)
+	}
+	if fetched.TermsAcceptedAt == nil || fetched.TermsAcceptedAt.Unix() != order.TermsAcceptedAt.Unix() {
+		t.Fatalf("terms mismatch: returned=%v fetched=%v", order.TermsAcceptedAt, fetched.TermsAcceptedAt)
 	}
 }

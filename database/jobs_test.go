@@ -47,6 +47,25 @@ func TestPersistentJobQueueDeduplicatesRetriesAndCompletes(t *testing.T) {
 	}
 }
 
+func TestEnqueueJobRejectsOversizedPayload(t *testing.T) {
+	db, err := InitDatabase(filepath.Join(t.TempDir(), "jobs-payload.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	now := time.Now().UTC()
+	big := make([]byte, MaxJobPayloadBytes+1)
+	for i := range big {
+		big[i] = 'x'
+	}
+	if _, err := EnqueueJob(db, "email", string(big), "email:big", 3, now); err == nil {
+		t.Fatal("oversized payload accepted")
+	}
+	if _, err := EnqueueJob(db, "email", `{}`, "email:small", 3, now); err != nil {
+		t.Fatalf("normal payload rejected: %v", err)
+	}
+}
+
 func TestDeadJobGetsCompletionDateForRetention(t *testing.T) {
 	db, err := InitDatabase(filepath.Join(t.TempDir(), "dead-job.db"))
 	if err != nil {
@@ -71,5 +90,25 @@ func TestDeadJobGetsCompletionDateForRetention(t *testing.T) {
 	}
 	if status != "dead" || !completed {
 		t.Fatalf("status=%q completed=%v", status, completed)
+	}
+}
+
+func TestFailJobZeroAttemptsDoesNotPanic(t *testing.T) {
+	db, err := InitDatabase(filepath.Join(t.TempDir(), "jobs-zero.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	now := time.Now().UTC()
+	if _, err := EnqueueJob(db, "email", `{}`, "email:zero", 3, now); err != nil {
+		t.Fatal(err)
+	}
+	job, err := ClaimNextJob(db, now)
+	if err != nil || job == nil {
+		t.Fatalf("claim=%+v err=%v", job, err)
+	}
+	job.Attempts = 0
+	if err := FailJob(db, job, errors.New("boom"), now); err != nil {
+		t.Fatalf("FailJob with zero attempts: %v", err)
 	}
 }

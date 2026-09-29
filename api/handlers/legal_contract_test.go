@@ -26,7 +26,7 @@ func TestNewOrderRejectsPreviousContractVersion(t *testing.T) {
 	}
 	defer db.Close()
 	handler := PublicOrderHandler(db, &config.Config{DevHTTP: true, StripeMock: true}, nil)
-	for _, version := range []string{"2026-08-25", "2026-09-09", "2026-09-10", "2026-09-11"} {
+	for _, version := range []string{"2026-08-25", "2026-09-09", "2026-09-10", "2026-09-11", "2026-09-21", "2026-09-24"} {
 		body := []byte(fmt.Sprintf(`{"email":"client@example.com","plan":"starter","technicians":1,"payment_method":"stripe","name":"Client Test","address":"1 rue du Test","postal_code":"75001","city":"Paris","customer_type":"business","terms_version":%q,"terms_accepted":true}`, version))
 		recorder := httptest.NewRecorder()
 		handler(recorder, httptest.NewRequest(http.MethodPost, "/api/v1/public/order", bytes.NewReader(body)))

@@ -6,10 +6,17 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 var invoiceNumberPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
+
+// invoiceSeqMu serializes invoice and credit-note numbering. SQLite defers
+// write locks, so two concurrent transactions could compute the same
+// FAC-YYYY-NNNN before either inserts; the API is a single process on a
+// single SQLite file, so a process-wide mutex closes the race.
+var invoiceSeqMu sync.Mutex
 
 // Invoice represents a billing invoice in SQLite.
 type Invoice struct {
@@ -100,12 +107,15 @@ func GenerateNextCreditNoteNumber(db *sql.DB) (string, error) {
 	return nextCreditNoteNumber(db, time.Now().UTC().Year())
 }
 
-// CreateInvoice inserts a new invoice into the database with a strict IMMEDIATE transaction
-// to guarantee sequential numbering without gaps and prevent concurrency collisions.
+// CreateInvoice inserts a new invoice into the database. Numbering is
+// serialized process-wide (see invoiceSeqMu) to guarantee sequential
+// numbering without gaps and prevent concurrency collisions.
 func CreateInvoice(db *sql.DB, inv *Invoice) (*Invoice, error) {
 	if inv == nil {
 		return nil, fmt.Errorf("facture requise")
 	}
+	invoiceSeqMu.Lock()
+	defer invoiceSeqMu.Unlock()
 	if inv.InvoiceNumber != "" && !invoiceNumberPattern.MatchString(inv.InvoiceNumber) {
 		return nil, fmt.Errorf("numéro de facture invalide")
 	}
@@ -251,8 +261,8 @@ func GetInvoiceByOrderID(db *sql.DB, orderID string) (*Invoice, error) {
 	return scanInvoice(db.QueryRow(query, orderID))
 }
 
-// ListInvoices returns all invoices with optional email or search filter.
-func ListInvoices(db *sql.DB, searchFilter string) ([]Invoice, error) {
+// invoiceListClauses builds the shared WHERE clause for invoice listing and counting.
+func invoiceListClauses(searchFilter string) (string, []interface{}) {
 	var conditions []string
 	var args []interface{}
 
@@ -266,6 +276,13 @@ func ListInvoices(db *sql.DB, searchFilter string) ([]Invoice, error) {
 	if len(conditions) > 0 {
 		where = "WHERE " + strings.Join(conditions, " AND ")
 	}
+	return where, args
+}
+
+// ListInvoices returns invoices (id DESC) with optional search filter.
+// limit <= 0 disables pagination.
+func ListInvoices(db *sql.DB, searchFilter string, limit, offset int) ([]Invoice, error) {
+	where, args := invoiceListClauses(searchFilter)
 
 	query := fmt.Sprintf(`
 		SELECT id, invoice_number, COALESCE(order_id, ''), customer_email, customer_name,
@@ -277,6 +294,13 @@ func ListInvoices(db *sql.DB, searchFilter string) ([]Invoice, error) {
 		%s
 		ORDER BY id DESC
 	`, where)
+	if limit > 0 {
+		if offset < 0 {
+			offset = 0
+		}
+		query += " LIMIT ? OFFSET ?"
+		args = append(args, limit, offset)
+	}
 
 	rows, err := db.Query(query, args...)
 	if err != nil {
@@ -292,7 +316,21 @@ func ListInvoices(db *sql.DB, searchFilter string) ([]Invoice, error) {
 		}
 		invoices = append(invoices, *inv)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("requête list invoices: %w", err)
+	}
 	return invoices, nil
+}
+
+// CountInvoices returns the total number of invoices matching the list filters.
+func CountInvoices(db *sql.DB, searchFilter string) (int, error) {
+	where, args := invoiceListClauses(searchFilter)
+	var total int
+	err := db.QueryRow(fmt.Sprintf(`SELECT COUNT(*) FROM invoices %s`, where), args...).Scan(&total)
+	if err != nil {
+		return 0, fmt.Errorf("requête count invoices: %w", err)
+	}
+	return total, nil
 }
 
 // ListInvoicesByCustomer uses an exact normalized e-mail match. The fuzzy
@@ -397,41 +435,13 @@ func DeleteInvoice(db *sql.DB, invoiceNumber string) (string, error) {
 	if invoiceNumber == "" {
 		return "", fmt.Errorf("numéro de facture invalide")
 	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return "", fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	var pdfPath string
-	err = tx.QueryRow(`SELECT COALESCE(pdf_path, '') FROM invoices WHERE invoice_number = ?`, invoiceNumber).Scan(&pdfPath)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return "", fmt.Errorf("facture introuvable")
-		}
-		return "", fmt.Errorf("recherche facture: %w", err)
-	}
-
-	// Detach from orders table if linked, without deleting the order
-	if _, err := tx.Exec(`UPDATE orders SET invoice_number = '' WHERE invoice_number = ?`, invoiceNumber); err != nil {
-		return "", fmt.Errorf("mise à jour commande: %w", err)
-	}
-
-	// Delete from invoices
-	res, err := tx.Exec(`DELETE FROM invoices WHERE invoice_number = ?`, invoiceNumber)
-	if err != nil {
-		return "", fmt.Errorf("suppression facture: %w", err)
-	}
-	affected, _ := res.RowsAffected()
-	if affected == 0 {
+	// Invoices are only created at payment: every row is an issued fiscal
+	// document (chronological, gapless, immutable, 10-year retention).
+	// Corrections go through credit notes ("Avoir"), never deletion.
+	if _, err := GetInvoiceByNumber(db, invoiceNumber); err != nil {
 		return "", fmt.Errorf("facture introuvable")
 	}
-
-	if err := tx.Commit(); err != nil {
-		return "", fmt.Errorf("commit transaction: %w", err)
-	}
-	return pdfPath, nil
+	return "", fmt.Errorf("suppression de facture interdite : émettez un avoir (document fiscal, conservation 10 ans)")
 }
 
 // CreateCreditNote generates an official credit note (avoir) referencing an original invoice.
@@ -440,6 +450,8 @@ func CreateCreditNote(db *sql.DB, originalInvoiceNumber, reason string) (*Invoic
 	if originalInvoiceNumber == "" {
 		return nil, fmt.Errorf("numéro de facture d'origine requis")
 	}
+	invoiceSeqMu.Lock()
+	defer invoiceSeqMu.Unlock()
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -482,7 +494,9 @@ func CreateCreditNote(db *sql.DB, originalInvoiceNumber, reason string) (*Invoic
 
 	// Update original invoice notes with reference to this credit note
 	mention := fmt.Sprintf("Avoir %s émis", creditNumber)
-	_, _ = tx.Exec(`UPDATE invoices SET notes = CASE WHEN notes = '' THEN ? ELSE notes || ' | ' || ? END WHERE invoice_number = ?`, mention, mention, orig.InvoiceNumber)
+	if _, err := tx.Exec(`UPDATE invoices SET notes = CASE WHEN COALESCE(notes, '') = '' THEN ? ELSE notes || ' | ' || ? END WHERE invoice_number = ?`, mention, mention, orig.InvoiceNumber); err != nil {
+		return nil, fmt.Errorf("mention avoir facture d'origine: %w", err)
+	}
 
 	var customerID int64
 	_ = tx.QueryRow(`SELECT customer_id FROM invoices WHERE invoice_number = ?`, originalInvoiceNumber).Scan(&customerID)
@@ -567,4 +581,3 @@ func UpdateInvoicePDFPath(db *sql.DB, invoiceNumber, pdfPath string) error {
 	}
 	return nil
 }
-

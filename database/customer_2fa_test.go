@@ -241,3 +241,63 @@ func TestCustomer2FAEmailCodeAndTrustedDevice(t *testing.T) {
 	}
 }
 
+func TestCustomerPasswordLockout(t *testing.T) {
+	db, err := InitDatabase(filepath.Join(t.TempDir(), "customer_lockout_test.db"))
+	if err != nil {
+		t.Fatalf("InitDatabase failed: %v", err)
+	}
+	defer db.Close()
+
+	email := "lockout@relaisdesk.fr"
+	password := "CorrectHorseBatteryStaple123!"
+	ident, err := EnsureCustomer(db, email, "business", "Lockout User")
+	if err != nil {
+		t.Fatalf("EnsureCustomer failed: %v", err)
+	}
+	now := time.Now().UTC()
+	if _, err = db.Exec(`
+		INSERT INTO licences (customer_id, license_id, email, license_key, status, created_at, expires_at, max_connections)
+		VALUES (?, 'LIC-LOCKOUT', ?, 'KEY-LOCKOUT', 'active', ?, ?, 1)
+	`, ident.ID, email, now.Format(time.RFC3339), now.Add(30*24*time.Hour).Format(time.RFC3339)); err != nil {
+		t.Fatalf("failed to insert licence: %v", err)
+	}
+	if err := SetCustomerPassword(db, email, password); err != nil {
+		t.Fatalf("SetCustomerPassword failed: %v", err)
+	}
+
+	// A few failures followed by a success reset the counter.
+	for i := 0; i < 3; i++ {
+		if _, err := ValidateCustomerPasswordWith2FA(db, email, "wrong-password"); err == nil {
+			t.Fatal("wrong password accepted")
+		}
+	}
+	if _, err := ValidateCustomerPasswordWith2FA(db, email, password); err != nil {
+		t.Fatalf("correct password rejected: %v", err)
+	}
+	var attempts int
+	if err := db.QueryRow("SELECT failed_password_attempts FROM customer_accounts WHERE email=?", email).Scan(&attempts); err != nil || attempts != 0 {
+		t.Fatalf("counter after success = %d, %v", attempts, err)
+	}
+
+	// Ten consecutive failures lock the account, even for the right password.
+	for i := 0; i < 10; i++ {
+		if _, err := ValidateCustomerPasswordWith2FA(db, email, "wrong-password"); err == nil {
+			t.Fatal("wrong password accepted")
+		}
+	}
+	if _, err := ValidateCustomerPasswordWith2FA(db, email, password); err == nil {
+		t.Fatal("locked account accepted the correct password")
+	}
+
+	// An expired lockout releases the account with a clean slate.
+	if _, err := db.Exec("UPDATE customer_accounts SET password_locked_until = ? WHERE email = ?",
+		time.Now().UTC().Add(-time.Minute).Format(time.RFC3339), email); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ValidateCustomerPasswordWith2FA(db, email, password); err != nil {
+		t.Fatalf("released account rejected: %v", err)
+	}
+	if err := db.QueryRow("SELECT failed_password_attempts FROM customer_accounts WHERE email=?", email).Scan(&attempts); err != nil || attempts != 0 {
+		t.Fatalf("counter after release = %d, %v", attempts, err)
+	}
+}

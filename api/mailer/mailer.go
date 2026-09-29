@@ -18,14 +18,19 @@ import (
 	"time"
 )
 
-const CurrentTermsVersion = "2026-09-21"
-const CurrentTrialTermsVersion = "2026-09-21-fleet-v2"
+const CurrentTermsVersion = "2026-09-27"
+const CurrentTrialTermsVersion = "2026-09-24-fleet-v3"
 const contractualTermsFilename = "CGV-RelaisDesk-" + CurrentTermsVersion + ".txt"
 
 // contractualTerms is an immutable copy of the conditions accepted at checkout.
 //
-//go:embed legal/CGV-RelaisDesk-2026-09-21.txt
+//go:embed legal/CGV-RelaisDesk-2026-09-27.txt
 var contractualTerms []byte
+
+// Keep accepted 2026-09-21 contracts byte-for-byte, including their older terms.
+//
+//go:embed legal/CGV-RelaisDesk-2026-09-21.txt
+var september21ContractualTerms []byte
 
 // Keep accepted 2026-09-11 contracts byte-for-byte, including their older terms.
 //
@@ -40,8 +45,13 @@ var september10ContractualTerms []byte
 //go:embed legal/CGV-RelaisDesk-2026-09-09.txt
 var september9ContractualTerms []byte
 
-//go:embed legal/ESSAI-RelaisDesk-2026-09-21-fleet-v2.txt
+//go:embed legal/ESSAI-RelaisDesk-2026-09-24-fleet-v3.txt
 var fleetTrialSupplement []byte
+
+// Keep the accepted 2026-09-21 trial supplement byte-for-byte.
+//
+//go:embed legal/ESSAI-RelaisDesk-2026-09-21-fleet-v2.txt
+var fleetTrialSupplementV2 []byte
 
 //go:embed legal/ESSAI-RelaisDesk-2026-09-11-fleet-v2.txt
 var september11TrialSupplement []byte
@@ -80,6 +90,9 @@ func termsAttachment(versions ...string) (string, []byte, error) {
 	case CurrentTrialTermsVersion:
 		combined := append(append([]byte{}, contractualTerms...), fleetTrialSupplement...)
 		return "CGV-et-ESSAI-RelaisDesk-" + CurrentTrialTermsVersion + ".txt", combined, nil
+	case "2026-09-21-fleet-v2":
+		combined := append(append([]byte{}, september21ContractualTerms...), fleetTrialSupplementV2...)
+		return "CGV-et-ESSAI-RelaisDesk-2026-09-21-fleet-v2.txt", combined, nil
 	case "2026-09-11-fleet-v2":
 		combined := append(append([]byte{}, september11ContractualTerms...), september11TrialSupplement...)
 		return "CGV-et-ESSAI-RelaisDesk-2026-09-11-fleet-v2.txt", combined, nil
@@ -94,6 +107,8 @@ func termsAttachment(versions ...string) (string, []byte, error) {
 		return "CGV-et-ESSAI-RelaisDesk-2026-09-09.txt", combined, nil
 	case CurrentTermsVersion:
 		return contractualTermsFilename, contractualTerms, nil
+	case "2026-09-21":
+		return "CGV-RelaisDesk-2026-09-21.txt", september21ContractualTerms, nil
 	case "2026-09-11":
 		return "CGV-RelaisDesk-2026-09-11.txt", september11ContractualTerms, nil
 	case "2026-09-10":
@@ -344,6 +359,75 @@ IMPORTANT : Veuillez impérativement reporter la référence "%s" dans le libell
 L'équipe RelaisDesk
 https://relaisdesk.fr
 `, orderID, planName, amount, orderID, holder, iban, bic, orderID)
+
+	return m.sendRawEmail(toEmail, subject, bodyText, filename, terms)
+}
+
+// SendCartReminderEmail nudges the customer to complete an unpaid Stripe
+// order. Round 2 is the last call before the 48h order expiry.
+func (m *Mailer) SendCartReminderEmail(toEmail, orderID, planName string, amount float64, expiresAt, resumeURL string, round int) error {
+	subject := fmt.Sprintf("Votre commande RelaisDesk %s vous attend", orderID)
+	intro := "Vous n'avez pas finalisé votre commande."
+	if round >= 2 {
+		subject = fmt.Sprintf("Dernière chance : votre commande RelaisDesk %s expire bientôt", orderID)
+		intro = "Dernier rappel avant expiration de votre commande."
+	}
+	expiry := ""
+	if strings.TrimSpace(expiresAt) != "" {
+		expiry = fmt.Sprintf("\nVotre commande expire le %s (UTC), après quoi il faudra la recommencer.\n", expiresAt)
+	}
+	bodyText := fmt.Sprintf(`Bonjour,
+
+%s
+
+Référence : %s
+Offre     : %s
+Montant   : %.2f €
+%s
+Finalisez votre commande en 2 minutes (carte bancaire, sans engagement) :
+%s
+
+Si vous avez déjà payé ou si vous rencontrez un problème, répondez simplement à cet email.
+
+L'équipe RelaisDesk
+https://relaisdesk.fr
+`, intro, orderID, planName, amount, expiry, resumeURL)
+
+	return m.sendRawEmail(toEmail, subject, bodyText, "", nil)
+}
+
+// SendCryptoInstructionsEmail sends the payment recap (exact amount, deposit
+// address, destination tag, expiry) so the customer can pay even after
+// closing the page. destTag is nil for BTC.
+func (m *Mailer) SendCryptoInstructionsEmail(toEmail, orderID, planName string, amountEUR float64, asset, amountCrypto, rateEUR, payAddress string, destTag *uint32, expiresAt time.Time, termsVersion ...string) error {
+	filename, terms, err := termsAttachment(termsVersion...)
+	if err != nil {
+		return err
+	}
+	subject := fmt.Sprintf("Instructions de paiement %s pour votre commande RelaisDesk (%s)", asset, orderID)
+
+	tagLine := ""
+	if destTag != nil {
+		tagLine = fmt.Sprintf("Tag de dépôt (Destination Tag) : %d — À REPRENDRE EXACTEMENT\n", *destTag)
+	}
+	bodyText := fmt.Sprintf(`Bonjour,
+
+Nous avons bien enregistré votre commande %s pour le plan %s.
+
+Pour activer votre licence, réglez exactement %s %s à l'adresse suivante avant le %s :
+--------------------------------------------------
+Montant en %s : %s %s
+Adresse de dépôt : %s
+%sCours appliqué : %s EUR/%s (OKX, garanti jusqu'à expiration du devis)
+Montant en euros (seul montant faisant foi) : %.2f €
+--------------------------------------------------
+
+IMPORTANT : réglez le montant exact avant l'expiration du devis ; les frais du réseau s'ajoutent au montant demandé. Passé ce délai, demandez un nouveau devis depuis le récapitulatif de commande (référence %s). Votre licence est activée automatiquement à réception du dépôt.
+
+L'équipe RelaisDesk
+https://relaisdesk.fr
+`, orderID, planName, amountCrypto, asset, expiresAt.Format("02/01/2006 15:04"),
+		asset, amountCrypto, asset, payAddress, tagLine, rateEUR, asset, amountEUR, orderID)
 
 	return m.sendRawEmail(toEmail, subject, bodyText, filename, terms)
 }

@@ -18,11 +18,19 @@ type Job struct {
 	MaxAttempts int
 }
 
+// MaxJobPayloadBytes caps queued payloads (legitimate ones are IDs and small
+// JSON; even raw Stripe events stay far below). Unknown job types are
+// rejected at processing time by the worker's default branch.
+const MaxJobPayloadBytes = 256 * 1024
+
 func EnqueueJob(db *sql.DB, jobType, payload, uniqueKey string, maxAttempts int, availableAt time.Time) (bool, error) {
 	jobType = strings.TrimSpace(jobType)
 	uniqueKey = strings.TrimSpace(uniqueKey)
 	if jobType == "" || uniqueKey == "" || len(jobType) > 80 || len(uniqueKey) > 255 {
 		return false, errors.New("type ou clé de travail invalide")
+	}
+	if len(payload) > MaxJobPayloadBytes {
+		return false, errors.New("charge de travail trop volumineuse")
 	}
 	if maxAttempts <= 0 || maxAttempts > 100 {
 		maxAttempts = 12
@@ -117,7 +125,7 @@ func FailJob(db *sql.DB, job *Job, processingErr error, now time.Time) error {
 	if job.Attempts >= job.MaxAttempts {
 		status = "dead"
 	}
-	delay := time.Minute * time.Duration(1<<min(job.Attempts-1, 8))
+	delay := time.Minute * time.Duration(1<<min(max(job.Attempts-1, 0), 8))
 	_, err := db.Exec(`
 		UPDATE jobs SET status = ?, available_at = ?, locked_at = NULL, last_error = ?,
 		completed_at = CASE WHEN ? = 'dead' THEN ? ELSE NULL END

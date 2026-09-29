@@ -244,6 +244,24 @@ func processTrialEmail(db *sql.DB, cfg *config.Config, m *mailer.Mailer, job *db
 		}
 		subject = "Votre essai RelaisDesk se termine prochainement"
 		body = "Rappel avant le premier prélèvement automatique.\n" + body
+	case "nurture":
+		if t.CancelRequestedAt != 0 || t.CancelAtPeriodEnd || t.StripeStatus != "trialing" || time.Now().Unix() >= t.TrialEnd {
+			return nil
+		}
+		subject = "Bien démarrer avec votre essai RelaisDesk"
+		site := strings.TrimRight(cfg.PublicWebsiteURL, "/")
+		body = "Vous testez RelaisDesk depuis quelques jours : voici l'essentiel pour en tirer le meilleur.\n\n" +
+			"1. Connectez votre premier poste depuis votre console technicien.\n" +
+			"2. Faites un test d'accès permanent sur une machine supervisée.\n" +
+			"3. Lisez le guide de démarrage : " + site + "/guide-demarrage.html\n\n" +
+			"Une question ? Répondez à cet email, on vous répond vite.\n" + body
+	case "reminder_final":
+		if t.CancelRequestedAt != 0 || t.CancelAtPeriodEnd || t.StripeStatus != "trialing" || time.Now().Unix() >= t.TrialEnd {
+			return nil
+		}
+		subject = "Plus que quelques jours d'essai RelaisDesk"
+		body = "Dernier rappel : sans action de votre part, le premier prélèvement automatique interviendra à l'échéance. " +
+			"Pour ne pas être prélevé, annulez le renouvellement depuis votre espace client avant cette date.\n" + body
 	case "cancelled":
 		subject = "Confirmation d'annulation du renouvellement RelaisDesk"
 		end := t.TrialEnd
@@ -253,7 +271,7 @@ func processTrialEmail(db *sql.DB, cfg *config.Config, m *mailer.Mailer, job *db
 		body = fmt.Sprintf("Votre renouvellement automatique est annulé.\nContrat : %s — offre %s — licence %s.\nFin de l'accès gratuit ou payé : %s (UTC). Aucun nouveau cycle ne sera souscrit. Les éventuels paiements déjà engagés ne sont pas automatiquement remboursés ; vos droits légaux restent applicables.\nGérer votre compte : %s", t.ID, t.Plan, t.LicenseID, time.Unix(end, 0).UTC().Format("02/01/2006 à 15:04"), portal)
 	case "payment_failed":
 		subject = "Paiement de votre abonnement RelaisDesk à régulariser"
-		body = "Le dernier prélèvement n'a pas abouti. L'accès n'est pas prolongé sans paiement et aucun nouvel essai n'est accordé. Consultez les messages sécurisés de Stripe pour régulariser ou contactez-nous. Vous pouvez également annuler les prochains renouvellements depuis votre espace client.\n" + portal
+		body = "Le dernier prélèvement n'a pas abouti. L'accès n'est pas prolongé sans paiement et aucun nouvel essai n'est accordé. Mettez à jour votre carte bancaire depuis votre espace client (bouton « Gérer mon moyen de paiement ») ou contactez-nous. Vous pouvez également annuler les prochains renouvellements depuis votre espace client.\n" + portal
 	case "renewal_paused":
 		subject = "Votre reconduction annuelle RelaisDesk est suspendue"
 		body = "Nous n'avons pas pu confirmer l'envoi de l'information annuelle dans le délai prévu. Pour éviter une reconduction non annoncée, nous avons demandé l'arrêt du prochain renouvellement. Votre accès à la période déjà payée est conservé. Une confirmation de l'arrêt Stripe suivra. Contactez-nous pour poursuivre le service au-delà de l'échéance, sans nouvelle période d'essai.\n" + portal
@@ -295,6 +313,52 @@ func QueueTrialReminders(db *sql.DB, now time.Time) error {
 	for _, id := range ids {
 		if _, err = enqueueJSONJob(db, jobTrialNotice, trialNotice{ID: id, Kind: "reminder"}, "trial-reminder:"+id, 20); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// QueueTrialNurture enqueues the J+3 onboarding email (trial started 3-7 days
+// ago, still trialing) and the final reminder (trial ending within 3 days).
+// Dedup keys make the hourly pass idempotent.
+func QueueTrialNurture(db *sql.DB, now time.Time) error {
+	now = now.UTC()
+	queries := []struct {
+		kind  string
+		key   string
+		query string
+		args  []any
+	}{
+		{"nurture", "trial-nurture:",
+			`SELECT id FROM trial_applications WHERE state='active' AND stripe_status='trialing' AND cancel_requested_at IS NULL AND cancel_at_period_end=0 AND trial_start<=? AND trial_start>? AND trial_end>?`,
+			[]any{now.Add(-3 * 24 * time.Hour).Unix(), now.Add(-7 * 24 * time.Hour).Unix(), now.Unix()}},
+		{"reminder_final", "trial-reminder-final:",
+			`SELECT id FROM trial_applications WHERE state='active' AND stripe_status='trialing' AND cancel_requested_at IS NULL AND cancel_at_period_end=0 AND trial_end>? AND trial_end<=?`,
+			[]any{now.Unix(), now.Add(3 * 24 * time.Hour).Unix()}},
+	}
+	for _, q := range queries {
+		rows, err := db.Query(q.query, q.args...)
+		if err != nil {
+			return err
+		}
+		ids := []string{}
+		for rows.Next() {
+			var id string
+			if err = rows.Scan(&id); err != nil {
+				rows.Close()
+				return err
+			}
+			ids = append(ids, id)
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			return err
+		}
+		for _, id := range ids {
+			if _, err = enqueueJSONJob(db, jobTrialNotice, trialNotice{ID: id, Kind: q.kind}, q.key+id, 20); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

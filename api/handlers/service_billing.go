@@ -73,7 +73,9 @@ func serviceStripe(c *config.Config, account, method, path, key string, form url
 }
 func serviceURL(raw, host string) bool {
 	u, e := url.Parse(raw)
-	return e == nil && u.Scheme == "https" && u.Host == host && u.User == nil && u.Fragment == ""
+	// No fragment check: Stripe appends a #fid... fragment to Checkout URLs
+	// and fragments are never sent to servers, so the host check stays sound.
+	return e == nil && u.Scheme == "https" && u.Host == host && u.User == nil
 }
 
 type serviceAccount struct {

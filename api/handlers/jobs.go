@@ -21,14 +21,16 @@ import (
 )
 
 const (
-	jobStripeEvent       = "stripe_event"
-	jobCustomerLogin     = "customer_login_email"
-	jobTeamInvitation    = "team_invitation_email"
-	jobBankInstructions  = "bank_instructions_email"
-	jobOrderDelivery     = "order_delivery_email"
-	jobWithdrawalEmails  = "withdrawal_emails"
-	jobRenewalReminder   = "renewal_reminder_email"
-	jobManualInvoiceMail = "manual_invoice_email"
+	jobStripeEvent        = "stripe_event"
+	jobCustomerLogin      = "customer_login_email"
+	jobTeamInvitation     = "team_invitation_email"
+	jobBankInstructions   = "bank_instructions_email"
+	jobOrderDelivery      = "order_delivery_email"
+	jobWithdrawalEmails   = "withdrawal_emails"
+	jobRenewalReminder    = "renewal_reminder_email"
+	jobManualInvoiceMail  = "manual_invoice_email"
+	jobCryptoEvent        = "crypto_event"
+	jobCryptoInstructions = "crypto_instructions_email"
 )
 
 type stringPayload struct {
@@ -81,6 +83,13 @@ func EnqueueBankInstructionsEmail(db *sql.DB, orderID string) error {
 	return err
 }
 
+// EnqueueCryptoInstructionsEmail queues the payment recap email for a crypto
+// order. One email per order: refreshed quotes are shown on the page.
+func EnqueueCryptoInstructionsEmail(db *sql.DB, orderID string) error {
+	_, err := enqueueJSONJob(db, jobCryptoInstructions, stringPayload{Value: orderID}, "crypto-instructions:"+orderID, 12)
+	return err
+}
+
 func EnqueueOrderDeliveryEmail(db *sql.DB, orderID string) error {
 	_, err := enqueueJSONJob(db, jobOrderDelivery, stringPayload{Value: orderID}, "order-delivery:"+orderID, 20)
 	return err
@@ -103,6 +112,14 @@ func EnqueueRenewalReminderEmail(db *sql.DB, candidate dbpkg.RenewalReminderCand
 
 func EnqueueStripeEvent(db *sql.DB, eventID string, body []byte) (bool, error) {
 	return dbpkg.EnqueueJob(db, jobStripeEvent, string(body), "stripe:"+eventID, 30, time.Now().UTC())
+}
+
+func EnqueueCryptoEvent(db *sql.DB, dedupKey string, payload cryptoEventPayload) (bool, error) {
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return false, err
+	}
+	return dbpkg.EnqueueJob(db, jobCryptoEvent, string(encoded), "crypto:"+dedupKey, 30, time.Now().UTC())
 }
 
 func EnqueueManualInvoiceEmail(db *sql.DB, invoiceNumber string) error {
@@ -167,7 +184,7 @@ func processJob(db *sql.DB, cfg *config.Config, mail *mailer.Mailer, job *dbpkg.
 		}
 		return processTrialWithdrawal(db, cfg, p.Value)
 	}
-	if job.Type != jobStripeEvent && mail == nil {
+	if job.Type != jobStripeEvent && job.Type != jobCryptoEvent && mail == nil {
 		return errors.New("service e-mail indisponible")
 	}
 	switch job.Type {
@@ -179,6 +196,8 @@ func processJob(db *sql.DB, cfg *config.Config, mail *mailer.Mailer, job *dbpkg.
 		return processTrialEmail(db, cfg, mail, job)
 	case jobStripeEvent:
 		return processStripeEvent(db, cfg, []byte(job.Payload))
+	case jobCryptoEvent:
+		return processCryptoEvent(db, cfg, []byte(job.Payload))
 	case jobCustomerLogin:
 		var payload stringPayload
 		if err := json.Unmarshal([]byte(job.Payload), &payload); err != nil {
@@ -206,6 +225,8 @@ func processJob(db *sql.DB, cfg *config.Config, mail *mailer.Mailer, job *dbpkg.
 			return err
 		}
 		return mail.SendTeamInvitation(email, strings.TrimRight(cfg.PublicWebsiteURL, "/")+"/client/#invite="+url.QueryEscape(token))
+	case jobCartReminder:
+		return processCartReminderEmail(db, cfg, mail, job)
 	case jobBankInstructions:
 		var payload stringPayload
 		if err := json.Unmarshal([]byte(job.Payload), &payload); err != nil {
@@ -216,6 +237,22 @@ func processJob(db *sql.DB, cfg *config.Config, mail *mailer.Mailer, job *dbpkg.
 			return err
 		}
 		return mail.SendBankTransferInstructionsEmail(order.Email, order.OrderID, order.Plan, order.Price, cfg.BankIBAN, cfg.BankBIC, cfg.BankHolder, order.TermsVersion)
+	case jobCryptoInstructions:
+		var payload stringPayload
+		if err := json.Unmarshal([]byte(job.Payload), &payload); err != nil {
+			return err
+		}
+		order, err := dbpkg.GetOrderByID(db, payload.Value)
+		if err != nil {
+			return err
+		}
+		quote, err := dbpkg.GetCryptoQuoteByOrderID(db, payload.Value)
+		if err != nil || quote == nil {
+			return fmt.Errorf("devis crypto introuvable pour %s", payload.Value)
+		}
+		return mail.SendCryptoInstructionsEmail(order.Email, order.OrderID, order.Plan, order.Price,
+			quote.Asset, quote.AmountCrypto, quote.RateEUR, quote.PayAddress, quote.DestTag,
+			quote.ExpiresAt, order.TermsVersion)
 	case jobOrderDelivery:
 		var payload stringPayload
 		if err := json.Unmarshal([]byte(job.Payload), &payload); err != nil {
@@ -293,10 +330,19 @@ func processOrderDeliveryEmail(db *sql.DB, cfg *config.Config, mail *mailer.Mail
 }
 
 func paymentLabel(order *dbpkg.Order) string {
-	if order != nil && order.PaymentMethod == "stripe" {
-		return "Carte Bancaire (Stripe)"
+	if order == nil {
+		return "Virement Bancaire"
 	}
-	return "Virement Bancaire"
+	switch order.PaymentMethod {
+	case "stripe":
+		return "Carte Bancaire (Stripe)"
+	case "crypto_btc":
+		return "Bitcoin (BTC)"
+	case "crypto_xrp":
+		return "XRP"
+	default:
+		return "Virement Bancaire"
+	}
 }
 
 func processManualInvoiceEmail(db *sql.DB, cfg *config.Config, mail *mailer.Mailer, invoiceNumber string) error {

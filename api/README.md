@@ -50,6 +50,7 @@ publie ensuite l'API sur `443`.
 - `POST /api/v1/customer/login/request`
 - `POST /api/v1/customer/login/verify`
 - `POST /api/v1/stripe/webhook` (Stripe uniquement, signature obligatoire)
+- `POST /api/v1/stripe/connect-webhook` (Stripe Connect uniquement, signature obligatoire)
 
 En production, enregistrer exactement
 `https://api.relaisdesk.fr/api/v1/stripe/webhook` dans Stripe Workbench pour
@@ -57,6 +58,14 @@ l'événement `checkout.session.completed`, puis placer le secret `whsec_...` de
 cette destination dans `STRIPE_WEBHOOK_SECRET`. La route
 `/api/v1/webhooks/stripe` n'existe pas. Le retour Checkout vers la page de
 succès ne remplace pas la livraison du webhook.
+
+Pour les prestations (Stripe Connect), enregistrer exactement
+`https://api.relaisdesk.fr/api/v1/stripe/connect-webhook` comme destination
+écoutant les événements **des comptes connectés** (pas ceux du compte
+plateforme), pour `checkout.session.completed` et
+`checkout.session.async_payment_succeeded`, puis placer son secret `whsec_...`
+dans `STRIPE_CONNECT_WEBHOOK_SECRET` avec `SERVICE_PAYMENTS_ENABLED=true`.
+Recette en mode test : `docs/RECETTE_CONNECT_TEST.md`.
 
 ## Endpoints espace client
 

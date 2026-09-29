@@ -15,6 +15,7 @@ import (
 
 	"api/middleware"
 	"api/networkauth"
+	"api/releasemanifest"
 )
 
 func TestDeviceEnrollAndHeartbeat(t *testing.T) {
@@ -607,9 +608,9 @@ func TestDeviceConnectionInterventionTracking(t *testing.T) {
 	}
 
 	var connectResp struct {
-		Success      bool                `json:"success"`
-		DeviceID     string              `json:"device_id"`
-		Alias        string              `json:"alias"`
+		Success      bool               `json:"success"`
+		DeviceID     string             `json:"device_id"`
+		Alias        string             `json:"alias"`
 		Intervention dbpkg.Intervention `json:"intervention"`
 	}
 	if err := json.Unmarshal(connectRec.Body.Bytes(), &connectResp); err != nil {
@@ -702,8 +703,8 @@ func TestViewerCodeConnectInterventionTracking(t *testing.T) {
 	}
 
 	var connectResp struct {
-		Success      bool                `json:"success"`
-		Code         string              `json:"code"`
+		Success      bool               `json:"success"`
+		Code         string             `json:"code"`
 		Intervention dbpkg.Intervention `json:"intervention"`
 	}
 	if err := json.Unmarshal(connectRec.Body.Bytes(), &connectResp); err != nil {
@@ -737,4 +738,158 @@ func TestViewerCodeConnectInterventionTracking(t *testing.T) {
 	}
 }
 
+func TestViewerCodeReconnectAfterCompleteOpensNewIntervention(t *testing.T) {
+	db, err := dbpkg.InitDatabase(filepath.Join(t.TempDir(), "viewer-reconnect-test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
 
+	lic, err := dbpkg.CreateLicense(db, "tech-reconnect@example.com", 365, 3, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	vc, err := dbpkg.CreateViewerCode(db, lic.LicenseID, "client@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := dbpkg.MarkViewerInterventionReady(db, vc.ID); err != nil {
+		t.Fatal(err)
+	}
+	techSession, err := dbpkg.CreateTechnicianSession(db, lic.LicenseID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	connect := func() dbpkg.Intervention {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/technician/viewer-codes/"+vc.Code+"/connect", nil)
+		req.Header.Set("Authorization", "Bearer "+techSession)
+		rec := httptest.NewRecorder()
+		middleware.TechnicianAuth(db)(TechnicianConnectCodeHandler(db)).ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("connect status=%d body=%s", rec.Code, rec.Body.String())
+		}
+		var resp struct {
+			Success      bool               `json:"success"`
+			Intervention dbpkg.Intervention `json:"intervention"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("unmarshal connect: %v", err)
+		}
+		if !resp.Success || resp.Intervention.Status != "in_progress" {
+			t.Fatalf("expected in_progress, got %+v", resp)
+		}
+		return resp.Intervention
+	}
+	complete := func(id string) dbpkg.Intervention {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/technician/interventions/"+id+"/complete", bytes.NewReader([]byte(`{"summary":"Fin de session"}`)))
+		req.Header.Set("Authorization", "Bearer "+techSession)
+		rec := httptest.NewRecorder()
+		middleware.TechnicianAuth(db)(TechnicianInterventionActionHandler(db)).ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("complete status=%d body=%s", rec.Code, rec.Body.String())
+		}
+		var item dbpkg.Intervention
+		if err := json.Unmarshal(rec.Body.Bytes(), &item); err != nil {
+			t.Fatalf("unmarshal complete: %v", err)
+		}
+		if item.Status != "completed" {
+			t.Fatalf("expected completed, got %s", item.Status)
+		}
+		return item
+	}
+
+	first := connect()
+	complete(first.InterventionID)
+	// Reconnecting after the closure opens a new fiche instead of failing.
+	second := connect()
+	if second.InterventionID == first.InterventionID {
+		t.Fatalf("expected a new intervention, got the same %s", first.InterventionID)
+	}
+	complete(second.InterventionID)
+}
+
+func TestCompleteInterventionRefreshesEndOnRepeat(t *testing.T) {
+	db, err := dbpkg.InitDatabase(filepath.Join(t.TempDir(), "viewer-recomplete-test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	lic, err := dbpkg.CreateLicense(db, "tech-recomplete@example.com", 365, 3, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	vc, err := dbpkg.CreateViewerCode(db, lic.LicenseID, "client@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := dbpkg.MarkViewerInterventionReady(db, vc.ID); err != nil {
+		t.Fatal(err)
+	}
+	techSession, err := dbpkg.CreateTechnicianSession(db, lic.LicenseID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	complete := func(id string) dbpkg.Intervention {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/technician/interventions/"+id+"/complete", bytes.NewReader([]byte(`{"summary":"Fin de session"}`)))
+		req.Header.Set("Authorization", "Bearer "+techSession)
+		rec := httptest.NewRecorder()
+		middleware.TechnicianAuth(db)(TechnicianInterventionActionHandler(db)).ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("complete status=%d body=%s", rec.Code, rec.Body.String())
+		}
+		var item dbpkg.Intervention
+		if err := json.Unmarshal(rec.Body.Bytes(), &item); err != nil {
+			t.Fatalf("unmarshal complete: %v", err)
+		}
+		return item
+	}
+	// First completion goes through Start to reach a normal in_progress fiche.
+	connectReq := httptest.NewRequest(http.MethodPost, "/api/v1/technician/viewer-codes/"+vc.Code+"/connect", nil)
+	connectReq.Header.Set("Authorization", "Bearer "+techSession)
+	connectRec := httptest.NewRecorder()
+	middleware.TechnicianAuth(db)(TechnicianConnectCodeHandler(db)).ServeHTTP(connectRec, connectReq)
+	if connectRec.Code != http.StatusOK {
+		t.Fatalf("connect status=%d body=%s", connectRec.Code, connectRec.Body.String())
+	}
+	var connectResp struct {
+		Intervention dbpkg.Intervention `json:"intervention"`
+	}
+	if err := json.Unmarshal(connectRec.Body.Bytes(), &connectResp); err != nil {
+		t.Fatalf("unmarshal connect: %v", err)
+	}
+	first := complete(connectResp.Intervention.InterventionID)
+	if first.EndedAt == nil {
+		t.Fatal("expected ended_at after completion")
+	}
+	time.Sleep(1200 * time.Millisecond)
+	second := complete(connectResp.Intervention.InterventionID)
+	if second.EndedAt == nil || !second.EndedAt.After(*first.EndedAt) {
+		t.Fatalf("expected refreshed ended_at, got first=%v second=%v", first.EndedAt, second.EndedAt)
+	}
+}
+
+func TestUpdateTargetFromManifest(t *testing.T) {
+	if got := updateTargetFromManifest(nil, "windows", "1.0.5", 15); got != nil {
+		t.Fatalf("nil manifest = %+v, want nil", got)
+	}
+	empty := &releasemanifest.Manifest{Version: "1.0.0"}
+	if got := updateTargetFromManifest(empty, "windows", "1.0.5", 15); got != nil {
+		t.Fatalf("missing artifact = %+v, want nil", got)
+	}
+	full := &releasemanifest.Manifest{Version: "1.0.0", Artifacts: []releasemanifest.Artifact{
+		{Name: "RelaisDesk_Portable.exe", URL: "https://example.com/p.exe", SHA256: "abc123"},
+		{Name: "RelaisDesk_viewer.deb", URL: "https://example.com/v.deb", SHA256: "def456"},
+	}}
+	win := updateTargetFromManifest(full, "windows", "1.0.5", 15)
+	if win == nil || win.SHA256 != "abc123" || win.Version != "1.0.5" || win.StaggerSeconds != 15 {
+		t.Fatalf("windows target = %+v", win)
+	}
+	lin := updateTargetFromManifest(full, "linux", "", 15)
+	if lin == nil || lin.SHA256 != "def456" || lin.Version != "1.0.0" {
+		t.Fatalf("linux target = %+v", lin)
+	}
+}

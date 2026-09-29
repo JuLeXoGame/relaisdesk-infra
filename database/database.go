@@ -160,6 +160,8 @@ func applyMigrations(db *sql.DB) error {
 		{"customer_accounts", "totp_secret", "TEXT"},
 		{"customer_accounts", "totp_recovery_codes", "TEXT"},
 		{"customer_accounts", "totp_confirmed_at", "DATETIME"},
+		{"customer_accounts", "failed_password_attempts", "INTEGER NOT NULL DEFAULT 0"},
+		{"customer_accounts", "password_locked_until", "DATETIME"},
 		{"licences", "totp_enabled", "INTEGER NOT NULL DEFAULT 0"},
 		{"licences", "totp_secret", "TEXT"},
 		{"licences", "totp_recovery_codes", "TEXT"},
@@ -293,7 +295,9 @@ func applyMigrations(db *sql.DB) error {
 			email TEXT PRIMARY KEY COLLATE NOCASE,
 			renewal_reminders_enabled INTEGER NOT NULL DEFAULT 1,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			last_login_at DATETIME
+			last_login_at DATETIME,
+			failed_password_attempts INTEGER NOT NULL DEFAULT 0,
+			password_locked_until DATETIME
 		);
 		CREATE TABLE IF NOT EXISTS customer_login_tokens (
 			token_hash TEXT PRIMARY KEY,
@@ -482,6 +486,45 @@ func backfillStableCustomers(db *sql.DB) error {
 			SELECT ca.renewal_reminders_enabled FROM customer_accounts ca
 			WHERE ca.customer_id = customers.id ORDER BY ca.created_at ASC LIMIT 1
 		), renewal_reminders_enabled);
+
+		CREATE TABLE IF NOT EXISTS crypto_quotes (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			order_id TEXT NOT NULL,
+			asset TEXT NOT NULL,
+			amount_crypto TEXT NOT NULL,
+			rate_eur TEXT NOT NULL,
+			rate_source TEXT NOT NULL DEFAULT 'OKX',
+			quoted_at DATETIME NOT NULL,
+			expires_at DATETIME NOT NULL,
+			pay_address TEXT NOT NULL,
+			dest_tag INTEGER,
+			status TEXT NOT NULL DEFAULT 'pending',
+			txid TEXT NOT NULL DEFAULT '',
+			sender TEXT NOT NULL DEFAULT '',
+			confirmations INTEGER NOT NULL DEFAULT 0,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (order_id) REFERENCES orders(order_id)
+		);
+		CREATE INDEX IF NOT EXISTS idx_crypto_quotes_order ON crypto_quotes(order_id, id);
+		CREATE INDEX IF NOT EXISTS idx_crypto_quotes_status ON crypto_quotes(status, expires_at);
+		CREATE INDEX IF NOT EXISTS idx_crypto_quotes_tag ON crypto_quotes(asset, dest_tag, status);
+		CREATE INDEX IF NOT EXISTS idx_crypto_quotes_open ON crypto_quotes(asset, status, expires_at);
+
+		CREATE TABLE IF NOT EXISTS crypto_payments (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			order_id TEXT NOT NULL,
+			invoice_number TEXT NOT NULL DEFAULT '',
+			asset TEXT NOT NULL,
+			amount_crypto TEXT NOT NULL,
+			rate_eur TEXT NOT NULL,
+			rate_at DATETIME NOT NULL,
+			txid TEXT NOT NULL DEFAULT '',
+			sender TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (order_id) REFERENCES orders(order_id)
+		);
+		CREATE INDEX IF NOT EXISTS idx_crypto_payments_order ON crypto_payments(order_id);
 	`)
 	if err != nil {
 		return err
@@ -753,26 +796,62 @@ func ExtendLicense(db *sql.DB, licenseID string, days int) error {
 	return ensureAffected(res, "license not found")
 }
 
-// ListLicenses returns licenses filtered by optional status and email values.
-func ListLicenses(db *sql.DB, status string, email string) ([]License, error) {
+// chunkStrings splits ids into chunks for SQLite IN clauses (variable limit).
+func chunkStrings(in []string, size int) [][]string {
+	if size <= 0 {
+		size = 500
+	}
+	var chunks [][]string
+	for start := 0; start < len(in); start += size {
+		end := start + size
+		if end > len(in) {
+			end = len(in)
+		}
+		chunks = append(chunks, in[start:end])
+	}
+	return chunks
+}
+
+func licenseListClauses(status, email, search string) (string, []interface{}) {
+	where := "WHERE 1 = 1"
+	args := make([]interface{}, 0, 5)
+
+	if status != "" {
+		where += " AND status = ?"
+		args = append(args, status)
+	}
+	if email != "" {
+		where += " AND email = ?"
+		args = append(args, email)
+	}
+	if search != "" {
+		where += " AND (license_id LIKE ? OR email LIKE ? OR COALESCE(notes, '') LIKE ?)"
+		pattern := "%" + search + "%"
+		args = append(args, pattern, pattern, pattern)
+	}
+	return where, args
+}
+
+// ListLicenses returns licenses (created_at DESC) with optional status, email
+// and fuzzy search filters. limit <= 0 disables pagination.
+func ListLicenses(db *sql.DB, status, email, search string, limit, offset int) ([]License, error) {
+	where, args := licenseListClauses(status, email, search)
+
 	query := `
 		SELECT id, license_id, email, license_key, status, created_at, expires_at,
 		       max_connections, current_connections, last_connection_at, notes,
 		       revoked_at, revoke_reason
 		FROM licences
-		WHERE 1 = 1
+		` + where + `
+		ORDER BY created_at DESC, id DESC
 	`
-	args := make([]any, 0, 2)
-
-	if status != "" {
-		query += " AND status = ?"
-		args = append(args, status)
+	if limit > 0 {
+		if offset < 0 {
+			offset = 0
+		}
+		query += " LIMIT ? OFFSET ?"
+		args = append(args, limit, offset)
 	}
-	if email != "" {
-		query += " AND email = ?"
-		args = append(args, email)
-	}
-	query += " ORDER BY created_at DESC"
 
 	rows, err := db.Query(query, args...)
 	if err != nil {
@@ -792,6 +871,17 @@ func ListLicenses(db *sql.DB, status string, email string) ([]License, error) {
 		return nil, fmt.Errorf("failed to iterate licenses: %w", err)
 	}
 	return licences, nil
+}
+
+// CountLicenses returns the total number of licenses matching the list filters.
+func CountLicenses(db *sql.DB, status, email, search string) (int, error) {
+	where, args := licenseListClauses(status, email, search)
+	var total int
+	err := db.QueryRow(`SELECT COUNT(*) FROM licences `+where, args...).Scan(&total)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count licenses: %w", err)
+	}
+	return total, nil
 }
 
 // GetStats returns global license statistics.

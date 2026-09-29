@@ -21,13 +21,13 @@ go build -o keygen .
 
 ### Générer une licence
 ```bash
-# Plan Starter (10€/mois, 1 technicien, viewers illimités)
+# Plan Starter (24,90€/mois, 1 technicien, viewers illimités)
 ./keygen generate --email "client@exemple.fr" --plan starter
 
-# Plan Pro (20€/mois, jusqu'à 10 techniciens, viewers illimités)
+# Plan Pro (110€/mois, jusqu'à 5 techniciens, viewers illimités)
 ./keygen generate --email "client@exemple.fr" --plan pro
 
-# Plan Ultra (ex: 20 techniciens = 33,88€/mois, viewers illimités)
+# Plan Ultra (ex: 20 techniciens = 339,00€/mois, viewers illimités)
 ./keygen generate --email "client@exemple.fr" --plan ultra --technicians 20
 ```
 

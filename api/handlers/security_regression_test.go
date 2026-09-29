@@ -151,7 +151,14 @@ func TestSecurityEmailLinkRequiresExistingMFA(t *testing.T) {
 	_, codes := auditEnable(t, db, lic.Email)
 	emailToken := auditEmailToken(t, db, lic.Email)
 	w := auditRequest(t, handlers.CustomerLoginVerifyHandler(db), map[string]string{"token": emailToken}, "")
-	if w.Code != 401 {
+	var challenge map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &challenge); err != nil {
+		t.Fatal(err)
+	}
+	// MFA still required (no session issued), but signaled with 200 like
+	// every other 2FA challenge: a 401 here would burn the IP-ban budget
+	// on each legitimate MFA login.
+	if w.Code != 200 || challenge["requires_2fa"] != true || challenge["token"] != nil {
 		t.Fatal("email link bypassed MFA")
 	}
 	session := auditToken(t, auditRequest(t, handlers.CustomerLoginVerifyHandler(db), map[string]string{"token": emailToken, "code": codes[0]}, ""))

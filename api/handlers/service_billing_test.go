@@ -180,7 +180,7 @@ func TestServiceCheckoutAndWebhook(t *testing.T) {
 					t.Fatal("incorrect charge")
 				}
 			}
-			body = fmt.Sprintf(`{"id":"cs_fixture","url":"https://checkout.stripe.com/c/pay/cs_fixture","status":"complete","payment_status":"paid","mode":"payment","currency":"eur","amount_total":%d,"client_reference_id":%q,"livemode":false}`, amount, work.ID)
+			body = fmt.Sprintf(`{"id":"cs_fixture","url":"https://checkout.stripe.com/c/pay/cs_fixture#fidanagsdXNwJ2JnYGNhcXAnKSdic3l%%2Fd3BjYHgl","status":"complete","payment_status":"paid","mode":"payment","currency":"eur","amount_total":%d,"client_reference_id":%q,"livemode":false}`, amount, work.ID)
 		}
 		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
 	})}

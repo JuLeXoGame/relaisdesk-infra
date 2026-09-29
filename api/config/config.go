@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -55,6 +56,20 @@ type Config struct {
 	BankIBAN   string
 	BankBIC    string
 	BankHolder string
+
+	// Crypto payments collected on the operator OKX account (read-only API
+	// key): quotes price at the OKX spot rate, deposits are detected by
+	// polling the OKX deposit history. Nothing is offered until CryptoEnabled
+	// is set AND the asset deposit configuration is complete.
+	CryptoEnabled         bool
+	CryptoQuoteTTLMinutes int
+	OKXBaseURL            string
+	OKXAPIKey             string
+	OKXAPISecret          string
+	OKXAPIPassphrase      string
+	OKXBTCDepositAddress  string
+	OKXXRPDepositAddress  string
+	OKXXRPDepositTag      string
 
 	// Downloads & Web configuration
 	DownloadsDir        string
@@ -162,6 +177,15 @@ func LoadConfig() *Config {
 		BankIBAN:                        getEnv("BANK_IBAN", "FR76 0000 0000 0000 0000 0000 000"),
 		BankBIC:                         getEnv("BANK_BIC", "BNPAFRPP"),
 		BankHolder:                      getEnv("BANK_HOLDER", "Informatique A Domicile 03 / RelaisDesk"),
+		CryptoEnabled:          getEnv("CRYPTO_ENABLED", "false") == "true",
+		CryptoQuoteTTLMinutes:  getEnvInt("CRYPTO_QUOTE_TTL_MINUTES", 30),
+		OKXBaseURL:             strings.TrimRight(getEnv("OKX_BASE_URL", "https://www.okx.com"), "/"),
+		OKXAPIKey:              strings.TrimSpace(getEnv("OKX_API_KEY", "")),
+		OKXAPISecret:           strings.TrimSpace(getEnv("OKX_API_SECRET", "")),
+		OKXAPIPassphrase:       strings.TrimSpace(getEnv("OKX_API_PASSPHRASE", "")),
+		OKXBTCDepositAddress:   strings.TrimSpace(getEnv("OKX_BTC_DEPOSIT_ADDRESS", "")),
+		OKXXRPDepositAddress:   strings.TrimSpace(getEnv("OKX_XRP_DEPOSIT_ADDRESS", "")),
+		OKXXRPDepositTag:       strings.TrimSpace(getEnv("OKX_XRP_DEPOSIT_TAG", "")),
 		DownloadsDir:                    getEnv("DOWNLOADS_DIR", "installer/build"),
 		InvoicesDir:                     invoicesDir,
 		PublicWebsiteURL:                getEnv("PUBLIC_WEBSITE_URL", "https://relaisdesk.fr"),
@@ -220,6 +244,56 @@ func (c *Config) BankTransferConfigured() bool {
 		}
 	}
 	return strings.TrimSpace(c.BankHolder) != ""
+}
+
+// CryptoQuoteTTL returns the quote validity clamped to 5..30 minutes.
+func (c *Config) CryptoQuoteTTL() time.Duration {
+	ttl := c.CryptoQuoteTTLMinutes
+	if ttl < 5 {
+		ttl = 5
+	}
+	if ttl > 30 {
+		ttl = 30
+	}
+	return time.Duration(ttl) * time.Minute
+}
+
+// CryptoAssetConfigured reports whether an asset ("BTC" or "XRP") can be
+// offered: globally enabled, OKX reachable in principle, the read-only API
+// credentials set, and the asset deposit address (plus tag for XRP)
+// configured.
+func (c *Config) CryptoAssetConfigured(asset string) bool {
+	if c == nil || !c.CryptoEnabled || strings.TrimSpace(c.OKXBaseURL) == "" {
+		return false
+	}
+	if strings.TrimSpace(c.OKXAPIKey) == "" || strings.TrimSpace(c.OKXAPISecret) == "" ||
+		strings.TrimSpace(c.OKXAPIPassphrase) == "" {
+		return false
+	}
+	switch strings.ToUpper(strings.TrimSpace(asset)) {
+	case "BTC":
+		return strings.TrimSpace(c.OKXBTCDepositAddress) != ""
+	case "XRP":
+		if strings.TrimSpace(c.OKXXRPDepositAddress) == "" {
+			return false
+		}
+		_, err := c.OKXXRPDepositTagValue()
+		return err == nil
+	default:
+		return false
+	}
+}
+
+// OKXXRPDepositTagValue parses the fixed OKX XRP deposit tag/memo shown on
+// every XRP quote. The tag is identical for all orders: deposits are told
+// apart by amount and time window.
+func (c *Config) OKXXRPDepositTagValue() (uint32, error) {
+	raw := strings.TrimSpace(c.OKXXRPDepositTag)
+	value, err := strconv.ParseUint(raw, 10, 32)
+	if err != nil || raw == "" {
+		return 0, fmt.Errorf("tag de dépôt XRP invalide")
+	}
+	return uint32(value), nil
 }
 
 // ValidateServerSettings prevents a malformed environment variable from being

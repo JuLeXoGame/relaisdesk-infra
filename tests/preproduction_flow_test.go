@@ -42,7 +42,7 @@ func TestPreproductionPurchaseActivationAndConnectionAuthorization(t *testing.T)
 	orderResponse := postPreproductionJSON(t, handlers.PublicOrderHandler(db, cfg, nil), "/api/v1/public/order", map[string]any{
 		"email": "preprod@example.test", "plan": "pro", "technicians": 3, "payment_method": "bank_transfer",
 		"name": "Client Préproduction", "address": "1 rue du Test", "postal_code": "75001", "city": "Paris",
-		"customer_type": "business", "terms_version": "2026-09-21", "terms_accepted": true,
+		"customer_type": "business", "terms_version": "2026-09-27", "terms_accepted": true,
 	}, "")
 	if orderResponse.Code != http.StatusCreated {
 		t.Fatalf("purchase status = %d: %s", orderResponse.Code, orderResponse.Body.String())
@@ -89,7 +89,7 @@ func TestPreproductionPurchaseActivationAndConnectionAuthorization(t *testing.T)
 	if retryResponse.Code != http.StatusOK {
 		t.Fatalf("idempotent fulfillment retry status = %d: %s", retryResponse.Code, retryResponse.Body.String())
 	}
-	invoices, err := dbpkg.ListInvoices(db, order.OrderID)
+	invoices, err := dbpkg.ListInvoices(db, order.OrderID, 0, 0)
 	if err != nil || len(invoices) != 1 {
 		t.Fatalf("invoice count after retry = %d, %v; want exactly one", len(invoices), err)
 	}

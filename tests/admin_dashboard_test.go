@@ -207,8 +207,14 @@ func TestFormerMasterLicenseIDDoesNotGrantAdminRights(t *testing.T) {
 		recorder,
 		httptest.NewRequest(http.MethodPost, "/api/v1/admin/login", bytes.NewReader(payload)),
 	)
-	if recorder.Code != http.StatusForbidden {
-		t.Fatalf("former master ID login status = %d, want %d; body=%s", recorder.Code, http.StatusForbidden, recorder.Body.String())
+	// Uniform 401 (not 403): a distinct status would oracle license
+	// credential validity. No admin session must be issued.
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("former master ID login status = %d, want %d; body=%s", recorder.Code, http.StatusUnauthorized, recorder.Body.String())
+	}
+	var denied map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &denied); err != nil || denied["token"] != nil {
+		t.Fatalf("non-admin login issued a session: %s", recorder.Body.String())
 	}
 
 	session, err := dbpkg.CreateTechnicianSession(env.db, licenseID)
@@ -334,7 +340,9 @@ func TestAdminLoginWithEmailBadPasswordAndMissingRights(t *testing.T) {
 		t.Fatalf("Expected 401 for bad password, got %d", badRec.Code)
 	}
 
-	// 2. Email without admin license -> 403
+	// 2. Email without admin license -> uniform 401 with a generic message
+	// (a distinct 403 would oracle credential validity; the real reason
+	// stays server-side in the logs).
 	userEmail := "normal.tech@example.com"
 	userPassword := "NormalUserPass2026!"
 	_, err = env.db.Exec(`
@@ -354,7 +362,11 @@ func TestAdminLoginWithEmailBadPasswordAndMissingRights(t *testing.T) {
 	noAdminReq.Header.Set("Content-Type", "application/json")
 	noAdminRec := httptest.NewRecorder()
 	handlers.AdminLoginHandler(env.db, "master-secret")(noAdminRec, noAdminReq)
-	if noAdminRec.Code != http.StatusForbidden {
-		t.Fatalf("Expected 403 for email without admin license, got %d", noAdminRec.Code)
+	if noAdminRec.Code != http.StatusUnauthorized {
+		t.Fatalf("Expected uniform 401 for email without admin license, got %d", noAdminRec.Code)
+	}
+	var noAdminBody map[string]string
+	if err := json.Unmarshal(noAdminRec.Body.Bytes(), &noAdminBody); err != nil || noAdminBody["error"] != "Identifiants incorrects" {
+		t.Fatalf("Expected generic error message, got %q", noAdminRec.Body.String())
 	}
 }

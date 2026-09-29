@@ -128,13 +128,17 @@ type AdminAlert struct {
 	CreatedAt string `json:"created_at"`
 }
 
+// sharedAdminHTTPClient is reused across requests: rebuilding an http.Transport
+// per call wastes connections and leaks idle sockets until the GC intervenes.
+var sharedAdminHTTPClient = &http.Client{
+	Timeout: 10 * time.Second,
+	Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: false},
+	},
+}
+
 func getHTTPClient() *http.Client {
-	return &http.Client{
-		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: false},
-		},
-	}
+	return sharedAdminHTTPClient
 }
 
 func doAdminReq(method, path, token string, reqBody any, respObj any) error {

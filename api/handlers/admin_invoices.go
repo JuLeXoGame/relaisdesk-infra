@@ -38,8 +38,14 @@ func AdminListInvoicesHandler(db *sql.DB) http.HandlerFunc {
 			writeJSONError(w, "Filtre de recherche trop long", http.StatusBadRequest)
 			return
 		}
+		page, limit := paginationParams(r, 0)
 
-		invoices, err := dbpkg.ListInvoices(db, query)
+		invoices, err := dbpkg.ListInvoices(db, query, limit, (page-1)*limit)
+		if err != nil {
+			writeJSONError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		total, err := dbpkg.CountInvoices(db, query)
 		if err != nil {
 			writeJSONError(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -47,7 +53,9 @@ func AdminListInvoicesHandler(db *sql.DB) http.HandlerFunc {
 
 		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"invoices": invoices,
-			"total":    len(invoices),
+			"total":    total,
+			"page":     page,
+			"limit":    limit,
 		})
 	}
 }
@@ -121,6 +129,39 @@ func AdminDownloadInvoiceHandler(db *sql.DB, cfg *config.Config) http.HandlerFun
 	}
 }
 
+// AdminDownloadInvoiceCIIHandler serves the Factur-X BASIC (CII XML)
+// e-invoicing document for any invoice and logs audit trail.
+func AdminDownloadInvoiceCIIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		pathParts := strings.Split(r.URL.Path, "/")
+		// /api/v1/admin/invoices/{invoice_number}/cii
+		if len(pathParts) < 6 {
+			writeJSONError(w, "Chemin invalide", http.StatusBadRequest)
+			return
+		}
+		invoiceNumber := pathParts[5]
+		if !invoiceNumberPattern.MatchString(invoiceNumber) {
+			writeJSONError(w, "Facture introuvable", http.StatusNotFound)
+			return
+		}
+		inv, err := dbpkg.GetInvoiceByNumber(db, invoiceNumber)
+		if err != nil {
+			writeJSONError(w, "Facture introuvable", http.StatusNotFound)
+			return
+		}
+		out, err := invoice.GenerateInvoiceCII(inv)
+		if err != nil {
+			writeJSONError(w, "Document de facture indisponible", http.StatusNotFound)
+			return
+		}
+		clientIP := middleware.GetClientIP(r)
+		log.Printf("[AUDIT INVOICE CII DOWNLOAD] Facture %s (CII) téléchargée depuis IP %s à %s", invoiceNumber, clientIP, time.Now().UTC().Format(time.RFC3339))
+		w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", invoiceNumber+".xml"))
+		_, _ = w.Write(out)
+	}
+}
+
 // AdminUploadInvoiceHandler allows admin to upload an existing invoice PDF/HTML.
 func AdminUploadInvoiceHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -181,8 +222,11 @@ func AdminUploadInvoiceHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc 
 		// Ensure invoices directory exists (0700)
 		_ = os.MkdirAll(cfg.InvoicesDir, 0700)
 
-		// Generate invoice number if not provided
-		if invoiceNumber == "" {
+		// Generate invoice number if not provided. Standalone generation
+		// happens outside the creation lock, so a lost race retries once
+		// below with a fresh number instead of failing the upload.
+		autoNumbered := invoiceNumber == ""
+		if autoNumbered {
 			invoiceNumber, err = dbpkg.GenerateNextInvoiceNumber(db)
 			if err != nil {
 				writeJSONError(w, "Erreur génération numéro facture: "+err.Error(), http.StatusInternalServerError)
@@ -276,6 +320,17 @@ func AdminUploadInvoiceHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc 
 		}
 
 		createdInv, err := dbpkg.CreateInvoice(db, inv)
+		if err != nil && autoNumbered && strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			if retryNumber, genErr := dbpkg.GenerateNextInvoiceNumber(db); genErr == nil && invoiceNumberPattern.MatchString(retryNumber) {
+				retryPath := filepath.Join(cfg.InvoicesDir, fmt.Sprintf("%s%s", sanitizeFilename(retryNumber), ext))
+				if moveStagedInvoice(destPath, retryPath) == nil {
+					destPath = retryPath
+					inv.InvoiceNumber = retryNumber
+					inv.PDFPath = retryPath
+					createdInv, err = dbpkg.CreateInvoice(db, inv)
+				}
+			}
+		}
 		if err != nil {
 			writeJSONError(w, "Erreur enregistrement facture: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -288,6 +343,38 @@ func AdminUploadInvoiceHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc 
 			"invoice":        createdInv,
 		})
 	}
+}
+
+// moveStagedInvoice moves an uploaded invoice file to its retry name without
+// ever overwriting an existing file.
+func moveStagedInvoice(source, target string) error {
+	in, err := os.Open(filepath.Clean(source))
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.OpenFile(filepath.Clean(target), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	if err != nil {
+		return err
+	}
+	done := false
+	defer func() {
+		_ = out.Close()
+		if !done {
+			_ = os.Remove(filepath.Clean(target))
+		}
+	}()
+	if _, err := io.Copy(out, in); err != nil {
+		return err
+	}
+	if err := out.Sync(); err != nil {
+		return err
+	}
+	if err := out.Close(); err != nil {
+		return err
+	}
+	done = true
+	return os.Remove(filepath.Clean(source))
 }
 
 // AdminSendInvoiceEmailHandler resends or sends an invoice with PDF attachment by email to customer.
@@ -488,4 +575,3 @@ func AdminCreateCreditNoteHandler(db *sql.DB, cfg *config.Config) http.HandlerFu
 		})
 	}
 }
-

@@ -236,39 +236,47 @@ func resolveDeviceUpdateTarget(osName, targetVer string, deviceID ...string) *De
 		"../relaisdesk/downloads/release-manifest.json",
 		"../../relaisdesk/downloads/release-manifest.json",
 	}
-	var manifest *releasemanifest.Manifest
 	for _, p := range manifestPaths {
 		if m, err := releasemanifest.LoadVerified(p, "K3k6oko00jMzl7hN3poS6KYjJzZvjNz9Tgdz73E2duo"); err == nil {
-			manifest = m
-			break
+			if target := updateTargetFromManifest(m, osName, targetVer, stagger); target != nil {
+				return target
+			}
 		}
+	}
+	// Fail closed: without a verified manifest artifact there is no
+	// operator-signed SHA256, so no update is offered. Devices keep
+	// polling and update once the manifest is back.
+	log.Printf("[Devices] mise à jour OTA indisponible sans manifeste vérifié (os=%s)", osName)
+	return nil
+}
+
+// updateTargetFromManifest builds the OTA target from a verified manifest,
+// or nil when the artifact is absent. There is deliberately no unverified
+// fallback: devices must never install an update the operator did not sign.
+func updateTargetFromManifest(manifest *releasemanifest.Manifest, osName, targetVer string, stagger int) *DeviceUpdateTarget {
+	if manifest == nil {
+		return nil
 	}
 	artifactName := "RelaisDesk_Portable.exe"
 	if strings.EqualFold(osName, "linux") {
 		artifactName = "RelaisDesk_viewer.deb"
 	}
-	if manifest != nil {
-		for _, a := range manifest.Artifacts {
-			if a.Name == artifactName {
-				ver := manifest.Version
-				if targetVer != "" {
-					ver = targetVer
-				}
-				return &DeviceUpdateTarget{
-					Version:        ver,
-					URL:            a.URL,
-					SHA256:         a.SHA256,
-					StaggerSeconds: stagger,
-				}
-			}
+	for _, a := range manifest.Artifacts {
+		if a.Name != artifactName {
+			continue
+		}
+		ver := manifest.Version
+		if targetVer != "" {
+			ver = targetVer
+		}
+		return &DeviceUpdateTarget{
+			Version:        ver,
+			URL:            a.URL,
+			SHA256:         a.SHA256,
+			StaggerSeconds: stagger,
 		}
 	}
-	baseURL := "https://api.relaisdesk.fr/api/v1/downloads"
-	return &DeviceUpdateTarget{
-		Version:        targetVer,
-		URL:            baseURL + "/" + artifactName,
-		StaggerSeconds: stagger,
-	}
+	return nil
 }
 
 func issueDeviceNetworkToken(db *sql.DB, signer *networkauth.Signer, dev *dbpkg.Device, peerVersion ...int) (*networkauth.IssuedToken, error) {
@@ -517,7 +525,7 @@ func CustomerDeviceActionHandler(db *sql.DB) http.HandlerFunc {
 				return
 			}
 			if req.MACAddress != "" {
-				_ = dbpkg.UpdateDeviceMAC(db, deviceID, req.MACAddress)
+				_ = dbpkg.UpdateDeviceMAC(db, deviceID, req.MACAddress, identity.ID, "")
 			}
 			writeJSON(w, http.StatusOK, map[string]bool{"success": true})
 			return
@@ -751,7 +759,7 @@ func TechnicianDeviceActionHandler(db *sql.DB) http.HandlerFunc {
 				return
 			}
 			if req.MACAddress != "" {
-				_ = dbpkg.UpdateDeviceMAC(db, deviceID, req.MACAddress)
+				_ = dbpkg.UpdateDeviceMAC(db, deviceID, req.MACAddress, 0, licenseID)
 			}
 			writeJSON(w, http.StatusOK, map[string]bool{"success": true})
 			return

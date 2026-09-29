@@ -86,12 +86,13 @@ func EnsureViewerCodeIntervention(db *sql.DB, code *ViewerCode) (*Intervention, 
 		return nil, errors.New("code viewer requis")
 	}
 	existing, err := getInterventionByViewerCode(db, code.TechnicianLicenseID, code.ID)
-	if err == nil {
+	if err == nil && existing.Status != "completed" && existing.Status != "cancelled" {
 		return existing, nil
 	}
-	if !errors.Is(err, sql.ErrNoRows) {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
+	// A closed fiche stays closed; a new connection opens a new one.
 	viewerID := code.ID
 	return CreateIntervention(db, code.TechnicianLicenseID, &viewerID, code.ClientEmail, "Assistance à distance")
 }
@@ -165,7 +166,17 @@ func CompleteIntervention(db *sql.DB, licenseID, interventionID, clientReference
 	if rows == 0 {
 		existing, getErr := GetIntervention(db, licenseID, interventionID, 0)
 		if getErr == nil && existing.Status == "completed" {
-			return existing, nil
+			// Re-completing refreshes the end of the intervention (a later
+			// session disconnected) instead of failing.
+			if _, err := db.Exec(`
+				UPDATE interventions
+				SET ended_at = ?, duration_minutes = MAX(1, CAST(ROUND((julianday(?) - julianday(COALESCE(started_at, ?))) * 1440) AS INTEGER)),
+				    updated_at = ?
+				WHERE intervention_id = ? AND license_id = ?
+			`, now, now, now, now, interventionID, licenseID); err != nil {
+				return nil, err
+			}
+			return GetIntervention(db, licenseID, interventionID, 0)
 		}
 		return nil, errors.New("intervention introuvable ou état incompatible")
 	}
@@ -228,16 +239,9 @@ func StartInterventionByViewerCode(db *sql.DB, licenseID, code string) (*Interve
 	if vc.TechnicianLicenseID != licenseID {
 		return nil, errors.New("code non associé à cette licence")
 	}
-	existing, err := getInterventionByViewerCode(db, licenseID, vc.ID)
+	existing, err := EnsureViewerCodeIntervention(db, vc)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			existing, err = EnsureViewerCodeIntervention(db, vc)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, err
-		}
+		return nil, err
 	}
 	return StartIntervention(db, licenseID, existing.InterventionID)
 }
@@ -299,7 +303,7 @@ func getInterventionByViewerCode(db *sql.DB, licenseID string, viewerCodeID int)
 	return scanIntervention(db.QueryRow(`
 		SELECT id, intervention_id, license_id, viewer_code_id, COALESCE(client_reference, ''), title,
 		       status, started_at, ended_at, duration_minutes, COALESCE(summary, ''), created_at, updated_at
-		FROM interventions WHERE license_id = ? AND viewer_code_id = ? LIMIT 1
+		FROM interventions WHERE license_id = ? AND viewer_code_id = ? ORDER BY id DESC LIMIT 1
 	`, licenseID, viewerCodeID))
 }
 

@@ -69,6 +69,16 @@ type BillingDetails struct {
 	BillingCycle                  string `json:"billing_cycle,omitempty"`
 }
 
+// ValidPaymentMethod reports whether a payment method is accepted for orders.
+func ValidPaymentMethod(method string) bool {
+	switch strings.ToLower(strings.TrimSpace(method)) {
+	case "stripe", "bank_transfer", "crypto_btc", "crypto_xrp":
+		return true
+	default:
+		return false
+	}
+}
+
 // CalculateServerPrice calculates the official price and technician count on the server side.
 func CalculateServerPrice(plan string, requestedTechs int, billingCycle ...string) (price float64, technicians int, planName string, err error) {
 	cycle := "monthly"
@@ -136,14 +146,16 @@ func CalculateServerPrice(plan string, requestedTechs int, billingCycle ...strin
 	}
 }
 
-// GenerateOrderID generates an order ID with format ORD-XXXX-XXXX.
-func GenerateOrderID() string {
-	bytes := make([]byte, 4)
-	if _, err := rand.Read(bytes); err != nil {
-		return fmt.Sprintf("ORD-%08X", time.Now().UnixNano()%0xFFFFFFFF)
+// GenerateOrderID generates an unpredictable order ID (64-bit crypto
+// randomness, format ORD-XXXXXXXX-XXXXXXXX). It fails closed: there is no
+// predictable time-based fallback.
+func GenerateOrderID() (string, error) {
+	var entropy [8]byte
+	if _, err := rand.Read(entropy[:]); err != nil {
+		return "", fmt.Errorf("génération identifiant commande: %w", err)
 	}
-	hexStr := strings.ToUpper(hex.EncodeToString(bytes))
-	return fmt.Sprintf("ORD-%s-%s", hexStr[:4], hexStr[4:])
+	hexStr := strings.ToUpper(hex.EncodeToString(entropy[:]))
+	return fmt.Sprintf("ORD-%s-%s", hexStr[:8], hexStr[8:]), nil
 }
 
 // CreateOrder inserts a new order with pending status and 48-hour expiration.
@@ -169,14 +181,15 @@ func CreateOrderWithBilling(db *sql.DB, email, plan string, requestedTechs int, 
 	}
 
 	paymentMethod = strings.ToLower(strings.TrimSpace(paymentMethod))
-	if paymentMethod != "stripe" && paymentMethod != "bank_transfer" {
-		return nil, fmt.Errorf("méthode de paiement invalide (choix: stripe, bank_transfer)")
+	if !ValidPaymentMethod(paymentMethod) {
+		return nil, fmt.Errorf("méthode de paiement invalide (choix: stripe, bank_transfer, crypto_btc, crypto_xrp)")
 	}
 
 	var bName, bAddr, bZip, bCity, bCountry, bSiret string
 	customerType := "business"
 	termsVersion := "legacy"
 	var termsAcceptedAt interface{}
+	var termsAcceptedAtTime *time.Time
 	immediatePerformanceRequested := false
 	if billing != nil {
 		bName = strings.TrimSpace(billing.Name)
@@ -200,7 +213,9 @@ func CreateOrderWithBilling(db *sql.DB, email, plan string, requestedTechs int, 
 			termsVersion = "legacy"
 		}
 		if billing.TermsAccepted {
-			termsAcceptedAt = time.Now().UTC().Format(time.RFC3339)
+			acceptedAt := time.Now().UTC()
+			termsAcceptedAt = acceptedAt.Format(time.RFC3339)
+			termsAcceptedAtTime = &acceptedAt
 		}
 		immediatePerformanceRequested = billing.ImmediatePerformanceRequested
 	}
@@ -209,7 +224,10 @@ func CreateOrderWithBilling(db *sql.DB, email, plan string, requestedTechs int, 
 		return nil, err
 	}
 
-	orderID := GenerateOrderID()
+	orderID, err := GenerateOrderID()
+	if err != nil {
+		return nil, err
+	}
 	now := time.Now().UTC()
 	expiresAt := now.Add(48 * time.Hour)
 
@@ -250,7 +268,7 @@ func CreateOrderWithBilling(db *sql.DB, email, plan string, requestedTechs int, 
 		BillingSIRET:                  bSiret,
 		CustomerType:                  customerType,
 		TermsVersion:                  termsVersion,
-		TermsAcceptedAt:               nil,
+		TermsAcceptedAt:               termsAcceptedAtTime,
 		ImmediatePerformanceRequested: immediatePerformanceRequested,
 		OrderKind:                     "initial",
 		BillingCycle:                  billingCycle,
@@ -277,8 +295,8 @@ func CreateRenewalOrder(db *sql.DB, email, licenseID, paymentMethod, termsVersio
 	licenseID = strings.TrimSpace(licenseID)
 	paymentMethod = strings.ToLower(strings.TrimSpace(paymentMethod))
 	termsVersion = strings.TrimSpace(termsVersion)
-	if paymentMethod != "stripe" && paymentMethod != "bank_transfer" {
-		return nil, errors.New("méthode de paiement invalide")
+	if !ValidPaymentMethod(paymentMethod) {
+		return nil, errors.New("méthode de paiement invalide (choix: stripe, bank_transfer, crypto_btc, crypto_xrp)")
 	}
 	if !termsAccepted || termsVersion == "" {
 		return nil, errors.New("acceptation des conditions requise")
@@ -359,7 +377,10 @@ func CreateRenewalOrder(db *sql.DB, email, licenseID, paymentMethod, termsVersio
 		return nil, errors.New("un renouvellement est déjà en attente pour cette licence")
 	}
 
-	orderID := GenerateOrderID()
+	orderID, err := GenerateOrderID()
+	if err != nil {
+		return nil, err
+	}
 	notes := fmt.Sprintf("Renouvellement licence %s", licenseID)
 	_, err = tx.Exec(`
 		INSERT INTO orders (
@@ -444,6 +465,43 @@ func GetOrderEmailStatus(db *sql.DB, orderID string) (OrderEmailStatus, error) {
 		FROM orders WHERE order_id = ?
 	`, orderID).Scan(&status.LicenseSent, &status.InvoiceSent)
 	return status, err
+}
+
+// GetOrderEmailStatusBatch returns email delivery flags for many orders in a
+// few chunked queries instead of one query per order (N+1). Unknown IDs are
+// simply absent from the returned map.
+func GetOrderEmailStatusBatch(db *sql.DB, orderIDs []string) (map[string]OrderEmailStatus, error) {
+	out := make(map[string]OrderEmailStatus, len(orderIDs))
+	for _, chunk := range chunkStrings(orderIDs, 500) {
+		placeholders := make([]string, len(chunk))
+		args := make([]interface{}, len(chunk))
+		for i, id := range chunk {
+			placeholders[i] = "?"
+			args[i] = id
+		}
+		rows, err := db.Query(fmt.Sprintf(`
+			SELECT order_id, license_email_sent_at IS NOT NULL, invoice_email_sent_at IS NOT NULL
+			FROM orders WHERE order_id IN (%s)
+		`, strings.Join(placeholders, ",")), args...)
+		if err != nil {
+			return nil, fmt.Errorf("requête batch statuts email: %w", err)
+		}
+		for rows.Next() {
+			var id string
+			var st OrderEmailStatus
+			if err := rows.Scan(&id, &st.LicenseSent, &st.InvoiceSent); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			out[id] = st
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("requête batch statuts email: %w", err)
+		}
+		rows.Close()
+	}
+	return out, nil
 }
 
 func MarkOrderEmailSent(db *sql.DB, orderID, messageType string) error {
@@ -742,8 +800,22 @@ func CancelExpiredOrders(db *sql.DB) (int64, error) {
 	return res.RowsAffected()
 }
 
-// ListOrders returns all orders with optional status and email filters.
-func ListOrders(db *sql.DB, statusFilter, emailFilter string) ([]Order, error) {
+// orderSelectColumns is the column list scanned by scanOrderRows. The COALESCE
+// wrappers are required: the scan targets non-nullable Go values.
+const orderSelectColumns = `id, order_id, email, plan, technicians, price, payment_method, status,
+       COALESCE(stripe_session_id, ''), COALESCE(license_id, ''),
+       COALESCE(billing_name, ''), COALESCE(billing_address, ''),
+       COALESCE(billing_postal_code, ''), COALESCE(billing_city, ''),
+       COALESCE(billing_country, 'France'), COALESCE(billing_siret, ''),
+       COALESCE(invoice_number, ''),
+       COALESCE(customer_type, 'business'), COALESCE(terms_version, 'legacy'),
+       terms_accepted_at, COALESCE(immediate_performance_requested, 0),
+       COALESCE(order_kind, 'initial'), COALESCE(renewal_license_id, ''),
+       COALESCE(billing_cycle, 'monthly'),
+       created_at, paid_at, expires_at, COALESCE(notes, '')`
+
+// orderListClauses builds the shared WHERE clause for order listing and counting.
+func orderListClauses(statusFilter, emailFilter string) (string, []interface{}) {
 	var conditions []string
 	var args []interface{}
 
@@ -761,23 +833,27 @@ func ListOrders(db *sql.DB, statusFilter, emailFilter string) ([]Order, error) {
 	if len(conditions) > 0 {
 		where = "WHERE " + strings.Join(conditions, " AND ")
 	}
+	return where, args
+}
+
+// ListOrders returns orders (id DESC) with optional status and email filters.
+// limit <= 0 disables pagination.
+func ListOrders(db *sql.DB, statusFilter, emailFilter string, limit, offset int) ([]Order, error) {
+	where, args := orderListClauses(statusFilter, emailFilter)
 
 	query := fmt.Sprintf(`
-		SELECT id, order_id, email, plan, technicians, price, payment_method, status,
-		       COALESCE(stripe_session_id, ''), COALESCE(license_id, ''),
-		       COALESCE(billing_name, ''), COALESCE(billing_address, ''),
-		       COALESCE(billing_postal_code, ''), COALESCE(billing_city, ''),
-		       COALESCE(billing_country, 'France'), COALESCE(billing_siret, ''),
-		       COALESCE(invoice_number, ''),
-		       COALESCE(customer_type, 'business'), COALESCE(terms_version, 'legacy'),
-		       terms_accepted_at, COALESCE(immediate_performance_requested, 0),
-		       COALESCE(order_kind, 'initial'), COALESCE(renewal_license_id, ''),
-		       COALESCE(billing_cycle, 'monthly'),
-		       created_at, paid_at, expires_at, COALESCE(notes, '')
+		SELECT `+orderSelectColumns+`
 		FROM orders
 		%s
 		ORDER BY id DESC
 	`, where)
+	if limit > 0 {
+		if offset < 0 {
+			offset = 0
+		}
+		query += " LIMIT ? OFFSET ?"
+		args = append(args, limit, offset)
+	}
 
 	rows, err := db.Query(query, args...)
 	if err != nil {
@@ -792,6 +868,52 @@ func ListOrders(db *sql.DB, statusFilter, emailFilter string) ([]Order, error) {
 			return nil, err
 		}
 		orders = append(orders, *order)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("requête list orders: %w", err)
+	}
+	return orders, nil
+}
+
+// CountOrders returns the total number of orders matching the list filters.
+func CountOrders(db *sql.DB, statusFilter, emailFilter string) (int, error) {
+	where, args := orderListClauses(statusFilter, emailFilter)
+	var total int
+	err := db.QueryRow(fmt.Sprintf(`SELECT COUNT(*) FROM orders %s`, where), args...).Scan(&total)
+	if err != nil {
+		return 0, fmt.Errorf("requête count orders: %w", err)
+	}
+	return total, nil
+}
+
+// ListAbandonedCarts returns unpaid one-shot Stripe orders created in
+// [from, to) and not yet expired (cart reminder candidates). Times are
+// compared as RFC3339 strings like the order reaper does.
+func ListAbandonedCarts(db *sql.DB, from, to time.Time) ([]Order, error) {
+	rows, err := db.Query(`
+		SELECT `+orderSelectColumns+`
+		FROM orders
+		WHERE payment_method = 'stripe'
+		  AND status IN ('pending', 'processing')
+		  AND created_at >= ? AND created_at < ?
+		  AND expires_at > ?
+		ORDER BY id ASC
+	`, from.UTC().Format(time.RFC3339), to.UTC().Format(time.RFC3339), to.UTC().Format(time.RFC3339))
+	if err != nil {
+		return nil, fmt.Errorf("requête paniers abandonnés: %w", err)
+	}
+	defer rows.Close()
+
+	var orders []Order
+	for rows.Next() {
+		order, err := scanOrderRows(rows)
+		if err != nil {
+			return nil, err
+		}
+		orders = append(orders, *order)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("requête paniers abandonnés: %w", err)
 	}
 	return orders, nil
 }
@@ -883,6 +1005,16 @@ func DeleteOrder(db *sql.DB, orderID string) error {
 	orderID = strings.TrimSpace(orderID)
 	if orderID == "" {
 		return fmt.Errorf("identifiant de commande invalide")
+	}
+	order, err := GetOrderByID(db, orderID)
+	if err != nil || order == nil {
+		return fmt.Errorf("commande introuvable")
+	}
+	// Paid orders back licences, invoices and withdrawal records: deleting
+	// them would destroy the accounting and legal trail. Only abandoned
+	// (pending/cancelled/expired) orders may be cleaned up.
+	if order.Status == "paid" {
+		return fmt.Errorf("commande payée : suppression interdite (pièce comptable, conservation 10 ans)")
 	}
 
 	tx, err := db.Begin()
