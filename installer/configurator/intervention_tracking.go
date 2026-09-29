@@ -84,8 +84,11 @@ func startInterventionBridge(token, tokenFile, peer, interventionID string) (*in
 	}
 	interventionBridges.Lock()
 	defer interventionBridges.Unlock()
-	if interventionBridges.peers[peer] != nil {
-		return nil, errors.New("une intervention est déjà suivie sur ce poste")
+	if existing := interventionBridges.peers[peer]; existing != nil {
+		if err := existing.rebind(interventionID); err != nil {
+			return nil, err
+		}
+		return existing, nil
 	}
 	dir := filepath.Join(filepath.Dir(tokenFile), "interventions")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -201,10 +204,39 @@ func (b *interventionBridge) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	b.mu.Lock()
 	b.finalized = true
+	b.finalizing = false
 	b.mu.Unlock()
 	b.logBridgeEvent("event closed: finalized connected=%v", connected)
 	w.WriteHeader(http.StatusOK)
-	go b.stop()
+	// The bridge persists after finalizing so a later session to the same
+	// peer (retry or reconnect) stays tracked; stop() settles and cleans up.
+}
+
+// rebind moves a settled bridge to a new intervention so a later connection
+// to the same peer stays tracked. It refuses while a session is active or a
+// completion is in flight.
+func (b *interventionBridge) rebind(interventionID string) error {
+	if b == nil || !validInterventionID(interventionID) {
+		return errors.New("suivi d'intervention invalide")
+	}
+	b.mu.Lock()
+	stopped, finalizing, finalized := b.stopped, b.finalizing, b.finalized
+	if !stopped && !finalizing && finalized {
+		b.work = interventionID
+		b.connected = false
+		b.finalized = false
+	}
+	b.mu.Unlock()
+	switch {
+	case stopped:
+		return errors.New("suivi d'intervention invalide")
+	case finalizing:
+		return errors.New("clôture en cours, réessayez")
+	case !finalized:
+		return errors.New("une intervention est déjà suivie sur ce poste")
+	}
+	b.logBridgeEvent("bridge rebound to work=%s", interventionID)
+	return nil
 }
 
 func (b *interventionBridge) cancelBeforeLaunch() {

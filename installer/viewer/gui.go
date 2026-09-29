@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -25,6 +26,12 @@ var (
 	viewerApp    fyne.App
 	viewerWindow fyne.Window
 )
+
+// permWaitPollGen invalidates stale permanent-password polling loops whenever the
+// UI navigates to another screen; permEnrollClaimed guarantees a single
+// enrollment when the manual save and the background detector race.
+var permWaitPollGen atomic.Uint64
+var permEnrollClaimed atomic.Bool
 
 // RunGUI creates and displays the cross-platform activation GUI using Fyne for the Viewer.
 func RunGUI() error {
@@ -67,6 +74,7 @@ func RunGUIWithPreset(presetCode string, autoStart bool) error {
 }
 
 func renderViewerScreen(presetCode string, autoStart bool) {
+	permWaitPollGen.Add(1)
 	viewerWindow.SetTitle(PRODUCT_NAME)
 
 	title := widget.NewLabelWithStyle(TF("welcome_title", PRODUCT_NAME), fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
@@ -243,6 +251,7 @@ func handleActivationFyne(code string, setStatus func(string)) error {
 }
 
 func renderViewerActiveScreen(code, expiresAt string) {
+	permWaitPollGen.Add(1)
 	viewerWindow.SetTitle(PRODUCT_NAME + " - " + T("session_ready"))
 
 	title := widget.NewLabelWithStyle(T("session_ready"), fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
@@ -333,6 +342,8 @@ func handlePermanentEnrollmentFyne(code string, setStatus func(string)) error {
 }
 
 func renderPermanentPasswordWaitScreen(code string) {
+	myPollGen := permWaitPollGen.Add(1)
+	permEnrollClaimed.Store(false)
 	viewerWindow.SetTitle(PRODUCT_NAME + " - " + T("perm_step_wait_password"))
 
 	title := widget.NewLabelWithStyle("🔑 "+T("perm_step_wait_password"), fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
@@ -358,10 +369,15 @@ func renderPermanentPasswordWaitScreen(code string) {
 			statusLabel.SetText("⚠️ Les deux mots de passe ne correspondent pas")
 			return
 		}
+		if !permEnrollClaimed.CompareAndSwap(false, true) {
+			statusLabel.SetText("Activation déjà en cours, veuillez patienter...")
+			return
+		}
 		saveBtn.Disable()
 		statusLabel.SetText("Configuration du mot de passe permanent...")
 		go func() {
 			if err := setFleetPermanentPassword(p1); err != nil {
+				permEnrollClaimed.Store(false)
 				fyne.Do(func() {
 					saveBtn.Enable()
 					statusLabel.SetText(fmt.Sprintf("❌ Erreur : %v", err))
@@ -377,7 +393,13 @@ func renderPermanentPasswordWaitScreen(code string) {
 					statusLabel.SetText(msg)
 				})
 			}
-			_ = handlePermanentEnrollmentFyne(code, setStatus)
+			if err := handlePermanentEnrollmentFyne(code, setStatus); err != nil {
+				permEnrollClaimed.Store(false)
+				fyne.Do(func() {
+					saveBtn.Enable()
+					statusLabel.SetText(fmt.Sprintf("❌ Erreur : %v", err))
+				})
+			}
 		}()
 	})
 	saveBtn.Importance = widget.HighImportance
@@ -421,8 +443,18 @@ func renderPermanentPasswordWaitScreen(code string) {
 	go func() {
 		for {
 			time.Sleep(1500 * time.Millisecond)
+			if permWaitPollGen.Load() != myPollGen {
+				return
+			}
 			hasPwd, _ := hasFleetPermanentPassword()
 			if hasPwd {
+				if !permEnrollClaimed.CompareAndSwap(false, true) {
+					return
+				}
+				if permWaitPollGen.Load() != myPollGen {
+					permEnrollClaimed.Store(false)
+					return
+				}
 				fyne.Do(func() {
 					statusLabel.SetText(T("perm_password_detected"))
 				})
@@ -432,7 +464,12 @@ func renderPermanentPasswordWaitScreen(code string) {
 						statusLabel.SetText(msg)
 					})
 				}
-				_ = handlePermanentEnrollmentFyne(code, setStatus)
+				if err := handlePermanentEnrollmentFyne(code, setStatus); err != nil {
+					permEnrollClaimed.Store(false)
+					fyne.Do(func() {
+						statusLabel.SetText(fmt.Sprintf("❌ Erreur : %v", err))
+					})
+				}
 				return
 			}
 		}
@@ -440,6 +477,7 @@ func renderPermanentPasswordWaitScreen(code string) {
 }
 
 func renderPermanentEnrolledScreen(deviceID, alias, code string) {
+	permWaitPollGen.Add(1)
 	viewerWindow.SetTitle(PRODUCT_NAME + " - " + T("perm_enrolled_title"))
 
 	title := widget.NewLabelWithStyle("🖥️ "+T("perm_enrolled_title"), fyne.TextAlignCenter, fyne.TextStyle{Bold: true})

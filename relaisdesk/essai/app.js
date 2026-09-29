@@ -48,7 +48,7 @@
     const s = selection();
     if (!Number.isInteger(s.technicians) || s.technicians < 1 || s.technicians > 500) return;
     const data = Object.fromEntries(new FormData(el('trialForm')));
-    Object.assign(data, { technicians: s.technicians, expected_price_cents: Math.round(s.price * 100), terms_accepted: el('terms').checked, terms_version: '2026-09-21', recurring_accepted: el('recurring').checked, trial_terms_version: '2026-09-21-fleet-v2', immediate_performance_requested: el('immediate').checked });
+    Object.assign(data, { technicians: s.technicians, expected_price_cents: Math.round(s.price * 100), terms_accepted: el('terms').checked, terms_version: '2026-09-27', recurring_accepted: el('recurring').checked, trial_terms_version: '2026-09-24-fleet-v3', immediate_performance_requested: el('immediate').checked });
     el('submitButton').disabled = true;
     try { const reply = await request('/api/v1/public/trials/request', data); message(reply.message); el('trialForm').hidden = true; }
     catch (error) { message(error.message); }

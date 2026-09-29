@@ -488,6 +488,31 @@ body {
   flex-grow: 1;
 }
 
+/* Native picker icon visible on dark background */
+input[type="month"].form-input {
+  color-scheme: dark;
+}
+
+/* Pagination */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.pager-label {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .select-filter {
   padding: 0.8rem 1rem;
   border-radius: var(--radius-sm);
@@ -662,8 +687,20 @@ body {
   padding: 2.25rem;
   width: 100%;
   max-width: 520px;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
   box-shadow: var(--shadow-lg);
   position: relative;
+}
+
+@media (max-width: 560px) {
+  .modal-content {
+    padding: 1.5rem;
+    max-height: calc(100dvh - 2rem);
+  }
+  .modal-overlay {
+    padding: 1rem;
+  }
 }
 
 .modal-header {

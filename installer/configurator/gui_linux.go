@@ -93,6 +93,11 @@ func RunGUI() error {
 	}()
 
 	// 6. Prise en charge d'un URI de connexion directe (ex: relaisdesk://connect/DEV-XXXX-XXXX)
+	if pendingFleetError != "" {
+		fmt.Fprintf(os.Stderr, "Lien de parc invalide : %s\n", pendingFleetError)
+		showErrorLinux("RelaisDesk Technicien", pendingFleetError)
+		pendingFleetError = ""
+	}
 	if pendingFleetDevice != "" {
 		targetID := pendingFleetDevice
 		pendingFleetDevice = ""

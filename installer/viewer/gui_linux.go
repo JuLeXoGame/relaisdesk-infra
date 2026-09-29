@@ -221,6 +221,26 @@ func promptPermanentPasswordWithConfirmation() (string, bool) {
 	}
 }
 
+// writeEnrollPasswordFile stores a password in a 0600 temp file for a single
+// handoff to the elevated child, which deletes it right after reading.
+func writeEnrollPasswordFile(password string) (string, error) {
+	f, err := os.CreateTemp("", "relaisdesk-enroll-*")
+	if err != nil {
+		return "", err
+	}
+	name := f.Name()
+	if _, err := f.WriteString(password); err != nil {
+		f.Close()
+		os.Remove(name)
+		return "", err
+	}
+	if err := f.Close(); err != nil {
+		os.Remove(name)
+		return "", err
+	}
+	return name, nil
+}
+
 func promptPasswordAndConfirmDialog() (string, string, bool) {
 	if isDisplayAvailable() {
 		if pwd, confirm, ok := promptPasswordFormsZenity(); ok {
@@ -285,7 +305,15 @@ func handleActivationAndLaunch(code string) error {
 				return nil
 			}
 
-			args := []string{"--enroll", code, pwd}
+			// Never pass the password on the command line (visible via ps):
+			// hand it over through a 0600 temp file the elevated child reads once.
+			pwdFile, err := writeEnrollPasswordFile(pwd)
+			if err != nil {
+				showLinuxDialog("RelaisDesk", fmt.Sprintf("Échec de la préparation du mot de passe : %v", err), true)
+				return err
+			}
+			defer os.Remove(pwdFile)
+			args := []string{"--enroll", code, "@" + pwdFile}
 			notifyDesktop("RelaisDesk", "Authentification requise pour installer l'accès permanent...")
 			if err := relaunchElevated(args); err != nil {
 				showLinuxDialog("RelaisDesk", fmt.Sprintf("Échec de l'installation ou élévation refusée : %v", err), true)

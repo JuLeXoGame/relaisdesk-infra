@@ -7,6 +7,8 @@
   <meta name="description" content="Licences libres, avis de modification et accès au code source correspondant des forks RelaisDesk basés sur RustDesk.">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://relaisdesk.fr/logiciel-libre.html">
+  <link rel="alternate" hreflang="fr" href="https://relaisdesk.fr/logiciel-libre.html">
+  <link rel="alternate" hreflang="x-default" href="https://relaisdesk.fr/logiciel-libre.html">
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://relaisdesk.fr/logiciel-libre.html">
@@ -44,7 +46,7 @@
         <header class="legal-header">
           <div class="badge">GNU AGPLv3</div>
           <h1>Logiciel libre et code source</h1>
-          <p class="legal-date">Dernière mise à jour : 12 septembre 2026</p>
+          <p class="legal-date">Dernière mise à jour : 24 septembre 2026 — ajout du lot public 1.0.0.</p>
         </header>
         <div class="legal-body">
           <p>RelaisDesk utilise et modifie les projets RustDesk Community. Le paiement d'un accès RelaisDesk rémunère l'exploitation de l'infrastructure, la configuration et le support. Il ne retire aucun des droits accordés par les licences libres applicables.</p>
@@ -74,6 +76,18 @@
           <p>Au contrôle du 12 septembre 2026, le serveur de téléchargement propose le lot <strong>1.0.2 daté du 11 septembre à 10:22:39 UTC</strong>. Le <a href="https://api.relaisdesk.fr/api/v1/public/releases/latest">manifeste public signé</a> indique les noms, tailles et empreintes SHA-256 ; il peut évoluer après ce contrôle. Une autre préparation locale porte aussi le numéro 1.0.2 avec des empreintes différentes : le numéro seul ne permet donc pas d'identifier une source. La version Windows 1.0.3 est un lot de test local, non publié lors de ce contrôle.</p>
           <p><strong>Technicien Windows portable du lot public contrôlé :</strong> SHA-256 <code>0479b842bed81c13e250a0b6922ba93d5e2e9b508bb9ffd82824aaba4e22da43</code>. Le moteur embarqué a été retrouvé à l'identique dans ce fichier : empreinte <code>86a2132b04743e3c2199cc20a86e158412bcb549e4e9ab247427a9a463f326c0</code>, associé au <a href="https://github.com/JuLeXoGame/relaisdesk/tree/e34c8bab932791961b2406bac5d0256b744b40b1" target="_blank" rel="noopener">commit client <code>e34c8bab</code></a> par le compte rendu de construction. Cette référence identifie le moteur, pas à elle seule les sources des lanceurs ni les scripts de l'ensemble des paquets. Elle ne doit pas être extrapolée à un fichier portant une autre empreinte.</p>
           <p><strong>Accès permanent :</strong> il n'est pas disponible sous Linux ou macOS dans les versions proposées. L'assistance ponctuelle Linux est distincte.</p>
+          <p><strong>Lot public 1.0.0 — relevé du 24 septembre 2026 :</strong> le <a href="https://api.relaisdesk.fr/api/v1/public/releases/latest" style="color: var(--border-focus);">manifeste public signé</a> (version 1.0.0, publié le 24 septembre 2026) référence les fichiers suivants avec leurs empreintes SHA-256 :</p>
+          <ul>
+            <li><code>RelaisDesk_Technicien_Setup_1.0.0.exe</code> — <code>d0df389f2ad8fe788d4333a1cb978b19991bccdbec37cfdbf6197c2452c48b5f</code></li>
+            <li><code>RelaisDesk_Technicien_Portable.exe</code> — <code>4e5fe7e4319a13edd6ee56e75f794eda8862621096db820fb84ce9f3a5673862</code></li>
+            <li><code>RelaisDesk_Setup.exe</code> — <code>6d9fd2206ca2be7a7f347c741b129a6762324fd140acbe75b1468e04f77e974b</code></li>
+            <li><code>RelaisDesk_Portable.exe</code> — <code>d4c7d46d367f3e72de77f874dceb8ae8153e4484264385fe352c5898dd32d2ea</code></li>
+            <li><code>RelaisDesk_Technicien.deb</code> — <code>224d8fc8968726909db4bd1929f8aa5b44144b46a27baab5b673b956ab49e301</code></li>
+            <li><code>RelaisDesk_Technicien_Linux</code> — <code>306ade9ad859a4869558a6b39c1b7e8990e2a8e77ffac061f0f9574055f54101</code></li>
+            <li><code>RelaisDesk_viewer.deb</code> — <code>a701347f0cf8c0b3cad534350e9a5b4005fca0fa9b9426c924167973d974468f</code></li>
+            <li><code>RelaisDesk_Viewer_Linux</code> — <code>5b1a7ac98766d87b84cfcc6931893057b5a533eba5b4fcd778081f2993ae162b</code></li>
+          </ul>
+          <p>La correspondance exacte entre chaque binaire de ce lot et son commit source reste à documenter fichier par fichier ; le seul numéro de version ne permet pas d'identifier une source. Les sources des moteurs déjà publiées et la réserve sur les lanceurs ci-dessous restent applicables.</p>
 
           <p>Versions serveur précédentes : sources des commits <a href="https://github.com/JuLeXoGame/rustdesk-server/tree/d998a326afc32bbd26614e84f2b3332e8fdd10ab" target="_blank" rel="noopener" style="color: var(--border-focus);"><code>d998a326</code></a> et <a href="https://github.com/JuLeXoGame/rustdesk-server/tree/57318afae9c19935c75e47700a4d69275b71cce8" target="_blank" rel="noopener" style="color: var(--border-focus);"><code>57318afa</code></a>, conservées pour les versions précédemment exploitées.</p>
 
@@ -106,5 +120,6 @@
     </div>
   </footer>
   <script src="app.js"></script>
+  <script src="maintenance.js"></script>
 </body>
 </html>

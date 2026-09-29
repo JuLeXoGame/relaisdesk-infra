@@ -188,13 +188,62 @@ func cryptoRandInt64(max int64) int64 {
 	return n.Int64()
 }
 
+// quoteWindowsCmdArg quotes a single argument following the
+// CommandLineToArgvW rules used by ShellExecute, so values containing spaces
+// or quotes survive the round-trip instead of being split.
+func quoteWindowsCmdArg(arg string) string {
+	if arg == "" {
+		return `""`
+	}
+	needsQuotes := false
+	for i := 0; i < len(arg); i++ {
+		if c := arg[i]; c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '"' {
+			needsQuotes = true
+			break
+		}
+	}
+	if !needsQuotes {
+		return arg
+	}
+	var b strings.Builder
+	b.WriteByte('"')
+	slashes := 0
+	flushSlashes := func(extra int) {
+		for i := 0; i < slashes+extra; i++ {
+			b.WriteByte('\\')
+		}
+		slashes = 0
+	}
+	for i := 0; i < len(arg); i++ {
+		switch arg[i] {
+		case '\\':
+			slashes++
+		case '"':
+			flushSlashes(slashes + 1)
+			b.WriteByte('"')
+		default:
+			flushSlashes(0)
+			b.WriteByte(arg[i])
+		}
+	}
+	flushSlashes(slashes)
+	b.WriteByte('"')
+	return b.String()
+}
+
 // fleetCalculateNextWait calculates the next wait duration using:
 // 1. Server-directed interval (default 45s if not specified).
 // 2. Uniform ±15% random jitter to desynchronize fleet agents and prevent thundering herd.
 // 3. Full-jitter exponential backoff on consecutive connection errors (starts at 5s, doubles up to 120s max).
 func fleetCalculateNextWait(serverIntervalSec int, consecutiveErrors int) time.Duration {
 	if consecutiveErrors > 0 {
-		multiplier := 1 << (consecutiveErrors - 1)
+		// Cap the shift before it can overflow: 1<<5 already exceeds the
+		// multiplier cap of 24 applied below, so behavior is unchanged.
+		shift := consecutiveErrors - 1
+		if shift > 5 {
+			shift = 5
+		}
+		multiplier := 1 << shift
 		if multiplier > 24 {
 			multiplier = 24
 		}

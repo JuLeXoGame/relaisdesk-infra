@@ -12,6 +12,15 @@ let currentTab = "overview";
 let unmaskKeys = false;
 let licensesData = [];
 let invoicesData = [];
+let ledgerCache = { orders: [], invoices: [] };
+let currentLedgerRows = [];
+let unpaidCache = [];
+
+// Pagination state (server-side)
+const PAGE_SIZE = 100;
+let ordersPage = 1, ordersTotal = 0;
+let invoicesPage = 1, invoicesTotal = 0;
+let licensesPage = 1, licensesTotal = 0;
 let selectedPlan = "starter";
 let targetLicenseId = "";
 
@@ -39,6 +48,7 @@ if ("serviceWorker" in navigator) {
 document.addEventListener("DOMContentLoaded", () => {
   initAuth();
   initNavigation();
+  initPagination();
   initActionButtons();
   initFinancials();
   initPlanSelector();
@@ -77,9 +87,10 @@ function initActionButtons() {
     if (action === "retry-order-fulfillment") retryOrderFulfillment(trigger.dataset.orderId || "");
     if (action === "delete-order") deleteOrder(trigger.dataset.orderId || "");
     if (action === "download-invoice") downloadInvoice(trigger.dataset.invoiceNumber || "");
+    if (action === "download-invoice-cii") downloadInvoiceCII(trigger.dataset.invoiceNumber || "");
+    if (action === "export-ledger-csv") exportLedgerCSV();
     if (action === "send-invoice") sendInvoiceEmail(trigger.dataset.invoiceNumber || "");
     if (action === "credit-note") createCreditNote(trigger.dataset.invoiceNumber || "");
-    if (action === "delete-invoice") deleteInvoice(trigger.dataset.invoiceNumber || "");
   });
 }
 
@@ -447,6 +458,40 @@ function initNavigation() {
   }
 }
 
+function debounce(fn, ms) {
+  let timer = null;
+  return (...args) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => { timer = null; fn(...args); }, ms);
+  };
+}
+
+function updatePager(pagerId, labelId, prevId, nextId, page, total, perPage, noun) {
+  const pager = document.getElementById(pagerId);
+  if (!pager) return;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  const safePage = Math.min(Math.max(page, 1), totalPages);
+  pager.style.display = totalPages > 1 ? "flex" : "none";
+  const label = document.getElementById(labelId);
+  if (label) label.textContent = `Page ${safePage} / ${totalPages} — ${total} ${noun}`;
+  const prev = document.getElementById(prevId);
+  const next = document.getElementById(nextId);
+  if (prev) prev.disabled = safePage <= 1;
+  if (next) next.disabled = safePage >= totalPages;
+}
+
+function initPagination() {
+  const wire = (prevId, nextId, getPage, setPage, fetch) => {
+    document.getElementById(prevId)?.addEventListener("click", () => {
+      if (getPage() > 1) { setPage(getPage() - 1); fetch(); }
+    });
+    document.getElementById(nextId)?.addEventListener("click", () => { setPage(getPage() + 1); fetch(); });
+  };
+  wire("ordersPrevBtn", "ordersNextBtn", () => ordersPage, v => ordersPage = v, fetchOrders);
+  wire("invoicesPrevBtn", "invoicesNextBtn", () => invoicesPage, v => invoicesPage = v, fetchInvoices);
+  wire("licensesPrevBtn", "licensesNextBtn", () => licensesPage, v => licensesPage = v, fetchLicenses);
+}
+
 function switchTab(tabName) {
   currentTab = tabName;
 
@@ -464,9 +509,11 @@ function switchTab(tabName) {
     overview: { title: "Vue d'ensemble", sub: "Supervision globale de l'infrastructure et des licences RelaisDesk" },
     licenses: { title: "Licences Techniciens", sub: "Liste complète, révocation, prolongation et consultation des clés" },
     create: { title: "Créer une Licence", sub: "Génération immédiate selon les plans commerciaux ou sur-mesure" },
-    orders: { title: "Commandes & Virements", sub: "Suivi des commandes et activation en 1 clic des règlements par virement" },
+    orders: { title: "Commandes & Paiements", sub: "Suivi des commandes, activation en 1 clic des virements et rapprochement crypto" },
     invoices: { title: "Gestion des Factures", sub: "Factures conformes micro-entreprise (art. 293 B du CGI) archivées sur le serveur" },
-    alerts: { title: "Alertes de Sécurité", sub: "Journal d'audit anti-partage de codes et tentatives d'intrusion" }
+    alerts: { title: "Alertes de Sécurité", sub: "Journal d'audit anti-partage de codes et tentatives d'intrusion" },
+    ledger: { title: "Livre des comptes", sub: "Registre chronologique des encaissements avec export CSV comptable" },
+    unpaid: { title: "Impayés", sub: "Commandes en attente de paiement, triées par ancienneté" }
   };
 
   const currentInfo = titles[tabName] || { title: "Dashboard", sub: "" };
@@ -490,6 +537,8 @@ function switchTab(tabName) {
   if (tabName === "orders") fetchOrders();
   if (tabName === "invoices") fetchInvoices();
   if (tabName === "alerts") fetchAlerts();
+  if (tabName === "ledger") fetchLedger();
+  if (tabName === "unpaid") fetchUnpaid();
 }
 
 function capitalize(s) {
@@ -504,6 +553,8 @@ function refreshAll() {
   if (currentTab === "orders") fetchOrders();
   if (currentTab === "invoices") fetchInvoices();
   if (currentTab === "alerts") fetchAlerts();
+  if (currentTab === "ledger") fetchLedger();
+  if (currentTab === "unpaid") fetchUnpaid();
 }
 
 // =============================================================================
@@ -852,10 +903,18 @@ async function fetchLicenses() {
   tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">Chargement des licences...</td></tr>`;
 
   try {
-    const resp = await authFetch(`${API_BASE_URL}/api/v1/admin/licences?unmask=${unmaskKeys}&limit=500`);
+    const q = document.getElementById("licenseSearchInput")?.value.trim() || "";
+    const status = document.getElementById("licenseStatusFilter")?.value || "";
+    const resp = await authFetch(`${API_BASE_URL}/api/v1/admin/licences?unmask=${unmaskKeys}&status=${encodeURIComponent(status)}&q=${encodeURIComponent(q)}&page=${licensesPage}&limit=${PAGE_SIZE}`);
     if (!resp.ok) throw new Error("Impossible de récupérer les licences");
     const data = await resp.json();
     licensesData = data.licences || [];
+    licensesTotal = data.total ?? licensesData.length;
+    if (licensesData.length === 0 && licensesPage > 1) {
+      licensesPage -= 1;
+      return fetchLicenses();
+    }
+    updatePager("licensesPager", "licensesPageLabel", "licensesPrevBtn", "licensesNextBtn", licensesPage, licensesTotal, PAGE_SIZE, "licence(s)");
     renderLicensesTable();
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--danger); padding: 2rem;">❌ ${escapeHtml(err.message)}</td></tr>`;
@@ -864,18 +923,8 @@ async function fetchLicenses() {
 
 function renderLicensesTable() {
   const tbody = document.getElementById("licensesTableBody");
-  const searchQuery = document.getElementById("licenseSearchInput").value.toLowerCase().trim();
-  const statusFilter = document.getElementById("licenseStatusFilter").value;
-
-  const filtered = licensesData.filter(lic => {
-    const matchSearch = !searchQuery || 
-      (lic.license_id && lic.license_id.toLowerCase().includes(searchQuery)) ||
-      (lic.email && lic.email.toLowerCase().includes(searchQuery)) ||
-      (lic.notes && lic.notes.toLowerCase().includes(searchQuery));
-
-    const matchStatus = !statusFilter || lic.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  // Filtrage effectué côté serveur (paramètres q et status) : on affiche la page reçue.
+  const filtered = licensesData;
 
   if (filtered.length === 0) {
     tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">Aucune licence trouvée.</td></tr>`;
@@ -913,8 +962,8 @@ function renderLicensesTable() {
 }
 
 // Search & Filter Listeners
-document.getElementById("licenseSearchInput")?.addEventListener("input", renderLicensesTable);
-document.getElementById("licenseStatusFilter")?.addEventListener("change", renderLicensesTable);
+document.getElementById("licenseSearchInput")?.addEventListener("input", debounce(() => { licensesPage = 1; fetchLicenses(); }, 300));
+document.getElementById("licenseStatusFilter")?.addEventListener("change", () => { licensesPage = 1; fetchLicenses(); });
 
 // Toggle unmasked keys
 document.getElementById("toggleUnmaskBtn")?.addEventListener("click", () => {
@@ -1060,18 +1109,35 @@ async function fetchOrders() {
   tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">Chargement des commandes...</td></tr>`;
 
   try {
-    const resp = await authFetch(`${API_BASE_URL}/api/v1/admin/orders`);
+    const resp = await authFetch(`${API_BASE_URL}/api/v1/admin/orders?page=${ordersPage}&limit=${PAGE_SIZE}`);
     if (!resp.ok) throw new Error("Impossible de récupérer les commandes");
     const data = await resp.json();
     const orders = data.orders || [];
+    ordersTotal = data.total ?? orders.length;
+    if (orders.length === 0 && ordersPage > 1) {
+      ordersPage -= 1;
+      return fetchOrders();
+    }
+    updatePager("ordersPager", "ordersPageLabel", "ordersPrevBtn", "ordersNextBtn", ordersPage, ordersTotal, PAGE_SIZE, "commande(s)");
 
     if (orders.length === 0) {
       tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">Aucune commande enregistrée.</td></tr>`;
       return;
     }
 
+    const cryptoStatusFr = (status) => status === "paid" ? "réglé" : (status === "expired" ? "expiré" : (status === "cancelled" ? "annulé" : "en attente"));
+
     tbody.innerHTML = orders.map(ord => {
       const isPendingVirement = ord.status === "pending" && (ord.payment_method === "virement" || ord.payment_method === "bank_transfer");
+      const isPendingCrypto = ord.status === "pending" && (ord.payment_method === "crypto_btc" || ord.payment_method === "crypto_xrp");
+      const methodLabel = paymentMethodLabel(ord.payment_method);
+      let cryptoDetail = "";
+      if (ord.crypto) {
+        cryptoDetail = `<br><small style="color: var(--text-secondary);">${escapeHtml(ord.crypto.amount_crypto || "—")} ${escapeHtml(ord.crypto.asset || "")} — devis ${cryptoStatusFr(ord.crypto.status)}</small>`;
+        if (ord.crypto.txid) {
+          cryptoDetail += `<br><small style="color: var(--text-secondary);" title="${escapeHtml(ord.crypto.txid)}">TX ${escapeHtml(ord.crypto.txid.slice(0, 18))}…</small>`;
+        }
+      }
       const statusBadge = ord.status === "paid" ? "badge-active" : (ord.status === "pending" ? "badge-expired" : "badge-revoked");
       const statusTxt = ord.status === "paid" ? "Payée" : (ord.status === "pending" ? "En attente" : "Annulée/Expirée");
       const dateStr = ord.created_at ? ord.created_at.split("T")[0] : "—";
@@ -1092,7 +1158,7 @@ async function fetchOrders() {
           <td>${escapeHtml(ord.email)}${billingDisplay}</td>
           <td><span class="badge badge-plan">${escapeHtml(ord.plan)}</span><br><small>${Number(ord.technicians) || 0} connexion(s) simultanée(s)</small></td>
           <td><strong style="color: var(--border-focus);">${(Number(ord.price) || 0).toFixed(2)} €</strong></td>
-          <td>${ord.payment_method === "stripe" ? "💳 Carte Bancaire" : "🏦 Virement"}</td>
+          <td>${methodLabel}${cryptoDetail}</td>
           <td><span class="badge ${statusBadge}">${statusTxt}</span></td>
           <td>${escapeHtml(dateStr)}</td>
           <td style="font-size: 0.76rem; line-height: 1.55;">${fulfillment}</td>
@@ -1102,15 +1168,15 @@ async function fetchOrders() {
                 <button class="btn btn-success btn-sm" data-action="mark-order-paid" data-order-id="${escapeHtml(ord.order_id)}">
                   ✅ Valider Virement
                 </button>
-              ` : (needsRetry ? `
+              ` : (isPendingCrypto ? `<span style="font-size: 0.8rem; color: var(--text-secondary);">⏳ Dépôt attendu (auto)</span>` : (needsRetry ? `
                 <button class="btn btn-secondary btn-sm" data-action="retry-order-fulfillment" data-order-id="${escapeHtml(ord.order_id)}">
                   🔄 Relancer
                 </button>
-              ` : (ord.license_id ? `<span style="font-size: 0.8rem; color: var(--text-secondary);">${escapeHtml(ord.license_id)}</span>` : "—"))}
+              ` : (ord.license_id ? `<span style="font-size: 0.8rem; color: var(--text-secondary);">${escapeHtml(ord.license_id)}</span>` : "—")))}
               ${ord.invoice_number ? `
                 <button class="btn btn-secondary btn-sm" data-action="download-invoice" data-invoice-number="${escapeHtml(ord.invoice_number)}" title="Facture ${escapeHtml(ord.invoice_number)}">🧾</button>
               ` : ""}
-              <button class="btn btn-danger btn-sm" data-action="delete-order" data-order-id="${escapeHtml(ord.order_id)}" title="Supprimer la commande ${escapeHtml(ord.order_id)}">🗑️</button>
+              ${ord.status !== "paid" ? `<button class="btn btn-danger btn-sm" data-action="delete-order" data-order-id="${escapeHtml(ord.order_id)}" title="Supprimer la commande ${escapeHtml(ord.order_id)}">🗑️</button>` : ""}
             </div>
           </td>
         </tr>
@@ -1139,6 +1205,7 @@ async function deleteOrder(orderId) {
     fetchOrders();
     fetchStats();
     fetchFinancials();
+    fetchUnpaid();
   } catch (err) {
     showToast(err.message, "error");
   }
@@ -1177,6 +1244,7 @@ async function markOrderPaid(orderId) {
     fetchOrders();
     fetchStats();
     fetchFinancials();
+    fetchUnpaid();
   } catch (err) {
     showToast(err.message, "error");
   }
@@ -1191,10 +1259,17 @@ async function fetchInvoices() {
   tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">Chargement des factures...</td></tr>`;
 
   try {
-    const resp = await authFetch(`${API_BASE_URL}/api/v1/admin/invoices`);
+    const q = document.getElementById("invoiceSearchInput")?.value.trim() || "";
+    const resp = await authFetch(`${API_BASE_URL}/api/v1/admin/invoices?q=${encodeURIComponent(q)}&page=${invoicesPage}&limit=${PAGE_SIZE}`);
     if (!resp.ok) throw new Error("Impossible de récupérer les factures");
     const data = await resp.json();
     invoicesData = data.invoices || [];
+    invoicesTotal = data.total ?? invoicesData.length;
+    if (invoicesData.length === 0 && invoicesPage > 1) {
+      invoicesPage -= 1;
+      return fetchInvoices();
+    }
+    updatePager("invoicesPager", "invoicesPageLabel", "invoicesPrevBtn", "invoicesNextBtn", invoicesPage, invoicesTotal, PAGE_SIZE, "facture(s)");
     renderInvoicesTable();
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--danger); padding: 2rem;">❌ ${escapeHtml(err.message)}</td></tr>`;
@@ -1205,15 +1280,8 @@ function renderInvoicesTable() {
   const tbody = document.getElementById("invoicesTableBody");
   if (!tbody) return;
 
-  const searchQuery = document.getElementById("invoiceSearchInput")?.value.trim().toLowerCase() || "";
-
-  const filtered = invoicesData.filter(inv => {
-    return !searchQuery ||
-      (inv.invoice_number && inv.invoice_number.toLowerCase().includes(searchQuery)) ||
-      (inv.customer_name && inv.customer_name.toLowerCase().includes(searchQuery)) ||
-      (inv.customer_email && inv.customer_email.toLowerCase().includes(searchQuery)) ||
-      (inv.order_id && inv.order_id.toLowerCase().includes(searchQuery));
-  });
+  // Filtrage effectué côté serveur (paramètre q) : on affiche la page reçue.
+  const filtered = invoicesData;
 
   if (filtered.length === 0) {
     tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">Aucune facture trouvée.</td></tr>`;
@@ -1244,9 +1312,9 @@ function renderInvoicesTable() {
         <td>
           <div style="display: flex; gap: 0.35rem; align-items: center;">
             <button class="btn btn-secondary btn-sm" data-action="download-invoice" data-invoice-number="${escapeHtml(inv.invoice_number)}" title="Visualiser / Imprimer la facture">👁️ Voir</button>
+            <button class="btn btn-secondary btn-sm" data-action="download-invoice-cii" data-invoice-number="${escapeHtml(inv.invoice_number)}" title="Télécharger la facture électronique (Factur-X)">📄 XML</button>
             <button class="btn btn-secondary btn-sm" data-action="send-invoice" data-invoice-number="${escapeHtml(inv.invoice_number)}" title="Renvoyer au client par email">✉️</button>
             ${!isCredit ? `<button class="btn btn-secondary btn-sm" data-action="credit-note" data-invoice-number="${escapeHtml(inv.invoice_number)}" title="Émettre un avoir officiel" style="color: #f59e0b;">↩️ Avoir</button>` : ""}
-            <button class="btn btn-danger btn-sm" data-action="delete-invoice" data-invoice-number="${escapeHtml(inv.invoice_number)}" title="Supprimer définitivement la facture">🗑️</button>
           </div>
         </td>
       </tr>
@@ -1255,7 +1323,14 @@ function renderInvoicesTable() {
 }
 
 // Search listener
-document.getElementById("invoiceSearchInput")?.addEventListener("input", renderInvoicesTable);
+document.getElementById("invoiceSearchInput")?.addEventListener("input", debounce(() => { invoicesPage = 1; fetchInvoices(); }, 300));
+
+// Ledger & unpaid filter listeners
+document.getElementById("ledgerSearchInput")?.addEventListener("input", renderLedgerTable);
+document.getElementById("ledgerMonthInput")?.addEventListener("change", renderLedgerTable);
+document.getElementById("ledgerMethodFilter")?.addEventListener("change", renderLedgerTable);
+document.getElementById("ledgerTypeFilter")?.addEventListener("change", renderLedgerTable);
+document.getElementById("unpaidSearchInput")?.addEventListener("input", renderUnpaidTable);
 
 async function downloadInvoice(invoiceNumber) {
   try {
@@ -1264,6 +1339,24 @@ async function downloadInvoice(invoiceNumber) {
     const blob = await resp.blob();
     const url = window.URL.createObjectURL(blob);
     window.open(url, "_blank");
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+async function downloadInvoiceCII(invoiceNumber) {
+  try {
+    const resp = await authFetch(`${API_BASE_URL}/api/v1/admin/invoices/${encodeURIComponent(invoiceNumber)}/cii`);
+    if (!resp.ok) throw new Error("Erreur téléchargement facture électronique");
+    const blob = await resp.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${invoiceNumber}.xml`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => window.URL.revokeObjectURL(url), 1000);
   } catch (err) {
     showToast(err.message, "error");
   }
@@ -1296,24 +1389,6 @@ async function createCreditNote(invoiceNumber) {
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || "Échec création de l'avoir");
     showToast(`Avoir ${data.invoice_number} créé avec succès !`, "success");
-    await fetchInvoices();
-  } catch (err) {
-    showToast(err.message, "error");
-  }
-}
-
-async function deleteInvoice(invoiceNumber) {
-  if (!confirm(`⚠️ ATTENTION : Confirmez-vous la suppression définitive de la facture ${invoiceNumber} ?\n\nCette action est irréversible et supprimera le document PDF associé.`)) {
-    return;
-  }
-
-  try {
-    const resp = await authFetch(`${API_BASE_URL}/api/v1/admin/invoices/${encodeURIComponent(invoiceNumber)}`, {
-      method: "DELETE"
-    });
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || "Échec suppression de la facture");
-    showToast(`Facture ${invoiceNumber} supprimée avec succès.`, "success");
     await fetchInvoices();
   } catch (err) {
     showToast(err.message, "error");
@@ -1474,7 +1549,355 @@ async function fetchAlerts() {
 }
 
 // =============================================================================
-// 8. MODALS & ACTIONS
+// 8. LIVRE DES COMPTES (RECETTES)
+// =============================================================================
+function paymentMethodLabel(method) {
+  const labels = {
+    stripe: "💳 Carte Bancaire",
+    bank_transfer: "🏦 Virement",
+    virement: "🏦 Virement",
+    crypto_btc: "₿ Bitcoin (BTC)",
+    crypto_xrp: "◈ XRP"
+  };
+  return labels[method] || escapeHtml(method || "—");
+}
+
+function paymentMethodText(method) {
+  const labels = {
+    stripe: "Carte bancaire",
+    bank_transfer: "Virement",
+    virement: "Virement",
+    crypto_btc: "Bitcoin (BTC)",
+    crypto_xrp: "XRP"
+  };
+  return labels[method] || method || "";
+}
+
+function methodGroup(method) {
+  if (method === "virement" || method === "bank_transfer") return "bank_transfer";
+  return method || "";
+}
+
+function formatDateFR(iso) {
+  if (!iso) return "—";
+  const parts = String(iso).split("T")[0].split("-");
+  if (parts.length !== 3) return String(iso);
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function isCreditNote(inv) {
+  return !!inv && (inv.status === "credit_note" || (inv.invoice_number && inv.invoice_number.startsWith("AV-")));
+}
+
+// Construit les lignes du livre : commandes payées + factures manuelles
+// orphelines (sans commande associée) + avoirs en négatif.
+// Les factures automatiques ne sont pas ajoutées séparément : elles sont déjà
+// comptées via leurs commandes (pas de double comptage).
+// Tri chronologique croissant (exigence du livre des recettes).
+function buildLedgerRows(orders, invoices) {
+  const rows = [];
+  const paidOrderIds = new Set();
+  const paidInvoiceNumbers = new Set();
+
+  (orders || []).forEach(ord => {
+    if (!ord || ord.status !== "paid") return;
+    if (ord.order_id) paidOrderIds.add(ord.order_id);
+    if (ord.invoice_number) paidInvoiceNumbers.add(ord.invoice_number);
+    rows.push({
+      dateISO: ord.paid_at || ord.created_at || "",
+      type: "recette",
+      orderId: ord.order_id || "",
+      invoiceNumber: ord.invoice_number || "",
+      client: ord.billing_name || "",
+      email: ord.email || "",
+      plan: ord.plan || "",
+      technicians: Number(ord.technicians) || 0,
+      orderKind: ord.order_kind || "initial",
+      amount: Number(ord.price) || 0,
+      method: ord.payment_method || ""
+    });
+  });
+
+  const methodByOrder = {};
+  (orders || []).forEach(ord => {
+    if (ord && ord.order_id) methodByOrder[ord.order_id] = ord.payment_method || "";
+  });
+
+  (invoices || []).forEach(inv => {
+    if (!inv) return;
+    if (isCreditNote(inv)) {
+      rows.push({
+        dateISO: inv.created_at || "",
+        type: "avoir",
+        orderId: inv.order_id || "",
+        invoiceNumber: inv.invoice_number || "",
+        client: inv.customer_name || "",
+        email: inv.customer_email || "",
+        plan: inv.plan || "",
+        technicians: Number(inv.technicians) || 0,
+        orderKind: "",
+        amount: -(Number(inv.amount_ttc || inv.amount_ht) || 0),
+        method: (inv.order_id && methodByOrder[inv.order_id]) || ""
+      });
+      return;
+    }
+    if (!inv.is_manual) return;
+    if (inv.order_id && paidOrderIds.has(inv.order_id)) return;
+    if (inv.invoice_number && paidInvoiceNumbers.has(inv.invoice_number)) return;
+    rows.push({
+      dateISO: inv.created_at || "",
+      type: "recette",
+      orderId: inv.order_id || "",
+      invoiceNumber: inv.invoice_number || "",
+      client: inv.customer_name || "",
+      email: inv.customer_email || "",
+      plan: inv.plan || "",
+      technicians: Number(inv.technicians) || 0,
+      orderKind: "",
+      amount: Number(inv.amount_ttc || inv.amount_ht) || 0,
+      method: (inv.order_id && methodByOrder[inv.order_id]) || ""
+    });
+  });
+
+  rows.sort((a, b) => (Date.parse(a.dateISO) || 0) - (Date.parse(b.dateISO) || 0));
+  return rows;
+}
+
+function filterLedgerRows(rows, filters) {
+  const f = filters || {};
+  const q = (f.search || "").trim().toLowerCase();
+  return (rows || []).filter(r => {
+    if (f.type && r.type !== f.type) return false;
+    if (f.method && methodGroup(r.method) !== f.method) return false;
+    if (f.month && (r.dateISO || "").slice(0, 7) !== f.month) return false;
+    if (!q) return true;
+    return [r.orderId, r.invoiceNumber, r.client, r.email, r.plan]
+      .some(v => (v || "").toLowerCase().includes(q));
+  });
+}
+
+function csvCell(value) {
+  const s = value === null || value === undefined ? "" : String(value);
+  return /[;"\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function formatAmountCSV(amount) {
+  return (Number(amount) || 0).toFixed(2).replace(".", ",");
+}
+
+// Export CSV français : séparateur point-virgule, décimales à virgule, BOM UTF-8.
+function ledgerToCSV(rows) {
+  const header = ["Date", "Type", "N° Commande", "N° Facture", "Client", "Email", "Prestation", "Montant (EUR)", "Moyen de paiement"];
+  const lines = [header.map(csvCell).join(";")];
+  (rows || []).forEach(r => {
+    const prestation = r.orderKind === "renewal" && r.plan
+      ? `${r.plan} (renouvellement)`
+      : (r.plan || "");
+    lines.push([
+      formatDateFR(r.dateISO),
+      r.type === "avoir" ? "Avoir" : "Recette",
+      r.orderId,
+      r.invoiceNumber,
+      r.client,
+      r.email,
+      prestation,
+      formatAmountCSV(r.amount),
+      paymentMethodText(r.method)
+    ].map(csvCell).join(";"));
+  });
+  return "\ufeff" + lines.join("\r\n") + "\r\n";
+}
+
+function downloadCSV(filename, content) {
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+}
+
+async function fetchLedger() {
+  const tbody = document.getElementById("ledgerTableBody");
+  if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">Chargement du livre des comptes...</td></tr>`;
+
+  try {
+    const [ordersResp, invoicesResp] = await Promise.all([
+      authFetch(`${API_BASE_URL}/api/v1/admin/orders`),
+      authFetch(`${API_BASE_URL}/api/v1/admin/invoices`)
+    ]);
+    if (!ordersResp.ok) throw new Error("Impossible de récupérer les commandes");
+    if (!invoicesResp.ok) throw new Error("Impossible de récupérer les factures");
+    const ordersData = await ordersResp.json();
+    const invoicesDataResp = await invoicesResp.json();
+    ledgerCache.orders = ordersData.orders || [];
+    ledgerCache.invoices = invoicesDataResp.invoices || [];
+    renderLedgerTable();
+  } catch (err) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--danger); padding: 2rem;">❌ ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+function renderLedgerTable() {
+  const tbody = document.getElementById("ledgerTableBody");
+  if (!tbody) return;
+
+  const rows = buildLedgerRows(ledgerCache.orders, ledgerCache.invoices);
+  const filtered = filterLedgerRows(rows, {
+    search: document.getElementById("ledgerSearchInput")?.value || "",
+    month: document.getElementById("ledgerMonthInput")?.value || "",
+    method: document.getElementById("ledgerMethodFilter")?.value || "",
+    type: document.getElementById("ledgerTypeFilter")?.value || ""
+  });
+  currentLedgerRows = filtered;
+
+  const setTxt = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+  const total = rows.reduce((s, r) => s + r.amount, 0);
+  const receiptCount = rows.filter(r => r.type === "recette").length;
+  const creditTotal = rows.filter(r => r.type === "avoir").reduce((s, r) => s + r.amount, 0);
+  setTxt("ledgerTotal", `${total.toFixed(2)} €`);
+  setTxt("ledgerCount", receiptCount);
+  setTxt("ledgerCredits", `${creditTotal.toFixed(2)} €`);
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">Aucune ligne dans le livre des comptes.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(r => {
+    const isCredit = r.type === "avoir";
+    const typeBadge = isCredit
+      ? `<span class="badge badge-revoked">Avoir</span>`
+      : `<span class="badge badge-active">Recette</span>`;
+    const kindLabel = r.orderKind === "renewal" ? `<br><small style="color: var(--text-secondary);">renouvellement</small>` : "";
+    const techLabel = r.technicians > 0 ? ` <small style="color: var(--text-secondary);">(${r.technicians} tech)</small>` : "";
+    const color = isCredit ? "#f87171" : "#34d399";
+    return `
+      <tr>
+        <td>${escapeHtml(formatDateFR(r.dateISO))}</td>
+        <td>${typeBadge}</td>
+        <td>${r.orderId ? `<strong>${escapeHtml(r.orderId)}</strong>` : "—"}</td>
+        <td>${r.invoiceNumber ? `<button class="btn btn-secondary btn-sm" data-action="download-invoice" data-invoice-number="${escapeHtml(r.invoiceNumber)}" title="Voir ${escapeHtml(r.invoiceNumber)}">🧾 ${escapeHtml(r.invoiceNumber)}</button>` : "—"}</td>
+        <td><strong>${escapeHtml(r.client || "—")}</strong>${r.email ? `<br><small style="color: var(--text-secondary);">${escapeHtml(r.email)}</small>` : ""}</td>
+        <td><span class="badge badge-plan">${escapeHtml(r.plan || "—")}</span>${techLabel}${kindLabel}</td>
+        <td><strong style="color: ${color};">${r.amount.toFixed(2)} €</strong></td>
+        <td>${paymentMethodLabel(r.method)}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function exportLedgerCSV() {
+  if (!currentLedgerRows || currentLedgerRows.length === 0) {
+    showToast("Aucune ligne à exporter avec les filtres actuels.", "error");
+    return;
+  }
+  const stamp = new Date().toISOString().split("T")[0];
+  downloadCSV(`livre-comptes-${stamp}.csv`, ledgerToCSV(currentLedgerRows));
+  const total = currentLedgerRows.reduce((s, r) => s + r.amount, 0);
+  showToast(`${currentLedgerRows.length} ligne(s) exportée(s) — total ${total.toFixed(2)} €.`, "success");
+}
+
+// =============================================================================
+// 9. IMPAYÉS
+// =============================================================================
+function unpaidAgeDays(iso, nowMs) {
+  const t = iso ? Date.parse(iso) : NaN;
+  if (Number.isNaN(t)) return 0;
+  const now = typeof nowMs === "number" ? nowMs : Date.now();
+  return Math.max(0, Math.floor((now - t) / 86400000));
+}
+
+async function fetchUnpaid() {
+  const tbody = document.getElementById("unpaidTableBody");
+  if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">Chargement des impayés...</td></tr>`;
+
+  try {
+    const resp = await authFetch(`${API_BASE_URL}/api/v1/admin/orders`);
+    if (!resp.ok) throw new Error("Impossible de récupérer les commandes");
+    const data = await resp.json();
+    unpaidCache = (data.orders || []).filter(o => o && (o.status === "pending" || o.status === "processing"));
+    unpaidCache.sort((a, b) => (Date.parse(a.created_at) || 0) - (Date.parse(b.created_at) || 0));
+    renderUnpaidTable();
+  } catch (err) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--danger); padding: 2rem;">❌ ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+function renderUnpaidTable() {
+  const tbody = document.getElementById("unpaidTableBody");
+  if (!tbody) return;
+
+  const q = (document.getElementById("unpaidSearchInput")?.value || "").trim().toLowerCase();
+  const filtered = unpaidCache.filter(o => {
+    return !q || [o.order_id, o.billing_name, o.email].some(v => (v || "").toLowerCase().includes(q));
+  });
+
+  const setTxt = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+  const total = unpaidCache.reduce((s, o) => s + (Number(o.price) || 0), 0);
+  setTxt("unpaidCount", unpaidCache.length);
+  setTxt("unpaidTotal", `${total.toFixed(2)} €`);
+
+  if (filtered.length === 0) {
+    const msg = unpaidCache.length === 0
+      ? "🎉 Aucun impayé. Toutes les commandes sont à jour."
+      : "Aucune commande ne correspond à la recherche.";
+    const color = unpaidCache.length === 0 ? "var(--success)" : "var(--text-muted)";
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: ${color}; padding: 2rem;">${msg}</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(o => {
+    const isVirement = o.payment_method === "virement" || o.payment_method === "bank_transfer";
+    const isCrypto = o.payment_method === "crypto_btc" || o.payment_method === "crypto_xrp";
+    const age = unpaidAgeDays(o.created_at);
+    const ageColor = age > 30 ? "#f87171" : (age > 7 ? "var(--warning)" : "var(--text-primary)");
+    const statusHint = o.status === "processing" ? "Paiement en cours" : "En attente";
+    const expiresStr = o.expires_at ? String(o.expires_at).split("T")[0] : "—";
+    let payDetail = "";
+    if (isCrypto && o.crypto) {
+      payDetail = `<br><small style="color: var(--text-secondary);">${escapeHtml(o.crypto.amount_crypto || "—")} ${escapeHtml(o.crypto.asset || "")} — dépôt attendu</small>`;
+    } else if (isCrypto) {
+      payDetail = `<br><small style="color: var(--text-secondary);">dépôt attendu (auto)</small>`;
+    }
+    return `
+      <tr>
+        <td><strong>${escapeHtml(o.order_id)}</strong><br><small style="color: var(--text-secondary);">${escapeHtml(statusHint)}</small></td>
+        <td>${escapeHtml(o.email || "—")}${o.billing_name ? `<br><small style="color: var(--text-secondary);">${escapeHtml(o.billing_name)}</small>` : ""}</td>
+        <td><span class="badge badge-plan">${escapeHtml(o.plan || "—")}</span><br><small>${Number(o.technicians) || 0} connexion(s)</small></td>
+        <td><strong style="color: var(--border-focus);">${(Number(o.price) || 0).toFixed(2)} €</strong></td>
+        <td>${paymentMethodLabel(o.payment_method)}${payDetail}</td>
+        <td><strong style="color: ${ageColor};">${age} j</strong></td>
+        <td>${escapeHtml(expiresStr)}</td>
+        <td>
+          <div style="display: flex; gap: 0.35rem; align-items: center;">
+            ${o.status === "pending" && isVirement ? `
+              <button class="btn btn-success btn-sm" data-action="mark-order-paid" data-order-id="${escapeHtml(o.order_id)}">
+                ✅ Valider Virement
+              </button>
+            ` : ""}
+            ${o.invoice_number ? `
+              <button class="btn btn-secondary btn-sm" data-action="download-invoice" data-invoice-number="${escapeHtml(o.invoice_number)}" title="Facture ${escapeHtml(o.invoice_number)}">🧾</button>
+            ` : ""}
+            <button class="btn btn-danger btn-sm" data-action="delete-order" data-order-id="${escapeHtml(o.order_id)}" title="Supprimer la commande ${escapeHtml(o.order_id)}">🗑️</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+// =============================================================================
+// 10. MODALS & ACTIONS
 // =============================================================================
 function initModals() {
   // Confirm Revoke

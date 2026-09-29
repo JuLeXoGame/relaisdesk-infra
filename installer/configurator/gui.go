@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"image/color"
 	"net/url"
@@ -246,6 +247,12 @@ func RunGUI() error {
 		}
 	} else {
 		showLoginScreen("")
+	}
+
+	if pendingFleetError != "" {
+		msg := pendingFleetError
+		pendingFleetError = ""
+		dialog.ShowError(errors.New(msg), mainWindow)
 	}
 
 	mainWindow.ShowAndRun()

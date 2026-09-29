@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sécurité & Signalement de vulnérabilités | RelaisDesk</title>
+  <meta name="description" content="Engagements de sécurité, flux de session chiffrés de bout en bout, hébergement en France, conformité RGPD et procédure de signalement responsable des vulnérabilités de RelaisDesk.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://relaisdesk.fr/securite.html">
+  <link rel="alternate" hreflang="fr" href="https://relaisdesk.fr/securite.html">
+  <link rel="alternate" hreflang="x-default" href="https://relaisdesk.fr/securite.html">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://relaisdesk.fr/securite.html">
+  <meta property="og:title" content="Sécurité & Signalement de vulnérabilités | RelaisDesk">
+  <meta property="og:description" content="Engagements de sécurité, flux de session chiffrés de bout en bout, hébergement en France et politique de divulgation responsable de RelaisDesk.">
+  <meta property="og:image" content="https://relaisdesk.fr/logo.avif">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:site_name" content="RelaisDesk">
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="icon" type="image/avif" href="/logo.avif">
+  <link rel="stylesheet" href="styles.css?v=20260912-nav-center">
+  <style>
+    .security-badge-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+      margin: 2rem 0;
+    }
+    .security-badge-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1.25rem;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+    .security-badge-card:hover {
+      border-color: rgba(99, 102, 241, 0.4);
+      transform: translateY(-2px);
+    }
+    .security-badge-card h3 {
+      margin: 0.5rem 0 0.25rem 0;
+      font-size: 1.05rem;
+      color: #f8fafc;
+    }
+    .security-badge-card p {
+      margin: 0;
+      font-size: 0.88rem;
+      color: #94a3b8;
+      line-height: 1.45;
+    }
+    .security-badge-icon {
+      font-size: 1.8rem;
+      line-height: 1;
+    }
+    .callout-box {
+      background: rgba(99, 102, 241, 0.08);
+      border-left: 4px solid #6366f1;
+      border-radius: 0 8px 8px 0;
+      padding: 1rem 1.25rem;
+      margin: 1.5rem 0;
+      font-size: 0.95rem;
+      color: #cbd5e1;
+    }
+    .callout-box strong {
+      color: #ffffff;
+    }
+    .step-list {
+      list-style: none;
+      padding: 0;
+      margin: 1.5rem 0;
+      counter-reset: sec-step;
+    }
+    .step-list li {
+      position: relative;
+      padding-left: 2.8rem;
+      margin-bottom: 1.25rem;
+    }
+    .step-list li::before {
+      counter-increment: sec-step;
+      content: counter(sec-step);
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 2rem;
+      height: 2rem;
+      background: rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="container nav-container">
+      <a href="/" class="logo-group" aria-label="Accueil RelaisDesk">
+        <img src="logo.avif" alt="" class="logo-img" width="42" height="42">
+        <span>Relais<span class="gradient-text">Desk</span></span>
+      </a>
+
+      <ul class="nav-menu" id="main-navigation">
+        <li><a href="/#features" class="nav-link">Fonctionnalités</a></li>
+        <li><a href="/#pricing" class="nav-link">Tarifs</a></li>
+        <li><a href="/#downloads" class="nav-link">Téléchargements</a></li>
+        <li><a href="/#faq" class="nav-link">FAQ</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <a href="client/" class="btn btn-secondary btn-sm">Espace Client</a>
+        <a href="/#pricing" class="btn btn-primary btn-sm">Commander</a>
+        <button class="mobile-toggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="main-navigation">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="legal-wrapper">
+    <div class="container" style="max-width: 920px;">
+      <a href="/" class="back-home-btn">← Retour à l'accueil</a>
+
+      <article class="legal-card">
+        <header class="legal-header">
+          <div class="badge">Sécurité & Confiance</div>
+          <h1>Sécurité, Résilience & Signalement de vulnérabilités</h1>
+          <p class="legal-date">Dernière mise à jour : 24 septembre 2026 — mise en cohérence avec la politique de confidentialité (transferts internationaux, qualification du chiffrement).</p>
+        </header>
+
+        <div class="legal-body">
+          <p>
+            La protection des postes de travail, des serveurs et des données de vos clients constitue le fondement de RelaisDesk. En tant que solution d'assistance et de télémaintenance à distance pour les professionnels, RelaisDesk applique le principe de <strong>sécurité dès la conception (Security by Design)</strong> et de <strong>moindre privilège</strong>.
+          </p>
+
+          <!-- Badges de réassurance -->
+          <div class="security-badge-grid">
+            <div class="security-badge-card">
+              <div class="security-badge-icon">🔒</div>
+              <h3>Flux de session chiffrés de bout en bout</h3>
+              <p>Clés éphémères générées sur vos postes. Aucun déchiffrement possible par nos relais. Les fiches et métadonnées conservées par l'API ne sont pas chiffrées de bout en bout (cf. annexe RGPD).</p>
+            </div>
+            <div class="security-badge-card">
+              <div class="security-badge-icon">🇫🇷</div>
+              <h3>Hébergement en France / UE</h3>
+              <p>Serveurs de rendez-vous et relais opérés en France. Protection stricte sous le RGPD.</p>
+            </div>
+            <div class="security-badge-card">
+              <div class="security-badge-icon">🛡️</div>
+              <h3>Assurance RC Professionnelle</h3>
+              <p>Activité couverte par une assurance Responsabilité Civile Professionnelle informatique.</p>
+            </div>
+            <div class="security-badge-card">
+              <div class="security-badge-icon">📜</div>
+              <h3>Accord RGPD (DPA Art. 28)</h3>
+              <p>Convention de sous-traitance des données opposable pour vos audits et conformité légale.</p>
+            </div>
+          </div>
+
+          <h2>1. Architecture cryptographique des sessions</h2>
+          <p>
+            Chaque session de contrôle à distance repose sur les protocoles cryptographiques éprouvés du projet RustDesk Community :
+          </p>
+          <ul>
+            <li>
+              <strong>Chiffrement symétrique ChaCha20-Poly1305 :</strong> tous les flux vidéo, audio, de saisie clavier/souris et de transfert de fichiers sont chiffrés avec des clés uniques générées localement par les machines communicantes.
+            </li>
+            <li>
+              <strong>Échange de clés asymétrique :</strong> les sessions négocient leurs secrets via un échange cryptographique direct (P2P ou relais aveugle). Les serveurs intermédiaires RelaisDesk ne détiennent jamais les clés privées et ne peuvent techniquement ni visualiser les écrans, ni intercepter les données échangées.
+            </li>
+            <li>
+              <strong>Authentification et intégrité Ed25519 :</strong> les jetons de réseau et les manifestes de mise à jour sont signés cryptographiquement au moyen d'algorithmes à courbe elliptique Ed25519, garantissant l'authenticité absolue des binaires et des requêtes réseau.
+            </li>
+            <li>
+              <strong>Protection anti-rejeu et expiration stricte :</strong> les codes d'assistance temporaires sont limités à 12 heures, et les jetons d'autorisation possèdent un TTL (Time To Live) strict pour interdire tout rejeu d'autorisation.
+            </li>
+          </ul>
+
+          <div class="callout-box">
+            <strong>Garantie « Zéro Connaissance » :</strong> RelaisDesk n'enregistre aucune frappe clavier, aucun mot de passe, aucun écran et aucun flux de session. Seules les métadonnées contractuelles d'intervention (horodatage, durée, référence client déclarée) sont consignées dans votre espace de gestion pour la traçabilité de vos dépannages.
+          </div>
+
+          <h2>2. Sécurité des accès permanents (Unattended) & Console de parc</h2>
+          <p>
+            La prise en main des machines sans présence humaine (postes de bureau, serveurs distants, caisses) exige une rigueur absolue :
+          </p>
+          <ul>
+            <li><strong>Autorisation préalable documentée :</strong> l'enrôlement d'une machine nécessite les droits d'administration locale du système d'exploitation et une approbation explicite.</li>
+            <li><strong>Validation en deux étapes (2FA TOTP) :</strong> la console d'administration et les espaces clients intègrent la double authentification par application compatible TOTP (Google Authenticator, Microsoft Authenticator, Aegis, 1Password) avec génération de codes de secours sécurisés.</li>
+            <li><strong>Isolation des techniciens par dossier :</strong> la gestion des droits permet d'isoler l'accès des techniciens aux seuls dossiers de machines auxquels ils sont expressément habilités.</li>
+          </ul>
+
+          <h2>3. Engagements juridiques, Assurance & RGPD</h2>
+          <p>
+            Pour vous permettre de répondre aux exigences de vos donneurs d'ordres, clients et DSI :
+          </p>
+          <ul>
+            <li>
+              <strong>Assurance Responsabilité Civile Professionnelle (RC Pro) :</strong> l'exploitant RelaisDesk (Julien BELLOT EI) est titulaire d'une assurance Responsabilité Civile Professionnelle couvrant spécifiquement les activités de services informatiques, la téléassistance, les prestations d'administration système et les dommages immatériels.
+            </li>
+            <li>
+              <strong>Accord de Sous-traitance des Données (DPA) :</strong> conformément à l'article 28 du Règlement Général sur la Protection des Données (RGPD), un accord de sous-traitance opposable est mis à disposition de tous nos clients professionnels. Vous pouvez consulter et intégrer à votre registre notre <a href="sous-traitance-rgpd.html" style="color: var(--border-focus); font-weight: 600;">Accord de sous-traitance RGPD</a>.
+            </li>
+            <li>
+              <strong>Hébergement des données :</strong> nos infrastructures sont hébergées au sein de l'Union Européenne (serveurs OVHcloud pour le web, serveurs Oracle Cloud OCI région Marseille pour les relais et l'API, hors offre Oracle EU Sovereign Cloud). Cette localisation n'exclut pas d'éventuels accès internationaux des groupes fournisseurs, décrits au §5 de la <a href="politique-confidentialite.html" style="color: var(--border-focus); font-weight: 600;">politique de confidentialité</a>.
+            </li>
+          </ul>
+
+          <h2>4. Politique de signalement responsable des vulnérabilités (VDP)</h2>
+          <p>
+            Nous attachons la plus haute importance aux alertes transmises par la communauté de sécurité, les administrateurs et les chercheurs indépendants. Si vous découvrez une anomalie de sécurité ou une vulnérabilité potentielle, nous vous invitons à nous en faire part dans le cadre d'une divulgation coordonnée et responsable.
+          </p>
+
+          <h3>Comment nous transmettre une alerte de sécurité ?</h3>
+          <p>
+            Merci de nous transmettre votre rapport détaillé via notre formulaire de contact dédié :
+          </p>
+          <div class="callout-box" style="border-left-color: #10b981; background: rgba(16, 185, 129, 0.08); text-align: center;">
+            <a href="contact.html" class="btn btn-primary" style="display: inline-block; text-decoration: none;">📩 Signaler une vulnérabilité</a><br>
+            <span style="font-size: 0.85rem; color: #94a3b8; display: inline-block; margin-top: 0.5rem;">Indiquez « Alerte de sécurité / Vulnérabilité » en objet de votre message.</span>
+          </div>
+
+          <h3>Informations utiles à inclure dans votre rapport :</h3>
+          <ul>
+            <li>Le type de vulnérabilité identifié (ex : injection, contournement d'accès, défaut de contrôle, etc.) ;</li>
+            <li>Les composants concernés (API, site web, configurateur Windows/Linux, service d'accès permanent) ;</li>
+            <li>Les étapes détaillées de reproduction pas-à-pas (PoC - Proof of Concept) ;</li>
+            <li>L'impact potentiel évalué selon vous ;</li>
+            <li>Vos coordonnées pour que nous puissions échanger et vous tenir informé des correctifs.</li>
+          </ul>
+
+          <h3>Nos engagements envers les chercheurs :</h3>
+          <ol class="step-list">
+            <li>
+              <strong>Accusé de réception rapide :</strong> nous nous engageons à accuser réception de votre signalement sous <strong>48 heures ouvrées</strong> maximum.
+            </li>
+            <li>
+              <strong>Analyse et priorisation :</strong> une qualification technique de la criticité de l'anomalie est réalisée avec estimation du délai de correction.
+            </li>
+            <li>
+              <strong>Résolution coordonnée :</strong> nous développons et déployons un correctif dans les meilleurs délais. Nous convenons d'une date de publication commune pour préserver la sécurité de tous les utilisateurs.
+            </li>
+            <li>
+              <strong>Reconnaissance :</strong> nous remercions publiquement chaque contributeur ayant formulé un signalement valide et respectueux de cette charte.
+            </li>
+          </ol>
+
+          <h3>Règles de bonne conduite attendues :</h3>
+          <p>Pour bénéficier de notre engagement de non-poursuite et d'une collaboration constructive, nous vous demandons de :</p>
+          <ul>
+            <li>Ne pas tenter de déni de service (DoS / DDoS) pouvant dégrader la disponibilité des serveurs de relais ;</li>
+            <li>Ne pas accéder, altérer, extraire ou détruire les données de clients tiers ;</li>
+            <li>Ne pas recourir à l'ingénierie sociale, au phishing ou à des attaques physiques contre nos locaux ;</li>
+            <li>Respecter un délai raisonnable de divulgation coordonnée avant toute communication publique sur la vulnérabilité signalée.</li>
+          </ul>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <a href="/" class="logo-group" style="margin-bottom: 1rem;" aria-label="Accueil RelaisDesk">
+            <img src="logo.avif" alt="" class="logo-img" width="42" height="42" loading="lazy">
+            <span>Relais<span class="gradient-text">Desk</span></span>
+          </a>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">
+            Service de support et de contrôle à distance basé sur RustDesk Community (AGPLv3).
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Navigation</h4>
+          <ul>
+            <li><a href="/#features">Fonctionnalités</a></li>
+            <li><a href="/#pricing">Tarifs</a></li>
+            <li><a href="/#downloads">Téléchargements</a></li>
+            <li><a href="client/">Espace Client</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Sécurité & Conformité</h4>
+          <ul>
+            <li><a href="securite.html">Sécurité & Vulnérabilités</a></li>
+            <li><a href="sous-traitance-rgpd.html">Sous-traitance RGPD (DPA)</a></li>
+            <li><a href="politique-confidentialite.html">Politique de confidentialité</a></li>
+            <li><a href="logiciel-libre.html">Logiciel libre & sources</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Contact & Légal</h4>
+          <ul>
+            <li><a href="contact.html">Formulaire de contact</a></li>
+            <li><a href="mentions-legales.html">Mentions légales</a></li>
+            <li><a href="cgv.html">Conditions Générales</a></li>
+            <li><a href="formulaire-retractation.html">Exercer une rétractation</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 RelaisDesk. Tous droits réservés.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="maintenance.js"></script>
+</body>
+</html>

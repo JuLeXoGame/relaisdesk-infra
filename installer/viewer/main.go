@@ -1,12 +1,27 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 	"time"
 )
+
+// readEnrollPasswordFile reads a one-shot password handoff file created by the
+// unelevated GUI and deletes it immediately after reading.
+func readEnrollPasswordFile(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	os.Remove(path)
+	if err != nil {
+		return "", err
+	}
+	if len(data) == 0 || len(data) > 4096 {
+		return "", errors.New("fichier de mot de passe invalide")
+	}
+	return string(data), nil
+}
 
 func main() {
 	if len(os.Args) >= 2 {
@@ -75,6 +90,16 @@ func main() {
 			}
 			if len(os.Args) >= 4 {
 				password = strings.TrimSpace(os.Args[3])
+			}
+			if password == "" {
+				password = strings.TrimSpace(os.Getenv("RELAISDESK_ENROLL_PASSWORD"))
+			}
+			if strings.HasPrefix(password, "@") {
+				filePassword, err := readEnrollPasswordFile(strings.TrimPrefix(password, "@"))
+				if err != nil {
+					log.Fatalf("Fichier de mot de passe illisible: %v", err)
+				}
+				password = strings.TrimSpace(filePassword)
 			}
 			code = strings.ToUpper(strings.TrimSpace(code))
 			if code == "" {

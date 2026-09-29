@@ -37,7 +37,7 @@ Write-Host "Updated SHA256SUMS.txt"
 Push-Location $ApiDir
 try {
     $includeList = ($releaseArtifactNames + "SHA256SUMS.txt") -join ","
-    & go run ./cmd/release-manifest `
+    & go run -buildvcs=false ./cmd/release-manifest `
         -downloads $DownloadsDir `
         -version $Version `
         -base-url "$ApiUrl/api/v1/downloads" `

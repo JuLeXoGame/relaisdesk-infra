@@ -7,6 +7,8 @@
   <meta name="description" content="Formulaire de contact direct avec l'équipe RelaisDesk pour toute demande d'information, commerciale ou technique.">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://relaisdesk.fr/contact.html">
+  <link rel="alternate" hreflang="fr" href="https://relaisdesk.fr/contact.html">
+  <link rel="alternate" hreflang="x-default" href="https://relaisdesk.fr/contact.html">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
@@ -139,15 +141,16 @@
               <span class="contact-info-icon">📞</span>
               <div>
                 <strong>Téléphone :</strong><br>
-                <a href="tel:+33662855930" style="color: var(--border-focus, #38bdf8);">06 62 85 59 30</a> (du lundi au vendredi, 9h-18h)
+                <span data-legal-phone="0018181d1d19131e1e12181b" data-legal-phone-style="color: var(--border-focus, #38bdf8);"><a href="&#116;&#101;&#108;&#58;&#43;&#51;&#51;&#54;&#54;&#50;&#56;&#53;&#53;&#57;&#51;&#48;" style="color: var(--border-focus, #38bdf8);">&#48;&#54;&#32;&#54;&#50;&#32;&#56;&#53;&#32;&#53;&#57;&#32;&#51;&#48;</a></span> (du lundi au vendredi, 9h-18h)
               </div>
             </div>
             <div class="contact-info-item">
               <span class="contact-info-icon">🏢</span>
               <div>
                 <strong>Adresse & Courrier :</strong><br>
-                RelaisDesk<br>
-                2 Chemin de Lonzais, 03170 Bizeneuille, France
+                Julien BELLOT EI — RelaisDesk<br>
+                2 Chemin de Lonzais, 03170 Bizeneuille, France<br>
+                SIRET 940 747 108 00014
               </div>
             </div>
             <div class="contact-info-item">
@@ -184,6 +187,8 @@
         <div>
           <h4>Informations</h4>
           <ul class="footer-links">
+            <li><a href="securite.html">Sécurité & Vulnérabilités</a></li>
+            <li><a href="sous-traitance-rgpd.html">Sous-traitance RGPD (DPA)</a></li>
             <li><a href="logiciel-libre.html">Code Source & Licence</a></li>
             <li><a href="mentions-legales.html">Mentions Légales</a></li>
             <li><a href="cgv.html">Conditions Générales de Vente</a></li>
@@ -195,7 +200,7 @@
           <h4>Support</h4>
           <ul class="footer-links">
             <li><a href="contact.html">Formulaire de Contact</a></li>
-            <li><a href="tel:+33662855930">06 62 85 59 30</a></li>
+            <li><span data-legal-phone="0018181d1d19131e1e12181b"><a href="&#116;&#101;&#108;&#58;&#43;&#51;&#51;&#54;&#54;&#50;&#56;&#53;&#53;&#57;&#51;&#48;">&#48;&#54;&#32;&#54;&#50;&#32;&#56;&#53;&#32;&#53;&#57;&#32;&#51;&#48;</a></span></li>
           </ul>
         </div>
       </div>
@@ -207,5 +212,7 @@
 
   <script src="app.js"></script>
   <script src="legal-email.js" defer></script>
+  <script src="legal-phone.js" defer></script>
+  <script src="maintenance.js"></script>
 </body>
 </html>

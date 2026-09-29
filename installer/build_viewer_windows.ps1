@@ -22,7 +22,7 @@ try {
 
     $version = "1.0.0"
     $windowsLdFlags = "-s -w -H windowsgui -X main.APIURL=$ApiUrl -X main.APP_VERSION=$version -X main.RUSTDESK_EXPECTED_SHA256=$forkWindowsSha256 -X main.RUSTDESK_SERVICE_EXPECTED_SHA256=$forkWindowsServiceSha256"
-    & go build -trimpath -ldflags $windowsLdFlags -o $winViewerBuild .
+    & go build -trimpath -buildvcs=false -ldflags $windowsLdFlags -o $winViewerBuild .
     if ($LASTEXITCODE -ne 0) { throw "Build viewer failed" }
 
     Copy-Item -Path $winViewerBuild -Destination $winViewerDl -Force

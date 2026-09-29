@@ -7,7 +7,7 @@
 // 1. CONFIGURATION GLOBALE DE L'API
 // =========================================================================
 const API_BASE_URL = "https://api.relaisdesk.fr";
-const TERMS_VERSION = "2026-09-21";
+const TERMS_VERSION = "2026-09-27";
 const PRO_MONTHLY_PRICE = 110.0;
 const PRO_ANNUAL_PRICE = PRO_MONTHLY_PRICE * 10;
 const ULTRA_BASE_MONTHLY_PRICE = 199.0;
@@ -25,6 +25,9 @@ let currentOrder = {
   price: PRO_MONTHLY_PRICE,
   paymentMethod: "stripe"
 };
+
+// Last crypto order shown in the recap box, for quote refresh.
+let lastCryptoOrder = null;
 
 // =========================================================================
 // 3. CALCUL DU PRIX ULTRA / PERSONNALISÉ (10 à 500 techniciens)
@@ -182,6 +185,7 @@ const UI_TEXTS = {
     recurringConsent: (price) => `J'accepte le prélèvement automatique de ${price} € après les 30 jours gratuits, résiliable à tout moment dans l'espace client. *`,
     submitStripe: "Démarrer mon essai gratuit de 30 jours (0 €)",
     submitBank: "Valider la commande par virement",
+    submitCrypto: (label) => `Valider la commande en ${label}`,
     totalBankAnnual: "Total pour 1 an (365 jours) :",
     totalBankMonthly: "Total pour 30 jours :",
     contactingServer: "Vérification auprès du serveur...",
@@ -212,6 +216,7 @@ const UI_TEXTS = {
     recurringConsent: (price) => `I accept automatic billing of €${price} after the 30-day free trial, cancelable anytime in the client portal. *`,
     submitStripe: "Start 30-day free trial (0 €)",
     submitBank: "Confirm order by bank transfer",
+    submitCrypto: (label) => `Confirm order in ${label}`,
     totalBankAnnual: "Total for 1 year (365 days) :",
     totalBankMonthly: "Total for 30 days :",
     contactingServer: "Contacting server…",
@@ -242,6 +247,7 @@ const UI_TEXTS = {
     recurringConsent: (price) => `Ich akzeptiere die automatische Abbuchung von ${price} € nach den 30 kostenlosen Tagen, jederzeit kündbar im Kundenbereich. *`,
     submitStripe: "30 Tage kostenlose Testphase starten (0 €)",
     submitBank: "Bestellung per Überweisung bestätigen",
+    submitCrypto: (label) => `Bestellung in ${label} bestätigen`,
     totalBankAnnual: "Gesamtbetrag für 1 Jahr (365 Tage):",
     totalBankMonthly: "Gesamtbetrag für 30 Tage:",
     contactingServer: "Serverabfrage läuft…",
@@ -272,6 +278,7 @@ const UI_TEXTS = {
     recurringConsent: (price) => `Acepto el cobro automático de ${price} € tras los 30 días gratuitos, cancelable en cualquier momento desde el área de clientes. *`,
     submitStripe: "Comenzar mi prueba gratuita de 30 días (0 €)",
     submitBank: "Confirmar pedido por transferencia",
+    submitCrypto: (label) => `Confirmar pedido en ${label}`,
     totalBankAnnual: "Total por 1 año (365 días):",
     totalBankMonthly: "Total por 30 días:",
     contactingServer: "Verificando con el servidor...",
@@ -302,6 +309,7 @@ const UI_TEXTS = {
     recurringConsent: (price) => `Accetto l'addebito automatico di ${price} € dopo i 30 giorni gratuiti, annullabile in qualsiasi momento nell'area clienti. *`,
     submitStripe: "Inizia la mia prova gratuita di 30 giorni (0 €)",
     submitBank: "Conferma l'ordine tramite bonifico",
+    submitCrypto: (label) => `Conferma l'ordine in ${label}`,
     totalBankAnnual: "Totale per 1 anno (365 giorni):",
     totalBankMonthly: "Totale per 30 giorni:",
     contactingServer: "Verifica con il server in corso...",
@@ -332,6 +340,7 @@ const UI_TEXTS = {
     recurringConsent: (price) => `Я соглашаюсь на автоматическое списание ${price} € после 30 бесплатных дней, отмена в любой момент в личном кабинете. *`,
     submitStripe: "Начать 30-дневный бесплатный период (0 €)",
     submitBank: "Подтвердить заказ банковским переводом",
+    submitCrypto: (label) => `Подтвердить заказ в ${label}`,
     totalBankAnnual: "Итого за 1 год (365 дней):",
     totalBankMonthly: "Итого за 30 дней:",
     contactingServer: "Проверка на сервере...",
@@ -362,6 +371,7 @@ const UI_TEXTS = {
     recurringConsent: (price) => `Akceptuję automatyczne pobieranie opłaty w wysokości ${price} € po 30 bezpłatnych dniach, z możliwością anulowania w panelu klienta. *`,
     submitStripe: "Rozpocznij 30-dniowy darmowy okres próbny (0 €)",
     submitBank: "Potwierdź zamówienie przelewem bankowym",
+    submitCrypto: (label) => `Potwierdź zamówienie w ${label}`,
     totalBankAnnual: "Łącznie za 1 rok (365 dni):",
     totalBankMonthly: "Łącznie za 30 dni:",
     contactingServer: "Weryfikacja na serwerze...",
@@ -517,11 +527,14 @@ function openOrderModal(planType) {
   document.getElementById("bankTransferResult").style.display = "none";
   const trialResult = document.getElementById("trialResult");
   if (trialResult) trialResult.style.display = "none";
+  document.getElementById("cryptoResult").style.display = "none";
+  lastCryptoOrder = null;
   document.getElementById("orderFormFields").style.display = "block";
   document.getElementById("submitOrderBtn").disabled = false;
 
   // Sélectionner Stripe (Essai 30 jours) par défaut
   selectPaymentMethod("stripe");
+  refreshPaymentMethods();
 
   modal.classList.add("active");
 }
@@ -577,8 +590,34 @@ function updateModalPaymentUI() {
       recurringInput.required = false;
       recurringInput.checked = false;
     }
-    if (submitBtn) submitBtn.textContent = ui.submitBank;
+    if (submitBtn) {
+      const cryptoLabel = cryptoAssetLabel(currentOrder.paymentMethod);
+      submitBtn.textContent = cryptoLabel ? ui.submitCrypto(cryptoLabel) : ui.submitBank;
+    }
   }
+}
+
+// cryptoAssetLabel returns the display name of a crypto payment method, or
+// null for non-crypto methods.
+function cryptoAssetLabel(method) {
+  if (method === "crypto_btc") return "Bitcoin";
+  if (method === "crypto_xrp") return "XRP";
+  return null;
+}
+
+// refreshPaymentMethods shows the crypto options only when the API offers
+// them (CGV: "lorsqu'ils sont proposés au récapitulatif"). On any failure
+// crypto stays hidden and the order falls back to card or bank transfer.
+async function refreshPaymentMethods() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/public/payment-methods`, { cache: "no-store" });
+    if (!response.ok) return;
+    const methods = await response.json();
+    const btc = document.getElementById("payOpt_crypto_btc");
+    const xrp = document.getElementById("payOpt_crypto_xrp");
+    if (btc) btc.style.display = methods.crypto_btc ? "flex" : "none";
+    if (xrp) xrp.style.display = methods.crypto_xrp ? "flex" : "none";
+  } catch (_) { /* crypto stays hidden when unreachable */ }
 }
 
 function selectPaymentMethod(method) {
@@ -668,10 +707,10 @@ function initOrderForm() {
             country: "France",
             siret: siretInput ? siretInput.value.trim() : "",
             customer_type: customerTypeValue,
-            terms_version: "2026-09-21",
+            terms_version: "2026-09-24",
             terms_accepted: true,
             recurring_accepted: true,
-            trial_terms_version: "2026-09-21-fleet-v2",
+            trial_terms_version: "2026-09-24-fleet-v3",
             immediate_performance_requested: customerTypeValue === "consumer" && immediatePerformanceInput.checked,
             plan: currentOrder.plan,
             technicians: currentOrder.technicians,
@@ -690,6 +729,50 @@ function initOrderForm() {
         if (trialRes) trialRes.style.display = "block";
         const sentEl = document.getElementById("trialEmailSent");
         if (sentEl) sentEl.textContent = email;
+      } catch (err) {
+        errorMsg.textContent = err.message || "Erreur de connexion avec le serveur.";
+        errorMsg.style.display = "block";
+        submitBtn.disabled = false;
+        updateModalPaymentUI();
+      }
+      return;
+    }
+
+    // Traitement Crypto (Bitcoin/XRP, devis au cours OKX)
+    if (cryptoAssetLabel(currentOrder.paymentMethod)) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Préparation du devis en cours...";
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/public/order`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: email,
+            name: nameInput ? nameInput.value.trim() : "",
+            address: addrInput ? addrInput.value.trim() : "",
+            postal_code: zipInput ? zipInput.value.trim() : "",
+            city: cityInput ? cityInput.value.trim() : "",
+            country: "France",
+            siret: siretInput ? siretInput.value.trim() : "",
+            customer_type: customerTypeValue,
+            terms_version: TERMS_VERSION,
+            terms_accepted: termsAcceptedInput.checked,
+            immediate_performance_requested: customerTypeValue === "consumer" && immediatePerformanceInput.checked,
+            plan: currentOrder.plan,
+            technicians: currentOrder.technicians,
+            billing_cycle: currentOrder.billingCycle || currentBillingCycle,
+            payment_method: currentOrder.paymentMethod
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Devis crypto indisponible pour le moment");
+        }
+
+        lastCryptoOrder = { order_id: data.order_id, email: email };
+        showCryptoRecap(data);
       } catch (err) {
         errorMsg.textContent = err.message || "Erreur de connexion avec le serveur.";
         errorMsg.style.display = "block";
@@ -741,6 +824,9 @@ function initOrderForm() {
       updateModalPaymentUI();
     }
   });
+
+  const cryptoRefreshBtn = document.getElementById("cryptoRefreshBtn");
+  if (cryptoRefreshBtn) cryptoRefreshBtn.addEventListener("click", refreshCryptoQuote);
 }
 
 function updateCustomerTypeFields() {
@@ -884,7 +970,7 @@ function initContactForm() {
 function showBankTransferInstructions(data) {
   document.getElementById("orderFormFields").style.display = "none";
   const resultBox = document.getElementById("bankTransferResult");
-  
+
   document.getElementById("bankIbanVal").textContent = data.instructions.iban;
   document.getElementById("bankBicVal").textContent = data.instructions.bic;
   document.getElementById("bankHolderVal").textContent = data.instructions.beneficiary;
@@ -892,6 +978,67 @@ function showBankTransferInstructions(data) {
   document.getElementById("bankAmountVal").textContent = `${data.instructions.amount.toFixed(2).replace(".", ",")} €`;
 
   resultBox.style.display = "block";
+}
+
+function formatCryptoDate(iso) {
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return iso;
+  const ui = getUiText();
+  return parsed.toLocaleString(ui.dateLocale || "fr-FR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit"
+  });
+}
+
+function showCryptoRecap(data) {
+  document.getElementById("orderFormFields").style.display = "none";
+
+  document.getElementById("cryptoAmountVal").textContent = data.amount_crypto;
+  document.getElementById("cryptoAssetVal").textContent = data.asset;
+  document.getElementById("cryptoAddressVal").textContent = data.pay_address;
+  const tagRow = document.getElementById("cryptoTagRow");
+  if (data.dest_tag !== undefined && data.dest_tag !== null) {
+    document.getElementById("cryptoTagVal").textContent = data.dest_tag;
+    tagRow.style.display = "flex";
+  } else {
+    tagRow.style.display = "none";
+  }
+  document.getElementById("cryptoRateVal").textContent = `${data.rate_eur} EUR/${data.asset} (OKX)`;
+  document.getElementById("cryptoExpiryVal").textContent = formatCryptoDate(data.expires_at);
+  document.getElementById("cryptoRefVal").textContent = data.order_id;
+  document.getElementById("cryptoNotice").textContent = data.notice || "";
+  document.getElementById("cryptoRefreshMessage").style.display = "none";
+
+  document.getElementById("cryptoResult").style.display = "block";
+}
+
+async function refreshCryptoQuote() {
+  const msg = document.getElementById("cryptoRefreshMessage");
+  const btn = document.getElementById("cryptoRefreshBtn");
+  if (!lastCryptoOrder) return;
+  btn.disabled = true;
+  msg.style.display = "none";
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/public/crypto/quote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order_id: lastCryptoOrder.order_id, email: lastCryptoOrder.email })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Renouvellement du devis impossible pour le moment.");
+    }
+    showCryptoRecap(data);
+    msg.style.color = "var(--text-secondary)";
+    msg.textContent = "Nouveau devis affiché ci-dessus.";
+    msg.style.display = "block";
+  } catch (err) {
+    msg.style.color = "var(--danger)";
+    msg.textContent = err.message || "Erreur de connexion avec le serveur.";
+    msg.style.display = "block";
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // =========================================================================

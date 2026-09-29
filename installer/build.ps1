@@ -296,7 +296,6 @@ try {
     Write-Success "Configurateur Windows compilé dans relaisdesk/downloads ($((Get-Item $winConfDl).Name)) : $size Mo"
 } catch {
     Write-Failure $_.Exception.Message
-    Pop-Location
     exit 1
 } finally {
     Pop-Location
@@ -339,7 +338,6 @@ if (Test-Path $ViewerDir) {
         Write-Success "Viewer Windows compilé dans relaisdesk/downloads ($((Get-Item $winViewerDl).Name)) : $size Mo"
     } catch {
         Write-Failure $_.Exception.Message
-        Pop-Location
         exit 1
     } finally {
         Pop-Location
@@ -381,7 +379,6 @@ if (Test-Path $AdminDir) {
         Write-Success "Dashboard Administrateur Windows compilé : $size Mo"
     } catch {
         Write-Failure $_.Exception.Message
-        Pop-Location
         exit 1
     } finally {
         Pop-Location
@@ -407,6 +404,8 @@ if (Test-Path $apiDir) {
         if ($LASTEXITCODE -eq 0) {
             $size = [math]::Round(((Get-Item $apiLinuxBin).Length / 1MB), 2)
             Write-Success "Binaire serveur API Linux compilé (api-linux) : $size Mo"
+        } else {
+            throw "Échec de compilation du serveur API Linux"
         }
     } finally {
         Remove-Item Env:\GOOS -ErrorAction SilentlyContinue
@@ -518,7 +517,6 @@ if (-not $SkipNSIS) {
                 }
             } catch {
                 Write-Failure $_.Exception.Message
-                Pop-Location
                 exit 1
             } finally {
                 Pop-Location

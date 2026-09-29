@@ -527,13 +527,46 @@
           </div>
           <div id="totpRecoveryRemaining" style="margin-top: 8px; font-size: 0.85rem; color: var(--muted); display: none;"></div>
         </div>
+
+        <div class="card settings-card" id="settingsAssuranceRGPDCard">
+          <h2>🛡️ Assurance & Conformité RGPD</h2>
+          <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 14px;">
+            <div style="background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 10px; padding: 14px 16px;">
+              <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #34d399; font-size: 0.95rem;">
+                <span>🛡️</span>
+                <span>Assurance Responsabilité Civile Professionnelle (RC Pro)</span>
+              </div>
+              <p class="muted" style="margin: 6px 0 0 0; font-size: 0.88rem; line-height: 1.5; color: #cbd5e1;">
+                L'activité de <strong>RelaisDesk (Julien BELLOT EI)</strong> est couverte par une assurance Responsabilité Civile Professionnelle spécifique aux prestations informatiques, garantissant la protection de vos interventions et de vos systèmes contre les dommages directs ou immatériels.
+              </p>
+            </div>
+
+            <div style="background: rgba(59, 130, 246, 0.06); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 10px; padding: 14px 16px;">
+              <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #60a5fa; font-size: 0.95rem;">
+                <span>🇪🇺</span>
+                <span>Conformité RGPD & Accord de sous-traitance (DPA - Art. 28)</span>
+              </div>
+              <p class="muted" style="margin: 6px 0 0 0; font-size: 0.88rem; line-height: 1.5; color: #cbd5e1;">
+                Toutes les données sont hébergées en France / Union Européenne. Les flux de session sont chiffrés de bout en bout (aucun enregistrement vidéo, de frappes clavier ou de mot de passe). Pour vos audits de conformité, un <strong>Accord de Sous-traitance des Données (DPA)</strong> conforme à l'article 28 du RGPD est opposable et consultable à tout moment.
+              </p>
+              <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <a href="../sous-traitance-rgpd.html" target="_blank" class="button secondary" style="font-size: 0.82rem; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;">
+                  <span>📄</span> Consulter l'Accord RGPD (DPA) →
+                </a>
+                <a href="../securite.html" target="_blank" class="button secondary" style="font-size: 0.82rem; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;">
+                  <span>🔒</span> Page Sécurité & Vulnérabilités →
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="card"><h2>Sécurité du compte</h2><p>Votre session expire automatiquement après 30 minutes d’inactivité et disparaît à la fermeture de l’onglet.</p></div>
       </section>
     </section>
   </div>
 
   <dialog id="setup2FADialog">
-    <form id="setup2FAForm" method="dialog" class="dialog-card" style="max-width: 520px;">
+    <form id="setup2FAForm" class="dialog-card" style="max-width: 520px;">
       <button id="closeSetup2FADialog" class="dialog-close" type="button" aria-label="Fermer">×</button>
       <p class="eyebrow">Sécurité renforcée</p>
       <h2>Activer la validation en deux étapes</h2>
@@ -565,7 +598,7 @@
   </dialog>
 
   <dialog id="disable2FADialog">
-    <form id="disable2FAForm" method="dialog" class="dialog-card" style="max-width: 440px;">
+    <form id="disable2FAForm" class="dialog-card" style="max-width: 440px;">
       <button id="closeDisable2FADialog" class="dialog-close" type="button" aria-label="Fermer">×</button>
       <p class="eyebrow">Sécurité</p>
       <h2>Désactiver la 2FA</h2>
@@ -582,7 +615,7 @@
   </dialog>
 
   <dialog id="recoveryCodesDialog">
-    <form id="recoveryCodesForm" method="dialog" class="dialog-card" style="max-width: 480px;">
+    <form id="recoveryCodesForm" class="dialog-card" style="max-width: 480px;">
       <button id="closeRecoveryCodesDialog" class="dialog-close" type="button" aria-label="Fermer">×</button>
       <p class="eyebrow">Codes de secours</p>
       <h2>Nouveaux codes de secours</h2>
@@ -615,21 +648,31 @@
   </dialog>
 
   <dialog id="renewDialog">
-    <form id="renewForm" method="dialog" class="dialog-card">
+    <form id="renewForm" class="dialog-card">
       <button id="closeRenewDialog" class="dialog-close" type="button" aria-label="Fermer">×</button>
       <p class="eyebrow">Renouvellement</p><h2>Prolonger la licence</h2>
       <p id="renewLicenseLabel" class="muted"></p>
       <label for="paymentMethod">Mode de paiement</label>
-      <select id="paymentMethod"><option value="stripe">Carte bancaire — Stripe</option><option value="bank_transfer">Virement bancaire</option></select>
+      <select id="paymentMethod"><option value="stripe">Carte bancaire — Stripe</option><option value="bank_transfer">Virement bancaire</option><option value="crypto_btc" hidden>Bitcoin (BTC)</option><option value="crypto_xrp" hidden>XRP</option></select>
       <label class="check"><input id="renewTerms" type="checkbox" required><span>J’accepte les <a href="../cgv.html" target="_blank" rel="noopener">CGV/CGU en vigueur</a>.</span></label>
       <label class="check"><input id="renewImmediate" type="checkbox"><span>Je demande l’exécution immédiate du renouvellement. Cette case est obligatoire pour un consommateur.</span></label>
       <button class="button primary" type="submit">Continuer vers le paiement</button>
+      <div id="renewCryptoRecap" style="display: none; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: rgba(15,23,42,.75); font-size: 14px;">
+        <p id="renewCryptoNotice" class="muted" style="margin: 0;"></p>
+        <div>Montant : <strong><code id="renewCryptoAmount"></code> <span id="renewCryptoAsset"></span></strong> <button id="copyRenewCryptoAmount" class="button subtle" type="button" style="width: auto; padding: 4px 10px;">Copier</button></div>
+        <div style="overflow-wrap: anywhere;">Adresse : <strong><code id="renewCryptoAddress"></code></strong> <button id="copyRenewCryptoAddress" class="button subtle" type="button" style="width: auto; padding: 4px 10px;">Copier</button></div>
+        <div id="renewCryptoTagRow" style="display: none;">Destination Tag : <strong><code id="renewCryptoTag"></code></strong> <button id="copyRenewCryptoTag" class="button subtle" type="button" style="width: auto; padding: 4px 10px;">Copier</button></div>
+        <div>Cours : <strong id="renewCryptoRate"></strong></div>
+        <div>À régler avant le : <strong id="renewCryptoExpiry"></strong></div>
+        <div>Référence : <strong><code id="renewCryptoRef"></code></strong></div>
+        <button id="renewCryptoRefresh" class="button secondary" type="button">Devis expiré ? Obtenir un nouveau montant</button>
+      </div>
       <p id="renewMessage" class="message" role="status"></p>
     </form>
   </dialog>
 
   <dialog id="interventionDialog">
-    <form id="interventionForm" method="dialog" class="dialog-card">
+    <form id="interventionForm" class="dialog-card">
       <button id="closeInterventionDialog" class="dialog-close" type="button" aria-label="Fermer">×</button>
       <p class="eyebrow">Historique</p><h2>Ajouter une fiche</h2>
       <label for="interventionLicense">Licence</label><select id="interventionLicense" required></select>
@@ -641,7 +684,7 @@
   </dialog>
 
   <dialog id="completeInterventionDialog">
-    <form id="completeInterventionForm" method="dialog" class="dialog-card">
+    <form id="completeInterventionForm" class="dialog-card">
       <button id="closeCompleteInterventionDialog" class="dialog-close" type="button" aria-label="Fermer">×</button>
       <p class="eyebrow">Historique</p><h2>Clôturer la fiche</h2>
       <label for="completeClientReference">Référence client</label><input id="completeClientReference" maxlength="254">
@@ -653,7 +696,7 @@
   </dialog>
 
   <dialog id="enrollDeviceDialog">
-    <form id="enrollDeviceForm" method="dialog" class="dialog-card" style="max-width: 540px;">
+    <form id="enrollDeviceForm" class="dialog-card" style="max-width: 540px;">
       <button id="closeEnrollDeviceDialog" class="dialog-close" type="button" aria-label="Fermer">×</button>
       <p class="eyebrow" data-i18n="enroll_eyebrow" style="padding-right: 2.5rem;">Accès permanent sans surveillance</p>
       <h2 data-i18n="enroll_heading">Enrôler un nouveau poste</h2>
@@ -689,7 +732,7 @@
 
   <!-- Modale : Création ou modification d'un dossier -->
   <dialog id="folderModal">
-    <form id="folderForm" method="dialog" class="dialog-card" style="max-width: 480px;">
+    <form id="folderForm" class="dialog-card" style="max-width: 480px;">
       <button id="closeFolderModal" class="dialog-close" type="button" aria-label="Fermer">×</button>
       <p class="eyebrow">Organisation du parc</p>
       <h2 id="folderModalTitle">Nouveau dossier</h2>
@@ -711,7 +754,7 @@
 
   <!-- Modale : Déplacer un poste vers un dossier -->
   <dialog id="moveDeviceModal">
-    <form id="moveDeviceForm" method="dialog" class="dialog-card" style="max-width: 480px;">
+    <form id="moveDeviceForm" class="dialog-card" style="max-width: 480px;">
       <button id="closeMoveDeviceModal" class="dialog-close" type="button" aria-label="Fermer">×</button>
       <p class="eyebrow">Organisation du parc</p>
       <h2>Déplacer le poste</h2>
@@ -729,8 +772,9 @@
   <script src="../i18n.js?v=20260920-interventions" defer></script>
   <script src="qrcode.min.js?v=20260911-2fa" defer></script>
   <script src="subscription-cancellation.js?v=20260912-legal-ui" defer></script>
-  <script src="app.js?v=20260921-legal-crypto-v1" defer></script>
+  <script src="app.js?v=20260922-okx-crypto-v1" defer></script>
   <script src="teams.js?v=20260919-prestations" defer></script>
   <script src="services.js?v=20260919-prestations-legal" defer></script>
+  <script src="../maintenance.js"></script>
 </body>
 </html>

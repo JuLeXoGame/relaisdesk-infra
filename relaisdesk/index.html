@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RelaisDesk | Logiciel de support et téléassistance pour tous les professionnels</title>
-  <meta name="description" content="Logiciel de prise en main et téléassistance à distance pour professionnels et entreprises : assistance ponctuelle illimitée, parc dès 500 postes et serveurs sécurisés en France. Dès 24,90 €/mois.">
+  <title>RelaisDesk | Logiciel de téléassistance pour professionnels</title>
+  <meta name="description" content="Logiciel de téléassistance pour professionnels : assistance ponctuelle illimitée, parc dès 500 postes, serveurs en France. Dès 24,90 €/mois.">
   <meta name="author" content="RelaisDesk">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <link rel="canonical" href="https://relaisdesk.fr/">
+  <link rel="alternate" hreflang="fr" href="https://relaisdesk.fr/">
+  <link rel="alternate" hreflang="x-default" href="https://relaisdesk.fr/">
 
   <!-- Open Graph / Facebook / LinkedIn / Discord -->
   <meta property="og:type" content="website">
@@ -64,7 +66,7 @@
   <link rel="stylesheet" href="styles.css?v=20260912-nav-center">
 
   <!-- Données Structurées Schema.org (JSON-LD) pour Google -->
-  <script type="application/ld+json">
+  <script type="application/ld+json" id="org-schema">
   {
     "@context": "https://schema.org",
     "@graph": [
@@ -75,7 +77,6 @@
         "legalName": "Julien BELLOT EI — RelaisDesk",
         "url": "https://relaisdesk.fr/",
         "logo": "https://relaisdesk.fr/logo.avif",
-        "telephone": "+33662855930",
         "identifier": "SIRET 94074710800014",
         "description": "Service de téléassistance et de support informatique à distance basé sur RustDesk Community.",
         "address": {
@@ -115,7 +116,7 @@
             "price": "24.90",
             "priceCurrency": "EUR",
             "availability": "https://schema.org/InStock",
-            "description": "1 technicien simultané, 500 postes enregistrables dans la console, assistance ponctuelle illimitée",
+            "description": "1 technicien simultané, 500 postes enregistrables dans la console, assistance ponctuelle illimitée. Prix net, TVA non applicable (art. 293 B du CGI).",
             "url": "https://relaisdesk.fr/#pricing"
           },
           {
@@ -124,7 +125,7 @@
             "price": "110.00",
             "priceCurrency": "EUR",
             "availability": "https://schema.org/InStock",
-            "description": "5 techniciens simultanés, 1 000 postes enregistrables dans la console, assistance ponctuelle illimitée",
+            "description": "5 techniciens simultanés, 1 000 postes enregistrables dans la console, assistance ponctuelle illimitée. Prix net, TVA non applicable (art. 293 B du CGI).",
             "url": "https://relaisdesk.fr/#pricing"
           },
           {
@@ -133,7 +134,7 @@
             "price": "199.00",
             "priceCurrency": "EUR",
             "availability": "https://schema.org/InStock",
-            "description": "10 à 500 techniciens simultanés, parc à partir de 2 000 postes, assistance ponctuelle illimitée",
+            "description": "10 à 500 techniciens simultanés, parc à partir de 2 000 postes, assistance ponctuelle illimitée. Prix net, TVA non applicable (art. 293 B du CGI).",
             "url": "https://relaisdesk.fr/#pricing"
           }
         ],
@@ -181,7 +182,7 @@
             "name": "Comment fonctionne le paiement et la livraison de la licence ?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Par carte bancaire (Stripe), votre licence est créée immédiatement et envoyée par email avec vos identifiants. Par virement bancaire, la licence est activée dès réception des fonds par notre administration."
+              "text": "Par carte bancaire (Stripe), votre licence est créée immédiatement et envoyée par email avec vos identifiants. Par virement bancaire, la licence est activée dès réception des fonds par notre administration. Les abonnements peuvent aussi être réglés en Bitcoin ou XRP lorsque ce moyen est proposé au récapitulatif."
             }
           },
           {
@@ -388,22 +389,22 @@
                 <span class="mockup-dot yellow"></span>
                 <span class="mockup-dot green"></span>
               </div>
-              <div class="mockup-title" data-i18n="fleet_mockup_title">RelaisDesk — Console de Parc</div>
+              <div class="mockup-title" data-i18n="fleet_mockup_title">RelaisDesk — Parc & Postes permanents</div>
               <div class="mockup-badge" data-i18n="fleet_quota_hint">500 postes inclus</div>
             </div>
 
             <div class="mockup-toolbar">
               <div class="mockup-search">
                 <span class="search-icon">🔍</span>
-                <span class="search-placeholder" data-i18n="fleet_mockup_search">Rechercher par alias, ID ou emplacement...</span>
+                <span class="search-placeholder" data-i18n="fleet_mockup_search">Rechercher parmi les postes chargés…</span>
               </div>
               <div class="mockup-actions">
-                <span class="mockup-btn-new">+ Enrôler un poste</span>
+                <span class="mockup-btn-new" data-i18n="fleet_mockup_enroll_btn">＋ Enrôler un nouveau poste</span>
               </div>
             </div>
 
             <div class="mockup-device-list">
-              <!-- Item 1: Online Server -->
+              <!-- Item 1: Enrolled Server -->
               <div class="mockup-device-item online">
                 <div class="mockup-device-icon">🖥️</div>
                 <div class="mockup-device-info">
@@ -414,15 +415,19 @@
                     </span>
                   </div>
                   <div class="mockup-device-sub">
-                    <span>Windows Server 2022</span> • <span>ID: 948 201 552</span> • <span>Siège social</span>
+                    <span>ID : 948 201 552</span> • <span><span data-i18n="fleet_detail_host">Hôte</span> : SRV-COMPTA</span> • <span>📁 Siège/Serveurs</span>
+                  </div>
+                  <div class="mockup-device-sub">
+                    <span><span data-i18n="fleet_mockup_activity">Activité</span> : 24/09/2026 09:12</span> • <span>MAC : 02:42:AC:11:00:02</span>
                   </div>
                 </div>
-                <div class="mockup-device-action">
-                  <span class="mockup-connect-btn">⚡ <span data-i18n="fleet_mockup_connect">Connecter</span></span>
+                <div class="mockup-device-actions">
+                  <span class="mockup-row-btn primary" data-i18n="fleet_mockup_btn_direct">Connexion directe</span>
+                  <span class="mockup-row-btn" data-i18n="fleet_mockup_btn_service">Connexion & Prestation</span>
                 </div>
               </div>
 
-              <!-- Item 2: Online Workstation -->
+              <!-- Item 2: Enrolled Workstation -->
               <div class="mockup-device-item online">
                 <div class="mockup-device-icon">💻</div>
                 <div class="mockup-device-info">
@@ -433,37 +438,41 @@
                     </span>
                   </div>
                   <div class="mockup-device-sub">
-                    <span>Windows 11 Pro</span> • <span>ID: 812 404 119</span> • <span>Hall principal</span>
+                    <span>ID : 812 404 119</span> • <span>Windows 11 Pro</span> • <span>📁 Siège/Accueil</span>
+                  </div>
+                  <div class="mockup-device-sub">
+                    <span><span data-i18n="fleet_mockup_activity">Activité</span> : 24/09/2026 09:05</span>
                   </div>
                 </div>
-                <div class="mockup-device-action">
-                  <span class="mockup-connect-btn">⚡ <span data-i18n="fleet_mockup_connect">Connecter</span></span>
+                <div class="mockup-device-actions">
+                  <span class="mockup-row-btn primary" data-i18n="fleet_mockup_btn_direct">Connexion directe</span>
+                  <span class="mockup-row-btn" data-i18n="fleet_mockup_btn_copyid">📋 Copier l'ID</span>
                 </div>
               </div>
 
-              <!-- Item 3: Offline POS -->
-              <div class="mockup-device-item offline">
+              <!-- Item 3: Pending enrollment POS -->
+              <div class="mockup-device-item pending">
                 <div class="mockup-device-icon">📠</div>
                 <div class="mockup-device-info">
                   <div class="mockup-device-title-row">
                     <span class="mockup-device-name">TPV-MAGASIN-LYON</span>
-                    <span class="mockup-status-tag tag-offline">
-                      <span class="dot-gray"></span> <span data-i18n="fleet_mockup_offline">Hors ligne</span>
+                    <span class="mockup-status-tag tag-waiting">
+                      <span class="dot-amber"></span> <span data-i18n="fleet_mockup_waiting">En attente</span>
                     </span>
                   </div>
                   <div class="mockup-device-sub">
-                    <span>Windows 10 IoT</span> • <span>ID: 703 118 420</span> • <span data-i18n="fleet_mockup_last_seen">Vu il y a 18 min</span>
+                    <span data-i18n="fleet_mockup_enroll_pending">⚠️ Enrôlement : en attente — code 15 min : 8F3K-2Q7M</span>
                   </div>
                 </div>
-                <div class="mockup-device-action">
-                  <span class="mockup-connect-btn disabled">Inactif</span>
+                <div class="mockup-device-actions">
+                  <span class="mockup-row-btn" data-i18n="fleet_mockup_btn_copycode">📋 Copier le code</span>
                 </div>
               </div>
             </div>
 
             <div class="mockup-footer">
-              <span class="mockup-footer-count">🟢 2 en ligne / 3 postes actifs</span>
-              <a href="client/" class="mockup-footer-link">Ouvrir la console →</a>
+              <span class="mockup-footer-count" data-i18n="fleet_mockup_footer_count">🟢 2 en ligne / 3 postes chargés</span>
+              <a href="client/#devices" class="mockup-footer-link" data-i18n="fleet_mockup_footer_link">Ouvrir la console →</a>
             </div>
           </div>
         </div>
@@ -525,53 +534,38 @@
                 <span class="mockup-dot yellow"></span>
                 <span class="mockup-dot green"></span>
               </div>
-              <div class="mockup-title" data-i18n="prestation_mockup_title">RelaisDesk Technicien — Prise en main</div>
+              <div class="mockup-title" data-i18n="prestation_mockup_title">Connexion & Prestation</div>
               <div class="mockup-badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3);" data-i18n="prestation_mockup_badge">Option Prestation Active</div>
             </div>
 
-            <!-- Launcher Simulation -->
+            <!-- Service Dialog Simulation -->
             <div class="prestation-mockup-body">
-              <div class="prestation-mockup-field-row">
-                <span class="prestation-mockup-label" data-i18n="prestation_mockup_client_id_label">ID du poste client :</span>
-                <span class="prestation-mockup-code">812 404 119</span>
+              <div class="prestation-target-row">
+                <span data-i18n="prestation_target">Cible : code viewer 7X4K-9P2M — Client Dupont</span>
+              </div>
+              <div class="prestation-client-ready" data-i18n="prestation_client_ready">🟢 Client prêt — ID : 812 404 119</div>
+
+              <div class="prestation-rate-select" data-i18n="prestation_rate_line">Dépannage standard — 50,00 €/h — paiement après connexion</div>
+              <div class="prestation-agreed" data-i18n="prestation_agreed">☑ Le client a accepté ce tarif et son mode de calcul</div>
+
+              <div class="prestation-work-card">
+                <div class="prestation-work-status" data-i18n="prestation_work_status">Temps confirmé : 18,70 min • Montant : 15,58 €</div>
+                <div class="prestation-work-state" data-i18n="prestation_work_state">Fiche #1042 • En cours • Non payé</div>
               </div>
 
-              <!-- Action Buttons -->
-              <div class="prestation-mockup-buttons">
-                <div class="prestation-btn-sample direct">
-                  <span data-i18n="prestation_btn_direct">⚡ Connexion directe</span>
-                  <small data-i18n="prestation_btn_direct_sub">(Gratuit / Sans facturation)</small>
-                </div>
-                <div class="prestation-btn-sample billing active-glow">
-                  <span data-i18n="prestation_btn_billing">💳 Connexion & Prestation</span>
-                  <small data-i18n="prestation_btn_billing_sub">(Tarif ou forfait sélectionné)</small>
-                </div>
-              </div>
-
-              <!-- Selected Rate & Timer Box -->
-              <div class="prestation-session-card">
-                <div class="prestation-session-header">
-                  <span class="prestation-rate-tag" data-i18n="prestation_sample_rate">Tarif horaire : 50,00 € / heure</span>
-                  <span class="mockup-status-tag tag-online"><span class="pulse-dot"></span> <span data-i18n="prestation_session_active">Session active</span></span>
-                </div>
-                <div class="prestation-meter-row">
-                  <div class="prestation-meter-val" data-i18n="prestation_sample_timer">⏱️ 18 min 42 s</div>
-                  <div class="prestation-meter-price" data-i18n="prestation_sample_price">15,58 € TTC</div>
-                </div>
-                <p class="prestation-meter-sub" data-i18n="prestation_meter_hint">Compteur monotone anti-triche • Déconnexions déduites</p>
-
-                <div class="prestation-checkout-preview">
-                  <div class="prestation-checkout-info">
-                    <strong data-i18n="prestation_checkout_ready">Paiement client prêt :</strong>
-                    <span data-i18n="prestation_checkout_link_info">Lien Stripe Checkout sécurisé</span>
-                  </div>
-                  <span class="prestation-pay-link" data-i18n="prestation_checkout_cta">💳 Payer par carte (Stripe) →</span>
-                </div>
+              <div class="prestation-btn-grid">
+                <span class="prestation-action-btn" data-i18n="prestation_btn_prepare">Préparer la prestation</span>
+                <span class="prestation-action-btn primary" data-i18n="prestation_btn_start">Démarrer / reprendre la connexion</span>
+                <span class="prestation-action-btn" data-i18n="prestation_btn_refresh">Actualiser le paiement / la durée</span>
+                <span class="prestation-action-btn" data-i18n="prestation_btn_createlink">Créer le lien Stripe</span>
+                <span class="prestation-action-btn" data-i18n="prestation_btn_copylink">Copier le lien pour le client</span>
+                <span class="prestation-action-btn" data-i18n="prestation_btn_finish">Fermer la prise en main et terminer</span>
+                <span class="prestation-action-btn wide" data-i18n="prestation_btn_cancel">Annuler la prestation sans paiement</span>
               </div>
             </div>
 
             <div class="mockup-footer">
-              <span class="mockup-footer-count" data-i18n="prestation_mockup_footer">🛡️ Sécurité Stripe Connect • Sans stockage de carte</span>
+              <span class="mockup-footer-count" data-i18n="prestation_mockup_footer">🛡️ Aucune saisie bancaire dans RelaisDesk</span>
               <a href="client/#services" class="mockup-footer-link" data-i18n="prestation_mockup_footer_link">Configurer mes tarifs →</a>
             </div>
           </div>
@@ -618,7 +612,7 @@
             <li class="highlight-feature"><span class="check">✓</span> <strong><span>500</span> <span data-i18n="plan_feat_managed_devices">postes enregistrables dans la console</span></strong></li>
             <li><span class="check">✓</span> <span data-i18n="plan_feat_unlimited_clients">Clients assistés illimités (codes 12h)</span></li>
             <li><span class="check">✓</span> <span data-i18n="feat5_title">Applications Windows & Linux</span></li>
-            <li><span class="check">✓</span> <span data-i18n="plan_feat_e2e">Chiffrement de bout en bout</span></li>
+            <li><span class="check">✓</span> <span data-i18n="plan_feat_e2e">Sessions chiffrées de bout en bout</span></li>
             <li><span class="check">✓</span> <span data-i18n="plan_feat_support">Support technique</span></li>
           </ul>
           <button class="btn btn-secondary btn-block" data-action="open-order" data-plan="starter" data-i18n="plan_btn_trial">Démarrer l'essai 30 jours</button>
@@ -643,7 +637,7 @@
             <li class="highlight-feature"><span class="check">✓</span> <strong><span>1 000</span> <span data-i18n="plan_feat_managed_devices">postes enregistrables dans la console</span></strong></li>
             <li><span class="check">✓</span> <span data-i18n="plan_feat_unlimited_clients">Clients assistés illimités (codes 12h)</span></li>
             <li><span class="check">✓</span> <span data-i18n="feat5_title">Applications Windows & Linux</span></li>
-            <li><span class="check">✓</span> <span data-i18n="plan_feat_e2e">Chiffrement de bout en bout</span></li>
+            <li><span class="check">✓</span> <span data-i18n="plan_feat_e2e">Sessions chiffrées de bout en bout</span></li>
             <li><span class="check">✓</span> <span data-i18n="plan_feat_support">Support technique</span></li>
           </ul>
           <button class="btn btn-primary btn-block" data-action="open-order" data-plan="pro" data-i18n="plan_btn_trial">Démarrer l'essai 30 jours</button>
@@ -675,12 +669,13 @@
             <li><span class="check">✓</span> <strong id="ultraTechFeature" data-i18n="plan_feat_custom_tech">10 à 500 connexions simultanées</strong></li>
             <li class="highlight-feature"><span class="check">✓</span> <strong><span id="ultraDeviceCount">2 000</span> <span data-i18n="plan_feat_managed_devices">postes enregistrables dans la console</span></strong></li>
             <li><span class="check">✓</span> <span data-i18n="plan_feat_unlimited_clients">Clients assistés illimités (codes 12h)</span></li>
-            <li><span class="check">✓</span> <span data-i18n="plan_feat_e2e_traffic">Bande passante dédiée & SLA</span></li>
+            <li><span class="check">✓</span> <span data-i18n="plan_feat_e2e_traffic">Bande passante dédiée</span></li>
             <li><span class="check">✓</span> <span data-i18n="plan_feat_support">Support technique</span></li>
           </ul>
           <button class="btn btn-secondary btn-block" data-action="open-order" data-plan="ultra" data-i18n="plan_btn_trial">Démarrer l'essai 30 jours</button>
         </div>
       </div>
+      <p class="pricing-legal-note" style="margin-top: 1.25rem; text-align: center; color: var(--text-secondary); font-size: 0.85rem;">Prix nets en euros, TVA non applicable (art. 293 B du CGI). Les formules « mensuelle » et « annuelle » sont prépayées pour 30 ou 365 jours, sans reconduction tacite hors parcours d'essai (voir <a href="cgv.html">CGV art. 3</a>).</p>
     </div>
   </section>
 
@@ -700,8 +695,8 @@
             <h3 data-i18n="dl_tech_heading">👨‍💻 Application Technicien (Configurateur)</h3>
             <p data-i18n="dl_tech_desc">Destinée aux techniciens disposant d'une licence. Permet de configurer automatiquement RustDesk et de générer les codes d'assistance.</p>
             <div class="download-actions" style="flex-wrap: wrap;">
-              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Setup_1.0.0.exe" class="btn btn-primary btn-sm" data-i18n="dl_win_installer">📦 Installeur Setup (.exe)</a>
-              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Portable.exe" class="btn btn-secondary btn-sm" data-i18n="dl_win_portable">Portatif (.exe)</a>
+              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Setup_1.0.0.exe" class="btn btn-primary btn-sm"><svg class="btn-logo" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path fill="currentColor" d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.2 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg><span data-i18n="dl_win_installer">Installeur Setup (.exe)</span></a>
+              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Portable.exe" class="btn btn-secondary btn-sm"><svg class="btn-logo" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path fill="currentColor" d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.2 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg><span data-i18n="dl_win_portable">Portatif (.exe)</span></a>
               <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Mac.dmg" class="btn btn-secondary btn-sm btn-mac-locked" data-i18n="dl_mac_dmg" title="Bientôt disponible (Accès réservé)">🍏 macOS (.dmg) — Bientôt disponible</a>
               <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien.deb" class="btn btn-secondary btn-sm" data-i18n="dl_linux_deb">🐧 Linux (.deb)</a>
               <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Linux" class="btn btn-secondary btn-sm" title="Exécutable Linux autonome">🐧 Linux autonome</a>
@@ -713,8 +708,8 @@
             <h3 data-i18n="dl_viewer_heading">👥 Application Client (Poste assisté)</h3>
             <p data-i18n="dl_viewer_desc">Application légère pour vos clients finaux. Il leur suffit d'entrer le code à 8 caractères (XXXX-XXXX) fourni par le technicien.</p>
             <div class="download-actions" style="flex-wrap: wrap;">
-              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Setup.exe" class="btn btn-primary btn-sm" data-i18n="dl_win_installer">📦 Installeur Setup (.exe)</a>
-              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Portable.exe" class="btn btn-secondary btn-sm" data-i18n="dl_win_portable">Portatif (.exe)</a>
+              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Setup.exe" class="btn btn-primary btn-sm"><svg class="btn-logo" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path fill="currentColor" d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.2 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg><span data-i18n="dl_win_installer">Installeur Setup (.exe)</span></a>
+              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Portable.exe" class="btn btn-secondary btn-sm"><svg class="btn-logo" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path fill="currentColor" d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.2 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg><span data-i18n="dl_win_portable">Portatif (.exe)</span></a>
               <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Mac.dmg" class="btn btn-secondary btn-sm btn-mac-locked" data-i18n="dl_mac_dmg" title="Bientôt disponible (Accès réservé)">🍏 macOS (.dmg) — Bientôt disponible</a>
               <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_viewer.deb" class="btn btn-secondary btn-sm" data-i18n="dl_linux_deb">🐧 Linux (.deb)</a>
             </div>
@@ -776,7 +771,7 @@
             <span class="faq-icon" aria-hidden="true">▼</span>
           </button>
           <div class="faq-answer" id="faq-answer-4" data-i18n="faq_a4">
-            Par carte bancaire (Stripe), votre licence est créée immédiatement et envoyée par email avec vos identifiants. Par virement bancaire, la licence est activée dès réception des fonds par notre administration.
+            Par carte bancaire (Stripe), votre licence est créée immédiatement et envoyée par email avec vos identifiants. Par virement bancaire, la licence est activée dès réception des fonds par notre administration. Les abonnements peuvent aussi être réglés en Bitcoin ou XRP lorsque ce moyen est proposé au récapitulatif.
           </div>
         </div>
 
@@ -826,6 +821,8 @@
             <li><a href="#downloads" data-i18n="nav_downloads">Téléchargements</a></li>
             <li><a href="client/" data-i18n="nav_client">Espace Client</a></li>
             <li><a href="client/#codes" data-i18n="nav_technician">👨‍💻 Espace Technicien</a></li>
+            <li><a href="comparatif.html">Comparatif</a></li>
+            <li><a href="guide-demarrage.html">Guide de démarrage</a></li>
           </ul>
         </div>
 
@@ -845,7 +842,11 @@
         <div class="footer-col">
           <h4>Contact & Légal</h4>
           <ul>
+            <li><a href="https://status.relaisdesk.fr/" target="_blank" rel="noopener" data-i18n="footer_status">🟢 État du service</a></li>
             <li><a href="contact.html">Formulaire de contact</a></li>
+            <li>📞 <span data-legal-phone="0018181d1d19131e1e12181b"><a href="&#116;&#101;&#108;&#58;&#43;&#51;&#51;&#54;&#54;&#50;&#56;&#53;&#53;&#57;&#51;&#48;">&#48;&#54;&#32;&#54;&#50;&#32;&#56;&#53;&#32;&#53;&#57;&#32;&#51;&#48;</a></span> (lun–ven, 9h–18h)</li>
+            <li><a href="securite.html">Sécurité & Vulnérabilités</a></li>
+            <li><a href="sous-traitance-rgpd.html">Sous-traitance RGPD (DPA)</a></li>
             <li><a href="mentions-legales.html">Mentions légales</a></li>
             <li><a href="politique-confidentialite.html">Politique de confidentialité</a></li>
             <li><a href="cgv.html">Conditions Générales</a></li>
@@ -951,6 +952,24 @@
                   <small style="color: var(--text-muted); font-size: 0.75rem;">Paiement direct (sans essai)</small>
                 </div>
               </div>
+
+              <!-- Bitcoin (shown only when offered by the API) -->
+              <div id="payOpt_crypto_btc" class="payment-option" data-action="select-payment" data-payment-method="crypto_btc" style="display: none;">
+                <span>₿</span>
+                <div>
+                  <div>Bitcoin (BTC)</div>
+                  <small style="color: var(--text-muted); font-size: 0.75rem;">Paiement direct (sans essai)</small>
+                </div>
+              </div>
+
+              <!-- XRP (shown only when offered by the API) -->
+              <div id="payOpt_crypto_xrp" class="payment-option" data-action="select-payment" data-payment-method="crypto_xrp" style="display: none;">
+                <span>◈</span>
+                <div>
+                  <div>XRP</div>
+                  <small style="color: var(--text-muted); font-size: 0.75rem;">Paiement direct (sans essai)</small>
+                </div>
+              </div>
             </div>
 
             <!-- PayPal Disabled Phase 2 -->
@@ -968,7 +987,7 @@
             <p id="orderTermsPeriodNote" style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.75rem;">0 € prélevé aujourd'hui. Vos coordonnées de carte sont vérifiées par Stripe. L'abonnement payant ne démarre qu'à l'issue des 30 jours gratuits, résiliable à tout moment en 1 clic dans l'espace client.</p>
             <label style="display: flex; gap: 0.65rem; align-items: flex-start; font-size: 0.84rem; margin-bottom: 0.75rem;">
               <input type="checkbox" id="orderTermsAccepted" required style="margin-top: 0.2rem;">
-              <span>J'ai lu et j'accepte les <a href="cgv.html" target="_blank" rel="noopener" style="color: var(--border-focus);">CGV/CGU version 2026-09-21</a> et j'ai pris connaissance de la <a href="politique-confidentialite.html" target="_blank" rel="noopener" style="color: var(--border-focus);">politique de confidentialité</a>. *</span>
+              <span>J'ai lu et j'accepte les <a href="cgv.html" target="_blank" rel="noopener" style="color: var(--border-focus);">CGV/CGU version 2026-09-27</a> et j'ai pris connaissance de la <a href="politique-confidentialite.html" target="_blank" rel="noopener" style="color: var(--border-focus);">politique de confidentialité</a>. *</span>
             </label>
             <label id="trialRecurringLabel" style="display: flex; gap: 0.65rem; align-items: flex-start; font-size: 0.84rem; margin-bottom: 0.75rem;">
               <input type="checkbox" id="orderRecurringAccepted" required style="margin-top: 0.2rem;">
@@ -1038,6 +1057,48 @@
 
         <button class="btn btn-secondary btn-block btn-sm" style="margin-top: 1rem;" data-action="close-order">Fermer</button>
       </div>
+
+      <!-- Crypto Instructions Display -->
+      <div id="cryptoResult" class="bank-info-box" style="display: none;">
+        <h4 style="color: #34d399; margin-bottom: 0.5rem;">✅ Commande enregistrée !</h4>
+        <p id="cryptoNotice" style="margin-bottom: 0.75rem; line-height: 1.5;"></p>
+
+        <div class="copy-row">
+          <span>Montant : <strong id="cryptoAmountVal">—</strong> <span id="cryptoAssetVal"></span></span>
+          <button class="copy-btn" data-action="copy-text" data-target="cryptoAmountVal">Copier</button>
+        </div>
+
+        <div class="copy-row">
+          <span style="word-break: break-all;">Adresse : <strong id="cryptoAddressVal">—</strong></span>
+          <button class="copy-btn" data-action="copy-text" data-target="cryptoAddressVal">Copier</button>
+        </div>
+
+        <div class="copy-row" id="cryptoTagRow" style="display: none;">
+          <span>Destination Tag : <strong id="cryptoTagVal">—</strong></span>
+          <button class="copy-btn" data-action="copy-text" data-target="cryptoTagVal">Copier</button>
+        </div>
+
+        <div class="copy-row">
+          <span>Cours : <strong id="cryptoRateVal">—</strong></span>
+        </div>
+
+        <div class="copy-row">
+          <span>À régler avant le : <strong id="cryptoExpiryVal">—</strong></span>
+        </div>
+
+        <div class="copy-row">
+          <span>Référence : <strong id="cryptoRefVal">—</strong></span>
+          <button class="copy-btn" data-action="copy-text" data-target="cryptoRefVal">Copier</button>
+        </div>
+
+        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.75rem;">
+          💡 <em>Un e-mail récapitulatif vient de vous être envoyé. Votre licence sera activée automatiquement à réception du dépôt.</em>
+        </p>
+
+        <div id="cryptoRefreshMessage" role="alert" style="display: none; font-size: 0.85rem; margin-top: 0.75rem;"></div>
+        <button id="cryptoRefreshBtn" type="button" class="btn btn-secondary btn-block btn-sm" style="margin-top: 0.75rem;">🔄 Devis expiré ? Obtenir un nouveau montant</button>
+        <button class="btn btn-secondary btn-block btn-sm" style="margin-top: 0.5rem;" data-action="close-order">Fermer</button>
+      </div>
     </div>
   </div>
 
@@ -1061,6 +1122,8 @@
   </div>
 
   <script src="i18n.js?v=20260912-legal-ui"></script>
-  <script src="app.js?v=20260921-legal-crypto-v1"></script>
+  <script src="app.js?v=20260922-okx-crypto-v1"></script>
+  <script src="legal-phone.js" defer></script>
+  <script src="maintenance.js"></script>
 </body>
 </html>

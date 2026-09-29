@@ -89,7 +89,11 @@ func relaunchElevated(args []string) error {
 	}
 	verbPtr, _ := windows.UTF16PtrFromString("runas")
 	exePtr, _ := windows.UTF16PtrFromString(exe)
-	argStr := strings.Join(args, " ")
+	quoted := make([]string, len(args))
+	for i, arg := range args {
+		quoted[i] = quoteWindowsCmdArg(arg)
+	}
+	argStr := strings.Join(quoted, " ")
 	argPtr, _ := windows.UTF16PtrFromString(argStr)
 	cwdPtr, _ := windows.UTF16PtrFromString(filepath.Dir(exe))
 
@@ -707,85 +711,123 @@ func uninstallFleet() error {
 		return err
 	}
 	defer manager.Disconnect()
-	service, err := manager.OpenService(fleetServiceName)
-	if err == nil {
-		defer service.Close()
-		status, e := service.Query()
-		if e != nil {
-			return e
-		}
-		if status.State != svc.Stopped {
-			if _, e = service.Control(svc.Stop); e != nil {
-				return e
-			}
-			if e = waitFleetService(service, svc.Stopped); e != nil {
-				return e
-			}
-		}
-		if e = service.Delete(); e != nil {
-			return e
-		}
-	} else if !errors.Is(err, windows.ERROR_SERVICE_DOES_NOT_EXIST) {
+
+	// Notre service d'autorisation : un échec ici est bloquant, sinon le
+	// remplacement automatique retomberait sur "existe déjà".
+	if err = removeFleetAuthService(manager); err != nil {
 		return err
 	}
 
-	// Only delete the engine service owned by this installation.
-	rdService, err := manager.OpenService("RustDesk")
-	if err == nil {
-		defer rdService.Close()
-		cfg, e := rdService.Config()
-		if e != nil {
-			return e
-		}
-		if checkFleetServiceCommand(cfg.BinaryPathName) == nil {
-			if e = stopFleetRustDesk(); e != nil {
-				return e
-			}
-			if e = rdService.Delete(); e != nil {
-				return e
-			}
-		}
-	} else if !errors.Is(err, windows.ERROR_SERVICE_DOES_NOT_EXIST) {
-		return err
-	}
-	if err = terminateFleetEngineProcesses(); err != nil {
-		return err
-	}
-	time.Sleep(200 * time.Millisecond)
-
+	// Notre état local : un échec ici est bloquant. Un agent orphelin
+	// (processus sans service) est terminé d'abord pour libérer les fichiers.
 	dir, err := fleetDirectory()
 	if err != nil {
 		return err
 	}
+	if err = terminateFleetAgentProcess(dir); err != nil {
+		return err
+	}
+	time.Sleep(200 * time.Millisecond)
+	if err = removeFleetStateFiles(dir); err != nil {
+		return err
+	}
+
+	// Moteur : meilleur effort uniquement. Un moteur étranger, verrouillé ou
+	// partiellement supprimé ne doit plus empêcher le retrait de notre accès.
+	return cleanupFleetEngine(manager)
+}
+
+func removeFleetAuthService(manager *mgr.Mgr) error {
+	service, err := manager.OpenService(fleetServiceName)
+	if err != nil {
+		if errors.Is(err, windows.ERROR_SERVICE_DOES_NOT_EXIST) {
+			return nil
+		}
+		return err
+	}
+	defer service.Close()
+	status, err := service.Query()
+	if err != nil {
+		return err
+	}
+	if status.State != svc.Stopped {
+		if _, err = service.Control(svc.Stop); err != nil {
+			return err
+		}
+		if err = waitFleetService(service, svc.Stopped); err != nil {
+			return err
+		}
+	}
+	return service.Delete()
+}
+
+// removeFleetStateFiles supprime les fichiers d'enrôlement puis le dossier.
+func removeFleetStateFiles(dir string) error {
 	for _, name := range []string{"network-token", "proof-key", "state.json", "viewer-agent.exe", "ready"} {
-		if err = os.Remove(filepath.Join(dir, name)); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(filepath.Join(dir, name)); err != nil && !os.IsNotExist(err) {
 			return err
 		}
 	}
 	_ = os.Remove(dir)
+	return nil
+}
+
+// cleanupFleetEngine retire le service et les fichiers du moteur quand ils nous
+// appartiennent. La première erreur est retournée mais n'interrompt pas la
+// suite du nettoyage : le remplacement automatique réinstalle le moteur.
+func cleanupFleetEngine(manager *mgr.Mgr) error {
+	var firstErr error
+	note := func(err error) {
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	// Only delete the engine service owned by this installation.
+	service, err := manager.OpenService("RustDesk")
+	if err == nil {
+		func() {
+			defer service.Close()
+			cfg, err := service.Config()
+			if err != nil {
+				note(err)
+				return
+			}
+			if checkFleetServiceCommand(cfg.BinaryPathName) != nil {
+				return // Moteur étranger : laissé en place.
+			}
+			note(stopFleetRustDesk())
+			note(service.Delete())
+		}()
+	} else if !errors.Is(err, windows.ERROR_SERVICE_DOES_NOT_EXIST) {
+		note(err)
+	}
+	note(terminateFleetEngineProcesses())
+	time.Sleep(200 * time.Millisecond)
 
 	root, err := windows.KnownFolderPath(windows.FOLDERID_ProgramFiles, 0)
 	if err != nil {
-		return err
+		note(err)
+		return firstErr
 	}
 	// Only our dedicated engine files; never recursively remove an unrelated
 	// RustDesk installation, or follow a substituted directory.
 	rdDir := filepath.Join(root, "RelaisDeskEngine")
-	if info, e := os.Lstat(rdDir); e == nil {
+	info, err := os.Lstat(rdDir)
+	if err == nil {
 		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-			return errors.New("dossier du moteur non sûr")
+			note(errors.New("dossier du moteur non sûr"))
+			return firstErr
 		}
 		for _, name := range []string{"rustdesk.exe", "sciter.dll", "dylib_virtual_display.dll"} {
-			if e = os.Remove(filepath.Join(rdDir, name)); e != nil && !os.IsNotExist(e) {
-				return e
+			if err = os.Remove(filepath.Join(rdDir, name)); err != nil && !os.IsNotExist(err) {
+				note(err)
 			}
 		}
 		_ = os.Remove(rdDir) // Preserve any other contents.
-	} else if !os.IsNotExist(e) {
-		return e
+	} else if !os.IsNotExist(err) {
+		note(err)
 	}
-
-	return nil
+	return firstErr
 }
 
 func applyServiceUpdate(dir, newBinaryPath string) error {
@@ -817,4 +859,3 @@ del "%%~f0" >nul 2>&1
 	}()
 	return nil
 }
-

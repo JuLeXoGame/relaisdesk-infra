@@ -3,7 +3,7 @@
 const API_BASE_URL = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
   ? 'http://localhost:8443'
   : 'https://api.relaisdesk.fr';
-const TERMS_VERSION = '2026-09-21';
+const TERMS_VERSION = '2026-09-27';
 const state = {
   token: sessionStorage.getItem('rd_customer_token') || '',
   data: null,
@@ -762,10 +762,23 @@ function renderSubscriptions(items) {
       } catch (error) { setMessage(byId('appMessage'), error.message, true); }
       finally { button.disabled = cancelled; }
     });
+    const portalBtn = document.createElement('button'); portalBtn.className = 'button secondary'; portalBtn.type = 'button';
+    portalBtn.textContent = isEn ? 'Manage payment method' : 'Gérer mon moyen de paiement';
+    portalBtn.addEventListener('click', async () => {
+      if (portalBtn.disabled) return;
+      portalBtn.disabled = true;
+      try {
+        const response = await api('/api/v1/customer/billing-portal', { method: 'POST', body: JSON.stringify({ id: item.id }) });
+        const data = await response.json();
+        if (!response.ok || !data.url) throw new Error(data.error || (isEn ? 'Payment portal unavailable' : 'Portail de paiement indisponible'));
+        window.location.href = data.url;
+      } catch (error) { setMessage(byId('appMessage'), error.message, true); }
+      finally { portalBtn.disabled = false; }
+    });
     const reference = document.createElement('p'); reference.textContent = `${isEn ? 'Contract' : 'Contrat'} : ${item.id}`; reference.style.overflowWrap = 'anywhere';
     const withdrawal = document.createElement('a'); withdrawal.href = '../formulaire-retractation.html#trial=' + encodeURIComponent(item.id);
     withdrawal.textContent = item.withdrawal_requested_at ? (isEn ? 'Withdrawal already notified — view form' : 'Rétractation déjà notifiée — formulaire') : (isEn ? 'Withdraw from this contract' : 'Se rétracter de ce contrat');
-    card.append(title, reference, detail, status, button, withdrawal); container.append(card);
+    card.append(title, reference, detail, status, button, portalBtn, withdrawal); container.append(card);
   }
 }
 
@@ -835,7 +848,7 @@ function renderInvoices(invoices) {
   invoices.forEach((item) => {
     const row = document.createElement('tr');
     [item.invoice_number, item.plan, money(item.amount_ttc), formatDate(item.created_at)].forEach((value) => { const cell = document.createElement('td'); cell.textContent = value; row.append(cell); });
-    const action = document.createElement('td'); const button = document.createElement('button'); button.className = 'button secondary'; button.type = 'button'; button.textContent = isEn ? 'Download' : 'Télécharger'; button.addEventListener('click', () => downloadInvoice(item.invoice_number)); action.append(button); row.append(action); body.append(row);
+    const action = document.createElement('td'); const button = document.createElement('button'); button.className = 'button secondary'; button.type = 'button'; button.textContent = isEn ? 'Download' : 'Télécharger'; button.addEventListener('click', () => downloadInvoice(item.invoice_number)); action.append(button); const xmlButton = document.createElement('button'); xmlButton.className = 'button secondary'; xmlButton.type = 'button'; xmlButton.textContent = 'XML'; xmlButton.title = isEn ? 'Download e-invoice (Factur-X)' : 'Télécharger la facture électronique (Factur-X)'; xmlButton.addEventListener('click', () => downloadInvoiceCII(item.invoice_number)); action.append(xmlButton); row.append(action); body.append(row);
   });
   if (!invoices.length) { const row = body.insertRow(); const cell = row.insertCell(); cell.colSpan = 5; cell.className = 'empty'; cell.textContent = 'Aucune facture.'; }
 }
@@ -849,11 +862,13 @@ function renderInterventions(items) {
     const status = document.createElement('td'); status.append(badge(item.status)); row.append(status);
     const started = document.createElement('td'); started.textContent = formatDate(item.started_at || item.created_at, true); row.append(started);
     const duration = document.createElement('td'); duration.textContent = item.duration_minutes == null ? '—' : `${item.duration_minutes} min`; row.append(duration);
-    const actions = document.createElement('td'); actions.className = 'device-actions';
-    const addButton = (label, className, onClick) => { const button = document.createElement('button'); button.className = className; button.type = 'button'; button.textContent = label; button.addEventListener('click', onClick); actions.append(button); };
+    const actions = document.createElement('td');
+    const actionsWrap = document.createElement('div'); actionsWrap.className = 'device-actions';
+    const addButton = (label, className, onClick) => { const button = document.createElement('button'); button.className = className; button.type = 'button'; button.textContent = label; button.addEventListener('click', onClick); actionsWrap.append(button); };
     if (item.status === 'planned' || item.status === 'client_ready') addButton(t('btn_start_intervention'), 'button secondary', () => updateIntervention(item.intervention_id, 'start'));
     if (item.status === 'in_progress') addButton(t('btn_complete_intervention'), 'button primary', () => openCompleteIntervention(item.intervention_id));
     if (item.status !== 'completed' && item.status !== 'cancelled') addButton(t('btn_cancel_intervention'), 'button btn-danger', () => updateIntervention(item.intervention_id, 'cancel'));
+    if (actionsWrap.hasChildNodes()) actions.append(actionsWrap); else actions.textContent = '—';
     row.append(actions); body.append(row);
   });
   if (!items.length) { const row = body.insertRow(); const cell = row.insertCell(); cell.colSpan = 8; cell.className = 'empty'; cell.textContent = 'Aucune intervention enregistrée.'; }
@@ -1560,7 +1575,6 @@ function renderDevices(devices) {
 
     // 8. Actions
     const actionCell = document.createElement('td');
-    actionCell.className = 'device-actions';
 
     // 1-Click Connect button (if RustDesk ID is known)
     if (/^\d{6,16}$/.test(item.rustdesk_id || '') && item.enrollment_state === 'enrolled') {
@@ -1627,6 +1641,9 @@ function renderDevices(devices) {
     delBtn.addEventListener('click', () => handleDeleteDevice(item.device_id, item.alias || item.hostname));
     actionCell.append(delBtn);
 
+    const actionsWrap = document.createElement('div'); actionsWrap.className = 'device-actions';
+    while (actionCell.firstChild) actionsWrap.append(actionCell.firstChild);
+    actionCell.append(actionsWrap);
     row.append(actionCell);
     tbody.append(row);
   });
@@ -1954,9 +1971,58 @@ function fillLicenseSelect(licenses) {
 
 function openRenewal(license) {
   state.renewalLicense = license.license_id;
+  state.renewalCryptoOrder = null;
   const planName = license.plan ? ('Plan ' + license.plan.charAt(0).toUpperCase() + license.plan.slice(1)) : 'Forfait';
   byId('renewLicenseLabel').textContent = `${planName} — échéance actuelle ${formatDate(license.expires_at)}`;
-  byId('renewTerms').checked = false; byId('renewImmediate').checked = false; setMessage(byId('renewMessage'), ''); byId('renewDialog').showModal();
+  byId('renewTerms').checked = false; byId('renewImmediate').checked = false; setMessage(byId('renewMessage'), '');
+  byId('renewCryptoRecap').style.display = 'none';
+  refreshRenewPaymentMethods();
+  byId('renewDialog').showModal();
+}
+
+// refreshRenewPaymentMethods shows the crypto options only when the API
+// offers them. On any failure crypto stays hidden.
+async function refreshRenewPaymentMethods() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/public/payment-methods`, { cache: 'no-store' });
+    if (!response.ok) return;
+    const methods = await response.json();
+    const select = byId('paymentMethod');
+    select.querySelectorAll('option').forEach((opt) => {
+      if (opt.value === 'crypto_btc') opt.hidden = !methods.crypto_btc;
+      if (opt.value === 'crypto_xrp') opt.hidden = !methods.crypto_xrp;
+    });
+    if (select.selectedOptions.length && select.selectedOptions[0].hidden) select.value = 'stripe';
+  } catch (_) { /* crypto stays hidden when unreachable */ }
+}
+
+function showRenewCryptoRecap(data) {
+  byId('renewCryptoAmount').textContent = data.amount_crypto;
+  byId('renewCryptoAsset').textContent = data.asset;
+  byId('renewCryptoAddress').textContent = data.pay_address;
+  const tagRow = byId('renewCryptoTagRow');
+  if (data.dest_tag !== undefined && data.dest_tag !== null) {
+    byId('renewCryptoTag').textContent = data.dest_tag;
+    tagRow.style.display = 'block';
+  } else {
+    tagRow.style.display = 'none';
+  }
+  byId('renewCryptoRate').textContent = `${data.rate_eur} EUR/${data.asset} (OKX)`;
+  byId('renewCryptoExpiry').textContent = formatDate(data.expires_at, true);
+  byId('renewCryptoRef').textContent = data.order_id;
+  byId('renewCryptoNotice').textContent = data.notice || '';
+  byId('renewCryptoRecap').style.display = 'grid';
+}
+
+async function refreshRenewCryptoQuote() {
+  if (!state.renewalCryptoOrder || !state.data || !state.data.email) return;
+  const button = byId('renewCryptoRefresh');
+  button.disabled = true;
+  try {
+    const response = await api('/api/v1/public/crypto/quote', { method: 'POST', body: JSON.stringify({ order_id: state.renewalCryptoOrder, email: state.data.email }) });
+    showRenewCryptoRecap(await response.json());
+    setMessage(byId('renewMessage'), 'Nouveau devis affiché ci-dessus.');
+  } catch (error) { setMessage(byId('renewMessage'), error.message, true); } finally { button.disabled = false; }
 }
 
 async function submitRenewal(event) {
@@ -1967,6 +2033,13 @@ async function submitRenewal(event) {
     const response = await api(`/api/v1/customer/licenses/${encodeURIComponent(state.renewalLicense)}/renew`, { method: 'POST', body: JSON.stringify({ payment_method: byId('paymentMethod').value, terms_version: TERMS_VERSION, terms_accepted: true, immediate_performance_requested: byId('renewImmediate').checked }) });
     const data = await response.json();
     if (data.checkout_url) return location.assign(data.checkout_url);
+    if (data.amount_crypto) {
+      state.renewalCryptoOrder = data.order_id;
+      showRenewCryptoRecap(data);
+      setMessage(byId('renewMessage'), 'Un e-mail récapitulatif vient de vous être envoyé. La licence sera prolongée automatiquement à réception du dépôt.');
+      await loadDashboard();
+      return;
+    }
     const instructions = data.instructions;
     setMessage(byId('renewMessage'), `Virement à préparer : ${money(instructions.amount)} — référence obligatoire ${instructions.reference}. Les instructions complètes vous ont été envoyées par e-mail.`);
     await loadDashboard();
@@ -1988,6 +2061,7 @@ async function downloadProtected(path, filename) {
 }
 
 const downloadInvoice = (number) => downloadProtected(`/api/v1/customer/invoices/${encodeURIComponent(number)}/download`, `${number}.pdf`);
+const downloadInvoiceCII = (number) => downloadProtected(`/api/v1/customer/invoices/${encodeURIComponent(number)}/cii`, `${number}.xml`);
 
 async function updateReminders() {
   const enabled = byId('remindersToggle').checked;
@@ -2095,6 +2169,10 @@ if (byId('btnCopyRegenCodes')) {
 byId('logoutButton').addEventListener('click', () => logout(true));
 byId('refreshButton').addEventListener('click', loadDashboard);
 byId('renewForm').addEventListener('submit', submitRenewal);
+byId('renewCryptoRefresh').addEventListener('click', refreshRenewCryptoQuote);
+byId('copyRenewCryptoAmount').addEventListener('click', () => copyTextToClipboard(byId('renewCryptoAmount').textContent, 'Montant copié.'));
+byId('copyRenewCryptoAddress').addEventListener('click', () => copyTextToClipboard(byId('renewCryptoAddress').textContent, 'Adresse copiée.'));
+byId('copyRenewCryptoTag').addEventListener('click', () => copyTextToClipboard(byId('renewCryptoTag').textContent, 'Destination Tag copié.'));
 byId('interventionForm').addEventListener('submit', createIntervention);
 byId('closeRenewDialog').addEventListener('click', () => byId('renewDialog').close());
 byId('closeInterventionDialog').addEventListener('click', () => byId('interventionDialog').close());

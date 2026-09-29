@@ -8,6 +8,23 @@ import (
 
 var fleetDevicePattern = regexp.MustCompile(`^DEV-[A-Z0-9]{4}(?:-[A-Z0-9]{4}){1,3}$`)
 var pendingFleetDevice string
+var pendingFleetError string
+
+// parseConnectURIArgs interprets CLI args. Empty args mean a normal launch.
+func parseConnectURIArgs(args []string) (string, error) {
+	if len(args) == 0 {
+		return "", nil
+	}
+	if len(args) != 2 || args[0] != "--connect-uri" {
+		return "", errors.New("Arguments non reconnus")
+	}
+	return parseFleetURI(args[1])
+}
+
+// fleetProtocolCommand builds the shell open command for relaisdesk:// links.
+func fleetProtocolCommand(exe string) string {
+	return "\"" + exe + "\" --connect-uri \"%1\""
+}
 
 func parseFleetURI(raw string) (string, error) {
 	if len(raw) > 180 {

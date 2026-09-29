@@ -1,0 +1,12 @@
+{
+  "enabled": false,
+  "until": "",
+  "message": {
+    "fr": "Intervention de maintenance en cours sur l'infrastructure de connexion. Les sessions en cours ne sont pas affectées.",
+    "en": "Scheduled maintenance in progress on the connection infrastructure. Ongoing sessions are not affected."
+  },
+  "until_label": {
+    "fr": "Fin estimée",
+    "en": "Estimated end"
+  }
+}
