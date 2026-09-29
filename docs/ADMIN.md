@@ -46,13 +46,22 @@
 ./keygen extend --id MP-XXXX-XXXX-XXXX --days 30
 ```
 
-## Sauvegarde DB
+## Sauvegarde DB et factures
 
 Ne jamais copier directement `licences.db` pendant que l'API fonctionne : la
 base utilise le mode WAL et une copie brute peut être incohérente. Le timer
 quotidien crée à la place un instantané SQLite cohérent, contrôle son intégrité,
 le chiffre en AES-256-GCM, le déchiffre dans un fichier temporaire et vérifie
 qu'il est restaurable avant de valider la sauvegarde.
+
+La même exécution scelle aussi le dossier des factures
+(`/data/relaisdesk/invoices`, conservation fiscale de dix ans) dans une archive
+`relaisdesk-AAAAMMJJTHHMMSSZ.invoices.aesgcm` déterministe (tar trié, chemins
+relatifs, liens refusés), chiffrée avec la même clé et contrôlée à blanc
+(déchiffrement + relecture intégrale + comparaison d'empreinte avec l'original).
+Le `manifest.json` liste les deux archives ; la rétention et le miroir hors site
+s'appliquent aux deux. Si le dossier des factures est inaccessible, la
+sauvegarde échoue immédiatement sans rien valider.
 
 ```bash
 systemctl status relaisdesk-backup.timer
@@ -65,6 +74,11 @@ journalctl -u relaisdesk-backup.service -n 50 --no-pager
 # Vérifier manuellement une sauvegarde existante.
 sudo -u relaisdesk /opt/relaisdesk/api/relaisdesk-backup verify \
   -file /var/backups/relaisdesk/relaisdesk-AAAAMMJJTHHMMSSZ.db.aesgcm \
+  -key-file /etc/relaisdesk/backup.key
+
+# Vérifier une archive de factures (détection automatique du type).
+sudo -u relaisdesk /opt/relaisdesk/api/relaisdesk-backup verify \
+  -file /var/backups/relaisdesk/relaisdesk-AAAAMMJJTHHMMSSZ.invoices.aesgcm \
   -key-file /etc/relaisdesk/backup.key
 ```
 

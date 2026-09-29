@@ -100,6 +100,31 @@ contrôler dans les en-têtes reçus les résultats `spf=pass`, `dkim=pass` et
 `Auto-Submitted`, mais la signature DKIM elle-même reste effectuée par le
 prestataire SMTP.
 
+## Stripe Connect (prestations)
+
+Les paiements des clients finaux aux prestataires sont des paiements directs
+sur comptes connectés Standard, sans commission RelaisDesk. Côté Stripe
+Workbench (mode live), la destination Connect doit viser exactement
+`https://api.relaisdesk.fr/api/v1/stripe/connect-webhook`, écouter les
+événements **des comptes connectés**, et recevoir au minimum
+`checkout.session.completed` et `checkout.session.async_payment_succeeded`.
+Son secret `whsec_...` va dans `STRIPE_CONNECT_WEBHOOK_SECRET` avec
+`SERVICE_PAYMENTS_ENABLED=true` ; les autres événements sont accusés sans
+effet. Un navigateur sur l'URL obtient `405` (POST uniquement) : c'est normal.
+
+Exploitation :
+
+- `SERVICE_PAYMENTS_ENABLED=false` + redémarrage coupe les nouvelles ventes
+  mais laisse le webhook confirmer les règlements en cours.
+- Lien Checkout expiré : l'API refuse toute recréation automatique ; vérifier
+  le paiement dans Stripe avant toute nouvelle tentative (aucun double débit).
+- Facturation, TVA, remboursements et litiges : gérés par le prestataire dans
+  Stripe ; le statut local `payé` ne reflète pas un remboursement ultérieur.
+- Supervision : livraisons dans Stripe Workbench, `journalctl -u
+  relaisdesk-api`, et état des fiches via l'espace propriétaire.
+- Recette : `docs/RECETTE_CONNECT_TEST.md` (bac à sable `sk_test`, jamais de
+  carte réelle en production).
+
 ## Sauvegardes
 
 `deploy_api.sh` installe et active `relaisdesk-backup.timer`, génère une clé

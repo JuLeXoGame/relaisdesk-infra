@@ -1,5 +1,67 @@
 # Journal des modifications (CHANGELOG) — RelaisDesk
 
+## [Stripe Connect : recette de bout en bout et correctif checkout] - 2026-09-23
+
+- Recette complète en bac à sable `sk_test` : onboarding Standard,
+  activation, tarif, prestation, Checkout 1,50 €, webhook Connect,
+  statut `payé`, cas négatifs (tarif < 0,50 € refusé, impayé stable).
+- Correctif bloquant : Stripe ajoute un fragment `#fid...` aux URLs
+  Checkout, rejeté à tort par `serviceURL` (`session Stripe invalide`,
+  aucun paiement ne pouvait aboutir) ; le contrôle d'hôte reste strict,
+  le fragment étant ignoré comme il doit l'être.
+- `keygen server-key --add` : amorçage de la clé publique serveur d'une
+  base fraîche sans SQL manuel (+ `TestAddServerKey`).
+- Docs : `docs/RECETTE_CONNECT_TEST.md` (kit de recette), endpoint
+  Connect dans `api/README.md` et `docs/DEPLOYMENT.md`.
+
+## [Correctifs de sécurité (audit 2026-09-22)] - 2026-09-22
+
+- Reprise du règlement crypto après interruption (un échec transitoire ne
+  bloque plus une commande payée en `pending`) ; relecture convergente sans
+  doublon (facture/livraison réémises, registre unique).
+- `UpdateDeviceMAC` limité par tenant (client/licence), comme le réveil.
+- Login admin : 401 générique uniforme (fin de l'oracle 401/403 et des
+  messages d'erreur bruts).
+- Défi 2FA du lien e-mail en 200 comme les autres (ne consomme plus le
+  budget du bannissement IP).
+- Verrouillage par compte après 10 mots de passe erronés (15 min),
+  réinitialisé au succès ; le lien magique reste disponible.
+- Mise à jour OTA : refus sans manifeste vérifié (plus de repli sans SHA256).
+- Suppression interdite : commandes payées et factures (corrections par
+  avoir) ; console admin ajustée.
+- Identifiants de commande en 64 bits aléatoires, échec franc sans repli.
+- Payloads de jobs limités à 256 Kio.
+- Classés sans changement : IDOR MAC (non exploitable, contrôles en amont),
+  énumération Google (auto-oracle uniquement), dépôt tardif 24 h au taux
+  d'origine (choix documenté au cahier crypto §4).
+
+## [Paiement crypto : encaissement OKX de bout en bout] - 2026-09-22
+
+- Fin de l'intégration Bitcoin/XRP sur le compte OKX Europe de
+  l'exploitant : devis au cours spot OKX, surveillance des dépôts par
+  clé API en lecture seule, rapprochement et activation automatiques.
+- Suppression des traces de l'ancien montage à portefeuille
+  auto-hébergé : `api/.env.example` ne documente plus que les variables
+  OKX réellement lues, cahier technique réécrit pour l'architecture
+  OKX, politique de confidentialité précisée (circuit d'encaissement).
+- Nouveau point public `GET /api/v1/public/payment-methods` : le site
+  n'affiche les options BTC/XRP que lorsqu'elles sont configurées.
+- E-mail d'instructions crypto envoyé à chaque commande (montant
+  exact, adresse, Destination Tag, expiration), comme pour le virement.
+- Tunnel de commande (site), renouvellement (espace client) et console
+  admin : options BTC/XRP, récapitulatif avec renouvellement de devis,
+  libellés et suivi du devis côté admin. CGV `2026-09-21` inchangées.
+
+## [Viewer Windows : remplacement d'accès permanent] - 2026-09-21
+
+- Le désenrôlement Windows ne s'interrompt plus sur le nettoyage du moteur :
+  le service d'autorisation et les fichiers d'état sont toujours retirés, le
+  moteur (service et fichiers) n'étant plus traité qu'en meilleur effort.
+  Saisir un nouveau code permanent sur un poste déjà enrôlé ne retombe plus
+  sur « un enrôlement est déjà enregistré ; utilisez --unenroll ».
+- Un agent orphelin (`viewer-agent.exe` sans service) est terminé avant la
+  suppression des fichiers d'état qu'il pouvait verrouiller.
+
 ## [CGV : paiement en crypto-actifs] - 2026-09-21
 
 - CGV `2026-09-21` et conditions d'essai `2026-09-21-fleet-v2` : ajout du

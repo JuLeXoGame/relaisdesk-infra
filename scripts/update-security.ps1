@@ -5,7 +5,8 @@
 .DESCRIPTION
     Recherche un environnement Python 3.11+, configure l'encodage UTF-8 et exécute
     scripts/security_maintenance.py dans un espace de travail temporaire isolé (update/).
-    Aucune modification n'est appliquée en direct sur les sources du projet sans confirmation.
+    Aucune modification n'est appliquée en direct sur les sources du projet sans confirmation :
+    -ApplyFixes et -Rollback demandent une validation interactive, sauf -Force ou -DryRun.
 
 .PARAMETER AuditOnly
     Effectue uniquement l'audit des vulnérabilités sans préparer de fichiers corrigés.
@@ -20,7 +21,19 @@
     Télécharge et installe automatiquement les outils d'audit manquants (govulncheck, etc.).
 
 .PARAMETER ApplyFixes
-    Applique automatiquement les manifestes et fichiers corrigés (fichiers-corriges/) directement dans le projet.
+    Applique les manifestes et fichiers corrigés (fichiers-corriges/) dans le projet,
+    après confirmation interactive (sauf -Force ou -DryRun).
+
+.PARAMETER DryRun
+    Simule l'application (-ApplyFixes, implicite) ou l'annulation (-Rollback)
+    sans modifier le projet.
+
+.PARAMETER Rollback
+    Annule un lot précédemment appliqué, désigné par -RunId (obligatoire).
+    N'exécute aucun audit ; demande confirmation sauf -Force ou -DryRun.
+
+.PARAMETER Force
+    Applique ou annule sans demander de confirmation (usage non interactif).
 
 .PARAMETER ShowReport
     Affiche le tableau de synthèse du rapport dans la console à la fin de l'exécution.
@@ -44,7 +57,15 @@
 
 .EXAMPLE
     .\update-security.ps1 -ApplyFixes -ShowReport
-    Lance l'audit et applique directement les dépendances corrigées sur le projet.
+    Lance l'audit puis applique les dépendances corrigées après confirmation.
+
+.EXAMPLE
+    .\update-security.ps1 -ApplyFixes -DryRun -ShowReport
+    Lance l'audit puis simule l'application, sans modifier le projet.
+
+.EXAMPLE
+    .\update-security.ps1 -Rollback -RunId '20260919-120000-1234abcd' -ShowReport
+    Annule un lot précédemment appliqué, après confirmation.
 #>
 [CmdletBinding()]
 param(
@@ -53,12 +74,24 @@ param(
     [switch]$RunBuildTests,
     [switch]$InstallAuditTools,
     [switch]$ApplyFixes,
+    [switch]$DryRun,
+    [switch]$Rollback,
+    [switch]$Force,
     [switch]$ShowReport,
     [switch]$OpenReport,
     [ValidateRange(30, 7200)][int]$CommandTimeoutSeconds = 900,
     [string]$PythonPath = "",
     [ValidatePattern('^\d{8}-\d{6}-[a-f0-9]{8,32}$')][string]$RunId
 )
+
+function Confirm-ProjectWrite {
+    param([string]$Question)
+    if ($Force) { return $true }
+    if (-not [Environment]::UserInteractive) {
+        throw 'Session non interactive : relancer avec -Force pour confirmer explicitement.'
+    }
+    return ((Read-Host "$Question [o/N]") -match '^(?i)(o|oui|y|yes)$')
+}
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -67,13 +100,29 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 if ($AuditOnly -and $PrepareOnly) { 
     throw 'Choisir -AuditOnly OU -PrepareOnly.' 
 }
-if ($ApplyFixes -and ($AuditOnly -or $PrepareOnly)) {
-    throw '-ApplyFixes exige une maintenance complete, pas -AuditOnly/-PrepareOnly.'
+if ($Rollback) {
+    if (-not $PSBoundParameters.ContainsKey('RunId')) {
+        throw '-Rollback exige -RunId : identifiant du lot appliqué à annuler.'
+    }
+    if ($ApplyFixes -or $AuditOnly -or $PrepareOnly -or $RunBuildTests -or $InstallAuditTools) {
+        throw '-Rollback est exclusif : aucun audit ni -ApplyFixes.'
+    }
+} else {
+    if ($DryRun) { $ApplyFixes = $true }
+    if ($ApplyFixes -and ($AuditOnly -or $PrepareOnly)) {
+        throw '-ApplyFixes exige une maintenance complete, pas -AuditOnly/-PrepareOnly.'
+    }
+    if ($ApplyFixes) { $RunBuildTests = $true }
+    if (-not $RunId) { $RunId = (Get-Date -Format 'yyyyMMdd-HHmmss-') + [Guid]::NewGuid().ToString('N') }
 }
-if ($ApplyFixes) { $RunBuildTests = $true }
-if (-not $RunId) { $RunId = (Get-Date -Format 'yyyyMMdd-HHmmss-') + [Guid]::NewGuid().ToString('N') }
 $runDirectory = Join-Path $projectRoot "update/$RunId"
-if (Test-Path -LiteralPath $runDirectory) { throw 'Identifiant deja utilise ; aucun lot ne sera ecrase.' }
+if ($Rollback) {
+    if (-not (Test-Path -LiteralPath $runDirectory -PathType Container)) {
+        throw "Lot '$RunId' introuvable dans update/ : rien à annuler."
+    }
+} elseif (Test-Path -LiteralPath $runDirectory) {
+    throw 'Identifiant deja utilise ; aucun lot ne sera ecrase.'
+}
 
 # Assurer un encodage UTF-8 propre dans la console Windows
 $prevConsoleEncoding = [Console]::OutputEncoding
@@ -82,6 +131,9 @@ $prevOutputEncoding = $OutputEncoding
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
 try {
+    if ($PythonPath -and -not (Test-Path -LiteralPath $PythonPath -PathType Leaf) -and -not (Get-Command $PythonPath -ErrorAction SilentlyContinue)) {
+        throw "Chemin Python invalide : '$PythonPath' est introuvable (ni fichier ni commande)."
+    }
     $candidates = @()
     if ($PythonPath) {
         $candidates += ,@($PythonPath)
@@ -142,12 +194,23 @@ try {
     if ($InstallAuditTools) { $arguments += '--install-audit-tools' }
 
     $prefix = @($selectedPython | Select-Object -Skip 1)
-    & $selectedPython[0] @prefix @arguments
-    $exitCode = $LASTEXITCODE
-    # Application des correctifs (-ApplyFixes)
-    if ($ApplyFixes -and $exitCode -eq 0) {
-        & $selectedPython[0] @prefix -B (Join-Path $PSScriptRoot 'maintenance_apply.py') --project-root $projectRoot --run-id $RunId
+    $exitCode = 0
+    if (-not $Rollback) {
+        & $selectedPython[0] @prefix @arguments
         $exitCode = $LASTEXITCODE
+    }
+    # Application (-ApplyFixes) ou annulation (-Rollback) du lot
+    if (($ApplyFixes -or $Rollback) -and $exitCode -eq 0) {
+        $applyArguments = @('-B', (Join-Path $PSScriptRoot 'maintenance_apply.py'), '--project-root', $projectRoot, '--run-id', $RunId)
+        if ($Rollback) { $applyArguments += '--rollback' }
+        if ($DryRun) { $applyArguments += '--dry-run' }
+        $question = if ($Rollback) { 'Annuler le lot appliqué sur le projet' } else { 'Appliquer les correctifs au projet' }
+        if ($DryRun -or (Confirm-ProjectWrite -Question $question)) {
+            & $selectedPython[0] @prefix @applyArguments
+            $exitCode = $LASTEXITCODE
+        } else {
+            Write-Host 'Abandon sur confirmation : aucune modification du projet.' -ForegroundColor Yellow
+        }
     }
 
     # Actions post-exécution (Affichage ou ouverture du rapport)
@@ -157,7 +220,16 @@ try {
         if ($latestReport) {
             if ($ShowReport) {
                 Write-Host "`n--- SYNTHÈSE DU RAPPORT ($($latestReport.FullName)) ---" -ForegroundColor Cyan
-                Get-Content -LiteralPath $latestReport.FullName -Encoding UTF8 | Select-Object -First 35 | ForEach-Object { Write-Host $_ }
+                $reportLines = Get-Content -LiteralPath $latestReport.FullName -Encoding UTF8
+                $synthesis = @()
+                foreach ($reportLine in $reportLines) {
+                    if ($reportLine -match '^## Signalements restants') { break }
+                    $synthesis += $reportLine
+                }
+                if (-not $synthesis) { $synthesis = @($reportLines | Select-Object -First 35) }
+                $synthesis | ForEach-Object { Write-Host $_ }
+                $reportLines | Where-Object { $_ -match '^\*\*NE PAS appliquer' } | ForEach-Object { Write-Host $_ -ForegroundColor Yellow }
+                Write-Host "Détail complet : $($latestReport.FullName)" -ForegroundColor Cyan
             }
             if ($OpenReport) {
                 Start-Process -FilePath $latestReport.FullName

@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const plain = value => value.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-const terms = read('api/mailer/legal/CGV-RelaisDesk-2026-09-21.txt');
+const terms = read('api/mailer/legal/CGV-RelaisDesk-2026-09-27.txt');
 const webTerms = plain(read('relaisdesk/cgv.html'));
 const dpa = plain(read('relaisdesk/sous-traitance-rgpd.html'));
 const privacy = plain(read('relaisdesk/politique-confidentialite.html'));
@@ -31,11 +31,11 @@ for (const file of ['relaisdesk/cgv.html', 'relaisdesk/sous-traitance-rgpd.html'
   assert(!/2026-09-(09|10)|(?:9|10) septembre 2026/.test(read(file)), file + ': stale current cross-reference');
 }
 for (const file of ['relaisdesk/app.js', 'relaisdesk/client/app.js', 'relaisdesk/essai/app.js']) {
-  assert(read(file).includes('2026-09-21'), file + ': wrong checkout version');
+  assert(read(file).includes('2026-09-27'), file + ': wrong checkout version');
   assert(!read(file).includes('2026-09-11'), file + ': stale checkout version');
 }
-assert.match(read('database/trials.go'), /const TrialTermsVersion = "2026-09-21-fleet-v2"/);
-assert.match(read('api/mailer/mailer.go'), /const CurrentTrialTermsVersion = "2026-09-21-fleet-v2"/);
+assert.match(read('database/trials.go'), /const TrialTermsVersion = "2026-09-24-fleet-v3"/);
+assert.match(read('api/mailer/mailer.go'), /const CurrentTrialTermsVersion = "2026-09-24-fleet-v3"/);
 for (const file of ['relaisdesk/index.html', 'relaisdesk/client/index.html', 'relaisdesk/essai/index.html']) {
   const cacheVersion = '20260921-legal-crypto-v1';
   assert(read(file).includes('app.js?v=' + cacheVersion), file + ': cache version missing');

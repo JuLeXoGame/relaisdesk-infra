@@ -167,12 +167,19 @@ Références des comportements utilisés : [Cargo update](https://doc.rust-lang.
 .\scripts\update-security.ps1 -RunBuildTests -ShowReport
 
 # Nouvelle maintenance avec application explicite aux sources si tous les contrôles passent
+# (confirmation interactive demandée avant toute écriture)
 .\scripts\update-security.ps1 -ApplyFixes -ShowReport
+
+# Simuler cette application sans rien modifier
+.\scripts\update-security.ps1 -ApplyFixes -DryRun -ShowReport
 
 # Ou intégrer précisément un lot déjà testé et examiné (remplacer IDENTIFIANT)
 python -B .\scripts\maintenance_apply.py --project-root . --run-id IDENTIFIANT
 
-# Simuler puis restaurer précisément CE lot de dépendances
+# Annuler précisément CE lot de dépendances, avec confirmation (aucun audit relancé)
+.\scripts\update-security.ps1 -Rollback -RunId IDENTIFIANT -ShowReport
+
+# Afficher le plan puis restaurer via l'orchestrateur (aucun audit relancé, confirmation demandée)
 .\scripts\update-and-rebuild-programs.ps1 -Rollback -RunId IDENTIFIANT -DryRun
 .\scripts\update-and-rebuild-programs.ps1 -Rollback -RunId IDENTIFIANT
 ```
@@ -183,7 +190,7 @@ Les originaux et le journal sont conservés dans `update/IDENTIFIANT/application
 
 Un verrou `update/.apply.lock` interdit deux applications/restaurations simultanées. Après un arrêt brutal, **ne pas supprimer ce verrou à l'aveugle** : vérifier qu'aucun processus ne travaille encore, examiner `application/receipt.json` et comparer les empreintes aux sauvegardes. Un état `applying`, `rollback_in_progress` ou `recovery_required` demande une récupération contrôlée ; il n'est pas déclaré réussi. Ne pas éditer les fichiers pendant l'application : le verrou coordonne les scripts, pas les autres éditeurs.
 
-`-ApplyFixes` impose les tests et refuse `-AuditOnly`/`-PrepareOnly`. Un avertissement non résolu ou un outil manquant interdit l'application automatique : cela peut nécessiter une analyse manuelle, pas un contournement du contrôle.
+`-ApplyFixes` impose les tests et refuse `-AuditOnly`/`-PrepareOnly`. Un avertissement non résolu ou un outil manquant interdit l'application automatique : cela peut nécessiter une analyse manuelle, pas un contournement du contrôle. Depuis le lanceur, toute écriture (`-ApplyFixes`, `-Rollback`) demande une confirmation interactive, sauf `-DryRun` (simulation sans écriture) ou `-Force` (usage non interactif, à réserver aux appels déjà autorisés explicitement, comme l'orchestrateur avec `-ApplySecurityFixes`). `-Rollback` exige le `-RunId` du lot et n'exécute aucun audit. L'option `-Rollback` de l'orchestrateur appelle le lanceur : même confirmation, avec `-Force` transmis quand il est présent.
 
 ## 9. Script tout-en-un : compiler un candidat sans publication
 

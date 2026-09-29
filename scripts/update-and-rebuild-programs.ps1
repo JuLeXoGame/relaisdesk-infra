@@ -24,6 +24,7 @@ param(
     [switch]$AuditOnly,
     [switch]$PrepareOnly,
     [switch]$DryRun,
+    [switch]$Force,
     [switch]$ShowReport,
     [switch]$Interactive
 )
@@ -102,6 +103,9 @@ function Invoke-Maintenance {
         Write-Warning 'Audit ignore explicitement : cette compilation ne sera pas une validation de securite.'
     } else {
         $auditArgs.ApplyFixes=[bool]$ApplySecurityFixes
+        # -ApplySecurityFixes vaut déjà consentement explicite : le transmettre
+        # pour la confirmation exigée par update-security.ps1 avant écriture.
+        if ($ApplySecurityFixes) { $auditArgs.Force=$true }
     }
     & (Join-Path $PSScriptRoot 'update-security.ps1') @auditArgs
     if ($LASTEXITCODE -ne 0) { throw 'Audit/tests/application en echec : compilation bloquee, candidats conserves dans update/.' }
@@ -189,7 +193,10 @@ try {
     }
     if ($Rollback) {
         if (-not $RunId) { throw '-Rollback exige -RunId ; aucune selection du dernier dossier.' }
-        Invoke-PythonChecked @((Join-Path $PSScriptRoot 'maintenance_apply.py'),'--project-root',$projectRoot,'--run-id',$RunId,'--rollback')
+        $rollbackArgs = @{RunId=$RunId; Rollback=$true; PythonPath=$PythonPath; ShowReport=[bool]$ShowReport}
+        if ($Force) { $rollbackArgs.Force=$true }
+        & (Join-Path $PSScriptRoot 'update-security.ps1') @rollbackArgs
+        if ($LASTEXITCODE -ne 0) { throw 'Restauration incomplete/en echec : lire le rapport et application/receipt.json.' }
         return
     }
     if ($Interactive -or $PSBoundParameters.Count -eq 0) {

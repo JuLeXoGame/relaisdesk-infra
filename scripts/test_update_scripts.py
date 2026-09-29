@@ -14,7 +14,7 @@ SHELL = shutil.which("powershell.exe") or shutil.which("pwsh")
 
 AUDIT_STUB = r'''
 [CmdletBinding()]
-param([string]$RunId,[string]$PythonPath,[switch]$ShowReport,[switch]$InstallAuditTools,[switch]$RunBuildTests,[switch]$ApplyFixes,[switch]$PrepareOnly,[switch]$AuditOnly)
+param([string]$RunId,[string]$PythonPath,[switch]$ShowReport,[switch]$InstallAuditTools,[switch]$RunBuildTests,[switch]$ApplyFixes,[switch]$PrepareOnly,[switch]$AuditOnly,[switch]$Force,[switch]$Rollback)
 $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
 if ($env:RELAISDESK_TEST_AUDIT_EXIT) { exit ([int]$env:RELAISDESK_TEST_AUDIT_EXIT) }
@@ -114,6 +114,20 @@ class ScriptTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse((self.root / "update").exists())
 
+    def test_rollback_delegates_to_security_launcher(self):
+        self.stub_audit()
+        run_id = "20260919-120000-1234abcd"
+        result = self.invoke(["-Rollback", "-RunId", run_id])
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        audit = json.loads((self.root / "audit-arguments.json").read_text(encoding="utf-8-sig"))
+        self.assertTrue(audit["Rollback"])
+        self.assertEqual(audit["RunId"], run_id)
+        self.assertNotIn("Force", audit)
+        result = self.invoke(["-Rollback", "-RunId", "20260919-120001-1234abcd", "-Force"])
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        audit = json.loads((self.root / "audit-arguments.json").read_text(encoding="utf-8-sig"))
+        self.assertTrue(audit["Force"])
+
     def test_incompatible_apply_modes_fail_before_tools(self):
         for mode in ("-AuditOnly", "-PrepareOnly"):
             result = self.invoke(["-ApplyFixes", mode], "update-security.ps1")
@@ -146,6 +160,7 @@ class ScriptTests(unittest.TestCase):
         build = json.loads((self.root / "build-arguments.json").read_text(encoding="utf-8-sig"))
         self.assertTrue(audit["ApplyFixes"])
         self.assertTrue(audit["RunBuildTests"])
+        self.assertTrue(audit["Force"])
         self.assertEqual(build["Version"], "9.8.7")
         self.assertEqual(build["SigningKeyPath"], str(self.root / "key.fixture"))
         self.assertEqual(build["PublicKey"], "A" * 43)

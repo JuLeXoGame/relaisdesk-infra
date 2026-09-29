@@ -28,7 +28,7 @@ vm.runInContext(read('relaisdesk/admin/app.js'), adminContext);
 assert.equal(evaluate('PRO_MONTHLY_PRICE'), 110);
 assert.equal(evaluate('PRO_ANNUAL_PRICE'), 1100);
 assert.equal(evaluate('ULTRA_BASE_MONTHLY_PRICE'), 199);
-assert.equal(evaluate('TERMS_VERSION'), '2026-09-21');
+assert.equal(evaluate('TERMS_VERSION'), '2026-09-27');
 const displayAmount = value => Number(value.replace(/\s|€/gu, '').replace(',', '.'));
 for (language of ['fr', 'en']) {
   for (const [cycle, multiplier] of [['monthly', 1], ['annual', 10]]) {

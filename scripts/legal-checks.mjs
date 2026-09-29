@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = p => fs.readFileSync(path.join(root, p), 'utf8');
-const version = '2026-09-21';
+const version = '2026-09-27';
 for (const file of ['relaisdesk/cgv.html', 'relaisdesk/index.html', 'relaisdesk/app.js', 'relaisdesk/client/app.js', 'api/mailer/mailer.go']) {
   assert(read(file).includes(version), `${file}: version courante absente`);
 }

@@ -2,11 +2,12 @@
 
 ## Périmètre et état
 
-Cette sauvegarde concerne uniquement `/data/relaisdesk/licences.db` : clients,
-licences, commandes, essais, abonnements, informations des factures, interventions,
-appareils et autres tables de la base. Les PDF, `.env`, clés externes à la base,
-données hbbs/hbbr, configurations système et fichiers OVH ne sont pas inclus.
-Ce n'est pas une image complète du VPS.
+Cette sauvegarde concerne `/data/relaisdesk/licences.db` (clients, licences,
+commandes, essais, abonnements, informations des factures, interventions,
+appareils et autres tables de la base) et `/data/relaisdesk/invoices`
+(PDF et jumeaux HTML des factures, conservation fiscale de dix ans).
+Les `.env`, clés externes à la base, données hbbs/hbbr, configurations système
+et fichiers OVH ne sont pas inclus. Ce n'est pas une image complète du VPS.
 
 La préparation du 10 septembre 2026 ne vaut pas activation : la connexion Google,
 une première sauvegarde distante vérifiée et la conservation hors serveur de la
@@ -17,23 +18,31 @@ redémarrage API ou déploiement de client n'est nécessaire.
 Fonctionnement :
 
 1. Instantané SQLite cohérent, chiffrement AES-256-GCM et vérification locale par
-   l'exécutable `relaisdesk-backup` existant.
-2. Copie des seules archives `relaisdesk-AAAAMMJJTHHMMSSZ.db.aesgcm` vers
+   l'exécutable `relaisdesk-backup` (`create`) ; mise en tarball trié du dossier
+   des factures puis chiffrement avec le même format et la même clé (`seal`,
+   contrôle à blanc inclus). Les deux archives partagent le même horodatage.
+2. Copie des seules archives `relaisdesk-AAAAMMJJTHHMMSSZ.db.aesgcm` et
+   `relaisdesk-AAAAMMJJTHHMMSSZ.invoices.aesgcm` vers
    `relaisdesk-drive:RelaisDesk-Backups/julexogame` ; pas de fichier en clair ou de
    clé envoyée. Les copies locales en attente d'une tentative précédente sont
    également envoyées.
-3. Relecture complète de la dernière archive depuis Drive, comparaison SHA-256,
-   déchiffrement temporaire et vérification SQLite. Cela ne remplace pas une
-   recette complète de reprise de l'application.
-4. Seulement après succès : conservation locale de 30 jours et actualisation de
-   `/var/backups/relaisdesk/google-drive-last-success.json`.
+3. Relecture complète des deux dernières archives depuis Drive, comparaison
+   SHA-256, déchiffrement temporaire et vérification (SQLite pour la base,
+   listage tar pour les factures). Cela ne remplace pas une recette complète
+   de reprise de l'application.
+4. Seulement après succès : ping du heartbeat de supervision (si configuré),
+   conservation locale de 30 jours et actualisation de
+   `/var/backups/relaisdesk/google-drive-last-success.json` (clés `archive`
+   et `invoices_archive` avec leurs SHA-256).
 
 Il n'y a **aucune suppression automatique sur Google Drive**. La commande `copy`
 avec `--immutable` refuse les remplacements ; elle n'est pas un verrou Google
 anti-effacement : le titulaire du compte ou un serveur compromis disposant du
 jeton peut encore supprimer des fichiers. Le quota Drive doit être surveillé.
-En cas d'échec, le service échoue et garde les archives locales, mais il n'envoie
-pas d'alerte par email. Il faudra consulter son état/journal.
+En cas d'échec, le service échoue et garde les archives locales. L'alerte passe
+par le heartbeat Better Stack (ping uniquement après succès vérifié) : sans
+ping reçu dans le délai, Better Stack alerte. Sans URL configurée, le script
+le signale à chaque exécution et il faut consulter l'état/journal du service.
 
 ## 1. Compte Google et autorisation
 
@@ -118,9 +127,15 @@ Fichiers à installer depuis les sources :
   `/opt/relaisdesk/backup-tools/backup_google_drive.py` (`root:root`, `0755`).
 - Binaire rclone officiel vérifié → `/opt/relaisdesk/backup-tools/rclone`
   (`root:root`, `0755`). Pas d'installation globale ni d'`apt upgrade` requis.
+- Binaire `relaisdesk-backup` reconstruit (sous-commandes `seal`/`open`) →
+  `/opt/relaisdesk/api/relaisdesk-backup` (`root:root`, `0755`), après
+  sauvegarde de l'ancien binaire. Les commandes existantes sont inchangées.
 - `api/relaisdesk-backup-google-drive.service` et `.timer` →
   `/etc/systemd/system/` (`root:root`, `0644`).
 - `/var/backups/relaisdesk` : `relaisdesk:relaisdesk`, `0700`.
+- `/etc/relaisdesk/backup.env` : `relaisdesk:relaisdesk`, `0600`, contenant
+  `BACKUP_HEARTBEAT_URL=<url>`. Fichier optionnel : absent ou vide, le
+  heartbeat est désactivé et le script le signale.
 
 L'unité Google Drive est indépendante de l'ancien minuteur local. Elle utilise
 les chemins de production ci-dessus explicitement, pas `backup.env`. Si les
@@ -128,10 +143,17 @@ chemins changent, adapter son ExecStart avec les options de `--help`.
 
 ## 4. Premier test et activation — après autorisation Google uniquement
 
+Créer dans Better Stack un moniteur Heartbeat nommé `Sauvegarde Oracle`
+(période 24 heures, grâce 6 heures), puis renseigner son URL de ping dans
+`/etc/relaisdesk/backup.env` (`BACKUP_HEARTBEAT_URL=…`, `0600`,
+`relaisdesk:relaisdesk`). Cette URL est un secret bearer : ne jamais la
+publier ni la versionner.
+
 Sauvegarder séparément `/etc/relaisdesk/backup.key` dans un coffre hors ligne
-ou un gestionnaire sécurisé. Ce fichier n'est **jamais envoyé dans Drive par le
-script**. Sa perte rend les archives indéchiffrables ; ne pas le régénérer pour
-essayer de restaurer les anciennes copies.
+ou un gestionnaire sécurisé, en deux exemplaires distincts. Ce fichier n'est
+**jamais envoyé dans Drive par le script**. Sa perte rend les archives
+indéchiffrables ; ne pas le régénérer pour essayer de restaurer les anciennes
+copies.
 
 ```bash
 sudo -u relaisdesk python3 -B /opt/relaisdesk/backup-tools/backup_google_drive.py --check-config
@@ -177,6 +199,18 @@ Télécharger depuis Drive l'archive choisie, conserver la clé séparément, pu
 Le fichier de sortie doit être nouveau. Ne pas remplacer la base active pendant
 que l'API fonctionne. La remise en service effective constitue une opération
 distincte, à préparer avec les configurations et clés externes à la base.
+
+Pour les factures (`relaisdesk-….invoices.aesgcm`) :
+
+```bash
+/opt/relaisdesk/api/relaisdesk-backup open -file /chemin/archive.invoices.aesgcm -key-file /chemin/backup.key -out /chemin/invoices.tar.gz
+tar -tzf /chemin/invoices.tar.gz   # contrôle du contenu avant extraction
+tar -xzf /chemin/invoices.tar.gz -C /chemin/restauration/
+```
+
+Effectuer une fois par an une restauration à blanc complète (base + factures)
+sur une machine distincte, pour prouver que la clé hors ligne et la procédure
+restent valides.
 
 Références : [permissions Drive](https://developers.google.com/workspace/drive/api/guides/api-specific-auth),
 [expiration OAuth](https://developers.google.com/identity/protocols/oauth2#expiration),
