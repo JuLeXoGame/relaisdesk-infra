@@ -31,7 +31,7 @@ if [ -z "$DOWNLOADS_DIR" ]; then DOWNLOADS_DIR="$PROJECT/relaisdesk/downloads"; 
 if [ -z "$API_DIR" ]; then API_DIR="$PROJECT/api"; fi
 if ! printf '%s' "$PUBLIC_KEY" | grep -Eq '^[A-Za-z0-9_-]{43}$'; then echo "Cle publique invalide." >&2; exit 1; fi
 
-ARTIFACTS="RelaisDesk_Portable.exe RelaisDesk_Setup.exe RelaisDesk_Technicien.deb RelaisDesk_Technicien_Linux RelaisDesk_Technicien_Portable.exe RelaisDesk_Technicien_Setup_1.0.0.exe RelaisDesk_viewer.deb RelaisDesk_Viewer_Linux"
+ARTIFACTS="RelaisDesk_Portable.exe RelaisDesk_Setup.exe RelaisDesk_Technicien.deb RelaisDesk_Technicien_Linux RelaisDesk_Technicien_Portable.exe RelaisDesk_Technicien_Setup_1.0.0.exe RelaisDesk_viewer.deb RelaisDesk_Viewer_Linux RelaisDesk_Mac.dmg RelaisDesk_Technicien_Mac.dmg RelaisDesk_Mac_Intel.dmg RelaisDesk_Technicien_Mac_Intel.dmg"
 
 # 1. Update SHA256SUMS.txt
 for name in $ARTIFACTS; do

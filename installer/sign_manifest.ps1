@@ -18,7 +18,11 @@ $releaseArtifactNames = @(
     "RelaisDesk_Technicien_Portable.exe",
     "RelaisDesk_Technicien_Setup_1.0.0.exe",
     "RelaisDesk_viewer.deb",
-    "RelaisDesk_Viewer_Linux"
+    "RelaisDesk_Viewer_Linux",
+    "RelaisDesk_Mac.dmg",
+    "RelaisDesk_Technicien_Mac.dmg",
+    "RelaisDesk_Mac_Intel.dmg",
+    "RelaisDesk_Technicien_Mac_Intel.dmg"
 )
 
 # 1. Update SHA256SUMS.txt
