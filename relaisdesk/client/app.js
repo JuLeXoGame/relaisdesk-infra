@@ -34,7 +34,22 @@ const money = (value) => new Intl.NumberFormat('fr-FR', { style: 'currency', cur
 
 function setMessage(target, text, error = false) {
   if (!target) return;
-  target.textContent = text || '';
+  target.replaceChildren();
+  for (const part of String(text || '').split(/(https?:\/\/[^\s<>"']+)/g)) {
+    if (!part) continue;
+    if (/^https?:\/\//.test(part)) {
+      const href = part.replace(/[.,;:!?)\]]+$/, '');
+      const link = document.createElement('a');
+      link.href = href;
+      link.textContent = href;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      target.append(link);
+      if (href.length < part.length) target.append(part.slice(href.length));
+    } else {
+      target.append(part);
+    }
+  }
   target.classList.toggle('error', error);
 }
 
