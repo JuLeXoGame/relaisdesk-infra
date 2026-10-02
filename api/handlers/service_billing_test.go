@@ -325,3 +325,52 @@ func TestServiceTeamFolderAndOwnerAuthorization(t *testing.T) {
 		t.Fatal("foreign owner action accepted")
 	}
 }
+
+func TestServiceOnboardingAutoResetAfterAbandon(t *testing.T) {
+	db, lic, _, c := serviceTestFixture(t)
+	old := time.Now().Add(-25 * time.Hour).Unix()
+	if _, err := db.Exec(`UPDATE service_merchants SET account_id='', setup_started=? WHERE customer_id=?`, old, lic.CustomerID); err != nil {
+		t.Fatal(err)
+	}
+	h := CustomerServiceBillingHandler(db, c)
+	calls := map[string]int{}
+	prev := serviceHTTPClient
+	defer func() { serviceHTTPClient = prev }()
+	serviceHTTPClient = &http.Client{Transport: serviceTransport(func(r *http.Request) (*http.Response, error) {
+		calls[r.URL.Path]++
+		var body string
+		switch r.URL.Path {
+		case "/v1/accounts":
+			body = `{"id":"acct_testreset1234567890"}`
+		case "/v1/account_links":
+			body = `{"url":"https://connect.stripe.com/setup/s/test123"}`
+		default:
+			return nil, fmt.Errorf("unexpected Stripe call %s", r.URL.Path)
+		}
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header), Request: r}, nil
+	})}
+	r := httptest.NewRequest("POST", "/api/v1/customer/service-billing/onboarding", strings.NewReader(`{}`))
+	r = r.WithContext(context.WithValue(r.Context(), middleware.CustomerIdentityContextKey, &dbpkg.CustomerIdentity{ID: lic.CustomerID, Role: "owner"}))
+	w := httptest.NewRecorder()
+	h(w, r)
+	if w.Code != 200 {
+		t.Fatalf("onboarding after abandon: got %d %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "connect.stripe.com") {
+		t.Fatalf("no onboarding link: %s", w.Body.String())
+	}
+	if calls["/v1/accounts"] != 1 {
+		t.Fatalf("accounts created %d times, want 1", calls["/v1/accounts"])
+	}
+	var accountID string
+	var setupStarted int64
+	if err := db.QueryRow(`SELECT account_id, setup_started FROM service_merchants WHERE customer_id=?`, lic.CustomerID).Scan(&accountID, &setupStarted); err != nil {
+		t.Fatal(err)
+	}
+	if accountID != "acct_testreset1234567890" {
+		t.Fatalf("account not stored: %q", accountID)
+	}
+	if setupStarted <= old {
+		t.Fatalf("setup_started not refreshed: %d", setupStarted)
+	}
+}

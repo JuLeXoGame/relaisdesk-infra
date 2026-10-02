@@ -228,8 +228,14 @@ func CustomerServiceBillingHandler(db *sql.DB, c *config.Config) http.HandlerFun
 			m, err = dbpkg.EnsureServiceMerchant(db, who.ID)
 			if err == nil && m.AccountID == "" {
 				if time.Now().Unix()-m.SetupStarted > 23*3600 {
-					err = errors.New("création Stripe ancienne à réconcilier avec le support, aucun nouveau compte créé")
-				} else {
+					// Abandoned onboarding restarts cleanly instead of dead-ending:
+					// a new 23h window begins and creation is retried once below.
+					// A Stripe-side account created but never stored (if any) stays
+					// orphaned for support cleanup; duplicates stay impossible in DB.
+					m.SetupStarted = time.Now().Unix()
+					_, err = db.Exec(`UPDATE service_merchants SET setup_started=? WHERE customer_id=? AND account_id=''`, m.SetupStarted, who.ID)
+				}
+				if err == nil {
 					var a serviceAccount
 					err = serviceStripe(c, "", "POST", "accounts", fmt.Sprintf("rd-service-merchant-%d-%d", who.ID, m.SetupStarted), url.Values{"type": {"standard"}, "metadata[relaisdesk_customer]": {who.PublicID}}, &a)
 					if err == nil && (!strings.HasPrefix(a.ID, "acct_") || !stripeObjectID.MatchString(a.ID)) {
