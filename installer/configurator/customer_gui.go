@@ -85,6 +85,11 @@ func collapseIconResource() fyne.Resource {
 	return fyne.NewStaticResource("nav-collapse.svg", []byte(doc))
 }
 
+func expandIconResource() fyne.Resource {
+	doc := `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#bfdbfe" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 17 5-5-5-5"/><path d="m6 17 5-5-5-5"/></svg>`
+	return fyne.NewStaticResource("nav-expand.svg", []byte(doc))
+}
+
 var fleetTreeIconCache = map[string]fyne.Resource{}
 
 // fleetTreeIcon fournit les icônes de l'explorateur de parc (comme le web).
@@ -134,6 +139,38 @@ func buildSidebarNav(selected int, collapsed bool, restricted bool, onSelect fun
 		return container.NewBorder(nil, footer, nil, nil, nav)
 	}
 	return nav
+}
+
+// sidebarSplitOffset donne le ratio du séparateur latéral : colonne
+// étroite (icônes seules) quand replié, confortable sinon. totalWidth et
+// navMinWidth sont les largeurs rendues (0 si inconnues -> repli par défaut).
+func sidebarSplitOffset(collapsed bool, totalWidth, navMinWidth float32) float64 {
+	const expandedOffset = 0.24
+	if !collapsed {
+		return expandedOffset
+	}
+	if totalWidth > 200 && navMinWidth > 0 {
+		ratio := float64((navMinWidth + 8) / totalWidth)
+		if ratio < 0.02 {
+			return 0.02
+		}
+		if ratio > 0.12 {
+			return 0.12
+		}
+		return ratio
+	}
+	return 0.05
+}
+
+// toggleSidebarCollapsed inverse l'état du panneau, le persiste et
+// retourne le nouvel état (le réaffichage reste à l'appelant, sans
+// reconstruction de l'écran).
+func toggleSidebarCollapsed(collapsed bool) bool {
+	collapsed = !collapsed
+	if app := fyne.CurrentApp(); app != nil {
+		app.Preferences().SetBool("sidebar_collapsed", collapsed)
+	}
+	return collapsed
 }
 
 func isCustomerSessionExpired(err error) bool {

@@ -1492,6 +1492,7 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 				return customerGatePanel(panelID, relaunch, builder)
 			}
 			navBox := container.NewMax()
+			var mainSplit *container.Split
 			collapsed := fyneApp.Preferences().BoolWithFallback("sidebar_collapsed", false)
 			var renderNav func()
 			selectPanel := func(panelID int) {
@@ -1529,17 +1530,30 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 				widget.NewLabelWithStyle(email, fyne.TextAlignLeading, fyne.TextStyle{Italic: true}),
 			)
 			renderNav = func() {
-				collapseBtn := widget.NewButtonWithIcon("", collapseIconResource(), func() {
-					fyneApp.Preferences().SetBool("sidebar_collapsed", !collapsed)
-					relaunch(selectedPanel)
+				icon := collapseIconResource()
+				if collapsed {
+					icon = expandIconResource()
+				}
+				collapseBtn := widget.NewButtonWithIcon("", icon, func() {
+					collapsed = toggleSidebarCollapsed(collapsed)
+					renderNav()
+					if mainSplit != nil {
+						mainSplit.Offset = sidebarSplitOffset(collapsed, mainSplit.Size().Width, navBox.MinSize().Width)
+						mainSplit.Refresh()
+					}
 				})
-				nav := buildSidebarNav(selectedPanel, collapsed, restricted, selectPanel, accountFooter)
+				var footer fyne.CanvasObject = accountFooter
+				if collapsed {
+					// Le pied de page (e-mail) forcerait la colonne à rester large.
+					footer = nil
+				}
+				nav := buildSidebarNav(selectedPanel, collapsed, restricted, selectPanel, footer)
 				navBox.Objects = []fyne.CanvasObject{container.NewBorder(collapseBtn, nil, nil, nil, nav)}
 				navBox.Refresh()
 			}
 			selectPanel(selectedPanel)
-			mainSplit := container.NewHSplit(navBox, contentBox)
-			mainSplit.Offset = 0.24
+			mainSplit = container.NewHSplit(navBox, contentBox)
+			mainSplit.Offset = sidebarSplitOffset(collapsed, 0, 0)
 
 			// Polling automatique toutes les 30 secondes pour rafraîchir codes et postes
 			currentCancel := make(chan struct{})
