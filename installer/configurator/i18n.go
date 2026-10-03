@@ -496,8 +496,8 @@ var messages = map[string]map[Lang]string{
 		LangEN: "📁 All devices",
 	},
 	"folder_root": {
-		LangFR: "📁 Racine",
-		LangEN: "📁 Root",
+		LangFR: "Racine",
+		LangEN: "Root",
 	},
 	"breadcrumb_root": {
 		LangFR: "🏠 Racine",

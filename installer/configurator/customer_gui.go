@@ -208,6 +208,20 @@ func formatEUR(amount float64) string {
 	return fmt.Sprintf("%.2f €", amount)
 }
 
+// customerCardWidth est la largeur confortable des cartes compte client.
+const customerCardWidth = 440
+
+// centeredCardScroll centre une carte horizontalement tout en lui donnant
+// toute la hauteur disponible (avec défilement si la fenêtre est petite).
+// Ne jamais envelopper un VScroll dans container.NewCenter : la hauteur
+// minimale d'un scroll vertical vaut 32px (Fyne), Center réduirait donc
+// la carte à une vignette inutilisable.
+func centeredCardScroll(card fyne.CanvasObject) fyne.CanvasObject {
+	scroll := container.NewVScroll(container.NewPadded(card))
+	scroll.SetMinSize(fyne.NewSize(customerCardWidth, 0))
+	return container.NewHBox(layout.NewSpacer(), scroll, layout.NewSpacer())
+}
+
 // customerLoginPanel affiche la connexion compte client dans le panneau.
 func customerLoginPanel(panelID int, relaunch func(int), notice string) fyne.CanvasObject {
 	box := container.NewMax()
@@ -300,7 +314,7 @@ func customerLoginPanel(panelID int, relaunch func(int), notice string) fyne.Can
 	form.Add(googleBtn)
 	form.Add(forgotBtn)
 	card := createCardBox(container.NewPadded(form), customerCardBorder, customerCardFill)
-	box.Objects = []fyne.CanvasObject{container.NewCenter(container.NewVScroll(card))}
+	box.Objects = []fyne.CanvasObject{centeredCardScroll(card)}
 	return box
 }
 
@@ -369,7 +383,7 @@ func customer2FAPanel(challengeToken, email string, emailCodeAllowed bool, panel
 	backBtn := widget.NewButton(T("totp_back_btn"), func() { relaunch(panelID) })
 	form.Add(backBtn)
 	card := createCardBox(container.NewPadded(form), customerCardBorder, customerCardFill)
-	return container.NewCenter(container.NewVScroll(card))
+	return centeredCardScroll(card)
 }
 
 // performGoogleOAuthFlowCustomer réutilise la boucle OAuth du navigateur
