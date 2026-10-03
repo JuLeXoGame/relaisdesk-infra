@@ -38,7 +38,7 @@ command -v scp >/dev/null || { echo "Commande introuvable : scp" >&2; exit 1; }
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PREBUILT_DIR="$ROOT/prebuilt/api"
-SSH_OPTS=(-o BatchMode=yes -i "$SSH_KEY")
+SSH_OPTS=(-o BatchMode=yes -o StrictHostKeyChecking=accept-new -i "$SSH_KEY")
 
 echo ""
 echo "===> 1/3 Transfert API vers Oracle ($VPS_TARGET)"
