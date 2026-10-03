@@ -142,37 +142,49 @@ func startGoogleOAuthLoopback(ctx context.Context) (authURL string, resultChan <
 	return authURL, resCh, cleanup, nil
 }
 
-// performGoogleOAuthFlow executes the full OAuth loopback flow and authenticates the technician.
-func performGoogleOAuthFlow(ctx context.Context, deviceToken ...string) (*TechnicianLoginResponse, error) {
+// performGoogleOAuthFlowCredential executes the full OAuth loopback flow,
+// authenticates the technician and returns the raw Google credential so the
+// caller can also open the customer session with it (verification rejouable).
+func performGoogleOAuthFlowCredential(ctx context.Context, deviceToken ...string) (*TechnicianLoginResponse, string, error) {
 	flowCtx, flowCancel := context.WithTimeout(ctx, 3*time.Minute)
 	defer flowCancel()
 
 	authURL, resChan, cleanup, err := startGoogleOAuthLoopback(flowCtx)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	defer cleanup()
 
 	// Open user's default browser
 	if err := openBrowserCrossPlatform(authURL); err != nil {
-		return nil, fmt.Errorf("impossible d'ouvrir le navigateur : %w", err)
+		return nil, "", fmt.Errorf("impossible d'ouvrir le navigateur : %w", err)
 	}
 
 	select {
 	case res := <-resChan:
 		if res.Error != nil {
-			return nil, res.Error
+			return nil, "", res.Error
 		}
 		dT := ""
 		if len(deviceToken) > 0 {
 			dT = deviceToken[0]
 		}
-		return loginTechnicianGoogle(res.Credential, "", dT)
+		resp, err := loginTechnicianGoogle(res.Credential, "", dT)
+		if err != nil {
+			return nil, "", err
+		}
+		return resp, res.Credential, nil
 
 	case <-flowCtx.Done():
 		if errors.Is(flowCtx.Err(), context.DeadlineExceeded) {
-			return nil, errors.New("délai de connexion Google dépassé (3 minutes)")
+			return nil, "", errors.New("délai de connexion Google dépassé (3 minutes)")
 		}
-		return nil, errors.New("connexion Google annulée")
+		return nil, "", errors.New("connexion Google annulée")
 	}
+}
+
+// performGoogleOAuthFlow executes the full OAuth loopback flow and authenticates the technician.
+func performGoogleOAuthFlow(ctx context.Context, deviceToken ...string) (*TechnicianLoginResponse, error) {
+	resp, _, err := performGoogleOAuthFlowCredential(ctx, deviceToken...)
+	return resp, err
 }

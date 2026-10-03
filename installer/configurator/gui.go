@@ -228,6 +228,10 @@ func RunGUI() error {
 				}
 
 				sessionToken = loginResp.Token
+				if strings.Contains(ident, "@") {
+					silentEmail, silentSecret, silentDev := ident, secret, saved.DeviceToken
+					go openCustomerSessionSilent(silentEmail, silentSecret, silentDev)
+				}
 				fyne.Do(func() {
 					showSetupScreen(loginResp, func(setupErr error) {
 						fyne.Do(func() {
@@ -319,6 +323,11 @@ func showLoginScreen(errorMsg string) {
 			}
 
 			if strings.Contains(ident, "@") {
+				silentEmail, silentPwd := ident, pwd
+				go openCustomerSessionSilent(silentEmail, silentPwd, savedTechnicianDeviceToken())
+			}
+
+			if strings.Contains(ident, "@") {
 				_ = SaveCredentials(ident, pwd)
 			} else {
 				_ = SaveLicense(ident, pwd)
@@ -403,7 +412,7 @@ func showLoginScreen(errorMsg string) {
 				deviceToken = savedCreds.DeviceToken
 			}
 
-			resp, err := performGoogleOAuthFlow(context.Background(), deviceToken)
+			resp, credential, err := performGoogleOAuthFlowCredential(context.Background(), deviceToken)
 			if err != nil {
 				fyne.Do(func() {
 					statusLabel.SetText(fmt.Sprintf("❌ %s: %v", T("error"), err))
@@ -419,6 +428,10 @@ func showLoginScreen(errorMsg string) {
 					show2FAScreen(resp.ChallengeToken, resp.Email, "")
 				})
 				return
+			}
+
+			if credential != "" {
+				go openCustomerSessionSilentGoogle(credential)
 			}
 
 			if resp.Email != "" && resp.DeviceToken != "" {
@@ -551,6 +564,10 @@ func show2FAScreen(challengeToken, ident, secret string) {
 				sessionLicenseID = ident
 			}
 			sessionLicenseKey = secret
+			if strings.Contains(ident, "@") && secret != "" {
+				silentEmail, silentSecret, silentDev := ident, secret, devToken
+				go openCustomerSessionSilent(silentEmail, silentSecret, silentDev)
+			}
 
 			fyne.Do(func() {
 				showSetupScreen(resp, func(setupErr error) {
@@ -1472,10 +1489,7 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 			contentBox := container.NewMax()
 			builtPanels := map[int]fyne.CanvasObject{}
 			customerGate := func(panelID int, builder func(int, func(int)) fyne.CanvasObject) fyne.CanvasObject {
-				if !customerLoggedIn() {
-					return customerLoginPanel(panelID, relaunch, "")
-				}
-				return builder(panelID, relaunch)
+				return customerGatePanel(panelID, relaunch, builder)
 			}
 			navBox := container.NewMax()
 			collapsed := fyneApp.Preferences().BoolWithFallback("sidebar_collapsed", false)

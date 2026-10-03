@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"strings"
 )
 
 // Compte client (miroir de l'espace client web) : la session technicien
@@ -15,6 +16,11 @@ var (
 	customerSessionCustomerID string
 	customerSessionRole       string
 	customerDeviceToken       string
+	// Challenge 2FA obtenu par l'ouverture silencieuse : le panneau
+	// affiche alors directement le formulaire de code (pas le mot de passe).
+	customerPendingChallenge    string
+	customerPendingEmail        string
+	customerPendingEmailAllowed bool
 )
 
 func clearCustomerSession() {
@@ -26,6 +32,83 @@ func clearCustomerSession() {
 
 func customerLoggedIn() bool {
 	return customerSessionToken != ""
+}
+
+// storeCustomerSession enregistre une session client authentifiée et
+// abandonne tout challenge 2FA en attente (connexion terminée).
+func storeCustomerSession(res *customerLoginResult) {
+	if res == nil {
+		return
+	}
+	customerSessionToken = res.Token
+	customerSessionEmail = res.Email
+	customerSessionCustomerID = res.CustomerID
+	customerPendingChallenge = ""
+	customerPendingEmail = ""
+	customerPendingEmailAllowed = false
+}
+
+// stashCustomerChallenge conserve un challenge 2FA pour afficher le
+// formulaire de code directement, sans redemander le mot de passe.
+func stashCustomerChallenge(res *customerLoginResult) {
+	if res == nil || res.ChallengeToken == "" {
+		return
+	}
+	customerPendingChallenge = res.ChallengeToken
+	customerPendingEmail = res.Email
+	customerPendingEmailAllowed = true
+	if res.EmailCodeAllowed != nil {
+		customerPendingEmailAllowed = *res.EmailCodeAllowed
+	}
+}
+
+func savedTechnicianDeviceToken() string {
+	if creds, err := LoadCredentials(); err == nil && creds != nil {
+		return creds.DeviceToken
+	}
+	return ""
+}
+
+// openCustomerSessionSilent ouvre la session client avec les identifiants
+// technicien (même mot de passe côté serveur). N'affiche jamais rien :
+// en cas d'échec la saisie manuelle reste disponible, en cas de 2FA le
+// code est demandé directement à l'ouverture d'une rubrique client.
+// Bloquant (un appel réseau) : à lancer dans une goroutine.
+func openCustomerSessionSilent(email, password, deviceToken string) {
+	if customerLoggedIn() {
+		return
+	}
+	email = strings.ToLower(strings.TrimSpace(email))
+	if email == "" || password == "" {
+		return
+	}
+	res, err := customerLoginPassword(email, password, deviceToken)
+	if err != nil {
+		return
+	}
+	if res.Requires2FA {
+		stashCustomerChallenge(res)
+		return
+	}
+	storeCustomerSession(res)
+}
+
+// openCustomerSessionSilentGoogle ouvre la session client avec le jeton
+// Google déjà obtenu pour la session technicien (vérification rejouable).
+// Mêmes garanties de silence qu'openCustomerSessionSilent.
+func openCustomerSessionSilentGoogle(credential string) {
+	if customerLoggedIn() || strings.TrimSpace(credential) == "" {
+		return
+	}
+	res, err := customerLoginGoogle(credential)
+	if err != nil {
+		return
+	}
+	if res.Requires2FA {
+		stashCustomerChallenge(res)
+		return
+	}
+	storeCustomerSession(res)
 }
 
 type customerLoginResult struct {

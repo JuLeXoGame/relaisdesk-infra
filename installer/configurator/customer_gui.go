@@ -222,6 +222,19 @@ func centeredCardScroll(card fyne.CanvasObject) fyne.CanvasObject {
 	return container.NewHBox(layout.NewSpacer(), scroll, layout.NewSpacer())
 }
 
+// customerGatePanel affiche le contenu client si la session est ouverte,
+// sinon le formulaire de code 2FA quand l'ouverture silencieuse a obtenu
+// un challenge, sinon le formulaire de connexion complet.
+func customerGatePanel(panelID int, relaunch func(int), builder func(int, func(int)) fyne.CanvasObject) fyne.CanvasObject {
+	if !customerLoggedIn() {
+		if customerPendingChallenge != "" {
+			return customer2FAPanel(customerPendingChallenge, customerPendingEmail, customerPendingEmailAllowed, panelID, relaunch)
+		}
+		return customerLoginPanel(panelID, relaunch, "")
+	}
+	return builder(panelID, relaunch)
+}
+
 // customerLoginPanel affiche la connexion compte client dans le panneau.
 func customerLoginPanel(panelID int, relaunch func(int), notice string) fyne.CanvasObject {
 	box := container.NewMax()
@@ -269,9 +282,7 @@ func customerLoginPanel(panelID int, relaunch func(int), notice string) fyne.Can
 					box.Refresh()
 					return
 				}
-				customerSessionToken = res.Token
-				customerSessionEmail = res.Email
-				customerSessionCustomerID = res.CustomerID
+				storeCustomerSession(res)
 				relaunch(panelID)
 			})
 		}()
@@ -294,9 +305,7 @@ func customerLoginPanel(panelID int, relaunch func(int), notice string) fyne.Can
 					box.Refresh()
 					return
 				}
-				customerSessionToken = res.Token
-				customerSessionEmail = res.Email
-				customerSessionCustomerID = res.CustomerID
+				storeCustomerSession(res)
 				relaunch(panelID)
 			})
 		}()
@@ -348,9 +357,7 @@ func customer2FAPanel(challengeToken, email string, emailCodeAllowed bool, panel
 				} else if !rememberCheck.Checked {
 					customerDeviceToken = ""
 				}
-				customerSessionToken = res.Token
-				customerSessionEmail = res.Email
-				customerSessionCustomerID = res.CustomerID
+				storeCustomerSession(res)
 				relaunch(panelID)
 			})
 		}()
