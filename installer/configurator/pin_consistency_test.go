@@ -26,6 +26,7 @@ var (
 		"RUSTDESK_EXPECTED_SHA256":         regexp.MustCompile(`RUSTDESK_EXPECTED_SHA256\s*=\s*"([^"]*)"`),
 		"RUSTDESK_PACKAGE_EXPECTED_SHA256": regexp.MustCompile(`RUSTDESK_PACKAGE_EXPECTED_SHA256\s*=\s*"([^"]*)"`),
 		"RUSTDESK_SO_EXPECTED_SHA256":      regexp.MustCompile(`RUSTDESK_SO_EXPECTED_SHA256\s*=\s*"([^"]*)"`),
+		"RUSTDESK_SERVICE_EXPECTED_SHA256": regexp.MustCompile(`RUSTDESK_SERVICE_EXPECTED_SHA256\s*=\s*"([^"]*)"`),
 	}
 )
 
@@ -123,11 +124,11 @@ func debInnerSHA256(debPath, innerPath string) (sum string, ok bool) {
 	return "", false
 }
 
-func checkExePin(t *testing.T, exePath, goFile, ps1File, ps1Var string) {
+func checkExePin(t *testing.T, exePath, goFile, goVar, ps1File, ps1Var string) {
 	t.Helper()
 	goSrc := readTestFile(t, goFile)
 	ps1Src := readTestFile(t, ps1File)
-	goPin := extractGoPin(t, goSrc, goFile, "RUSTDESK_EXPECTED_SHA256")
+	goPin := extractGoPin(t, goSrc, goFile, goVar)
 	ps1Pin := extractPs1Pin(t, ps1Src, ps1File, ps1Var)
 	if !validHex64(goPin) {
 		t.Errorf("%s: pin %q invalide (64 hex attendus)", goFile, goPin)
@@ -190,7 +191,7 @@ func checkDebPins(t *testing.T, debPath, goFile, ps1File, ps1Elf, ps1Deb, ps1So,
 func TestWindowsPinMatchesEmbeddedTechnician(t *testing.T) {
 	checkExePin(t,
 		filepath.Join("embedded", "rustdesk.exe"),
-		"config_windows.go",
+		"config_windows.go", "RUSTDESK_EXPECTED_SHA256",
 		filepath.Join("..", "build_technicien_portable.ps1"), "windowsHash",
 	)
 }
@@ -198,8 +199,16 @@ func TestWindowsPinMatchesEmbeddedTechnician(t *testing.T) {
 func TestWindowsPinMatchesEmbeddedViewer(t *testing.T) {
 	checkExePin(t,
 		filepath.Join("..", "viewer", "embedded", "rustdesk.exe"),
-		filepath.Join("..", "viewer", "config_windows.go"),
+		filepath.Join("..", "viewer", "config_windows.go"), "RUSTDESK_EXPECTED_SHA256",
 		filepath.Join("..", "build_viewer_windows.ps1"), "forkWindowsSha256",
+	)
+}
+
+func TestWindowsServicePinMatchesEmbeddedViewer(t *testing.T) {
+	checkExePin(t,
+		filepath.Join("..", "viewer", "embedded", "fleet", "rustdesk.exe"),
+		filepath.Join("..", "viewer", "config_windows.go"), "RUSTDESK_SERVICE_EXPECTED_SHA256",
+		filepath.Join("..", "build_viewer_windows.ps1"), "forkWindowsServiceSha256",
 	)
 }
 
