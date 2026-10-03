@@ -81,7 +81,26 @@ type createFolderRequest struct {
 }
 
 type updateFolderRequest struct {
-	Name string `json:"name"`
+	Name           string  `json:"name"`
+	ParentFolderID *string `json:"parent_folder_id"`
+}
+
+// applyFolderUpdate executes a folder rename and/or move. Either field may be
+// provided alone; at least one action is required.
+func applyFolderUpdate(db *sql.DB, customerID int64, licenseID, folderID string, req updateFolderRequest) (renamed, moved bool, err error) {
+	if req.ParentFolderID != nil {
+		if err := dbpkg.MoveDeviceFolder(db, customerID, licenseID, folderID, *req.ParentFolderID); err != nil {
+			return false, false, err
+		}
+		moved = true
+	}
+	if strings.TrimSpace(req.Name) != "" {
+		if err := dbpkg.UpdateDeviceFolder(db, customerID, licenseID, folderID, req.Name); err != nil {
+			return renamed, moved, err
+		}
+		renamed = true
+	}
+	return renamed, moved, nil
 }
 
 func getDeviceClientIP(r *http.Request) string {
@@ -834,12 +853,21 @@ func CustomerFolderActionHandler(db *sql.DB) http.HandlerFunc {
 
 		if r.Method == http.MethodPut || r.Method == http.MethodPost {
 			var req updateFolderRequest
-			if err := decodeSingleJSON(r, &req); err != nil || strings.TrimSpace(req.Name) == "" {
-				writeJSONError(w, "Nom de dossier invalide", http.StatusBadRequest)
+			if err := decodeSingleJSON(r, &req); err != nil {
+				writeJSONError(w, "Requête invalide", http.StatusBadRequest)
 				return
 			}
-			if err := dbpkg.UpdateDeviceFolder(db, identity.ID, "", folderID, req.Name); err != nil {
-				writeJSONError(w, "Impossible de renommer le dossier", http.StatusBadRequest)
+			renamed, moved, err := applyFolderUpdate(db, identity.ID, "", folderID, req)
+			if err != nil {
+				if !renamed && !moved {
+					writeJSONError(w, "Impossible de renommer ou déplacer le dossier", http.StatusBadRequest)
+				} else {
+					writeJSONError(w, "Impossible de renommer le dossier", http.StatusBadRequest)
+				}
+				return
+			}
+			if !renamed && !moved {
+				writeJSONError(w, "Nom de dossier invalide", http.StatusBadRequest)
 				return
 			}
 			writeJSON(w, http.StatusOK, map[string]bool{"success": true})
@@ -918,12 +946,21 @@ func TechnicianFolderActionHandler(db *sql.DB) http.HandlerFunc {
 
 		if r.Method == http.MethodPut || r.Method == http.MethodPost {
 			var req updateFolderRequest
-			if err := decodeSingleJSON(r, &req); err != nil || strings.TrimSpace(req.Name) == "" {
-				writeJSONError(w, "Nom de dossier invalide", http.StatusBadRequest)
+			if err := decodeSingleJSON(r, &req); err != nil {
+				writeJSONError(w, "Requête invalide", http.StatusBadRequest)
 				return
 			}
-			if err := dbpkg.UpdateDeviceFolder(db, 0, licenseID, folderID, req.Name); err != nil {
-				writeJSONError(w, "Impossible de renommer le dossier", http.StatusBadRequest)
+			renamed, moved, err := applyFolderUpdate(db, 0, licenseID, folderID, req)
+			if err != nil {
+				if !renamed && !moved {
+					writeJSONError(w, "Impossible de renommer ou déplacer le dossier", http.StatusBadRequest)
+				} else {
+					writeJSONError(w, "Impossible de renommer le dossier", http.StatusBadRequest)
+				}
+				return
+			}
+			if !renamed && !moved {
+				writeJSONError(w, "Nom de dossier invalide", http.StatusBadRequest)
 				return
 			}
 			writeJSON(w, http.StatusOK, map[string]bool{"success": true})

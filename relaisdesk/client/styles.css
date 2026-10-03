@@ -93,3 +93,66 @@
 .topbar.compact{margin-bottom:8px}
 .topbar.compact .eyebrow{margin:0}
 .section-heading h2{font-size:20px}
+/* Explorateur de parc + menu lateral repliable (2026-10-03) */
+.nav-item{display:flex;align-items:center;gap:12px;width:100%}
+.nav-icon{width:20px;height:20px;flex:none}
+.nav-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+#logoutButton{display:flex;align-items:center;justify-content:center;gap:10px}
+.sidebar-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sidebar-collapse{flex:none;width:32px;height:32px;display:grid;place-items:center;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer}
+.sidebar-collapse:hover{color:#bfdbfe;background:rgba(37,99,235,.15)}
+.sidebar-collapse svg{width:18px;height:18px;transition:transform .15s ease}
+.fleet-explorer{display:flex;align-items:stretch;margin-top:12px;min-height:320px}
+.fleet-tree-pane{flex:none;width:var(--fleet-tree-w,28%);min-width:170px;max-width:48%;border:1px solid var(--border);border-radius:12px;background:rgba(15,23,42,.6);display:flex;flex-direction:column;overflow:hidden}
+.fleet-pane-head{padding:10px 12px;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1px solid var(--border)}
+.fleet-tree{list-style:none;margin:0;padding:8px;overflow:auto;flex:1;max-height:560px}
+.fleet-tree ul{list-style:none;margin:0;padding-left:16px}
+.fleet-node{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;cursor:pointer;border:1px solid transparent}
+.fleet-node:hover{background:rgba(37,99,235,.12)}
+.fleet-node.selected{background:rgba(37,99,235,.18);border-color:rgba(59,130,246,.35)}
+.fleet-node.drag-over{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.5)}
+.fleet-chevron{flex:none;width:22px;height:22px;display:grid;place-items:center;border:0;background:transparent;color:var(--muted);cursor:pointer;border-radius:6px;padding:0}
+.fleet-chevron:hover{color:var(--text)}
+.fleet-chevron svg{width:14px;height:14px;transition:transform .12s ease}
+.fleet-chevron.expanded svg{transform:rotate(90deg)}
+.fleet-chevron.leaf{visibility:hidden}
+.fleet-node-icon{flex:none;width:18px;height:18px;color:#7cb3f5}
+.fleet-node-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:14px}
+.fleet-count{flex:none;font-size:12px;font-weight:700;color:var(--muted);background:rgba(148,163,184,.12);border-radius:999px;padding:1px 8px}
+.fleet-node-actions{display:none;gap:2px}
+.fleet-node:hover .fleet-node-actions,.fleet-node:focus-within .fleet-node-actions{display:flex}
+.fleet-node-actions button{border:0;background:transparent;color:var(--muted);cursor:pointer;padding:4px;border-radius:6px;display:grid;place-items:center}
+.fleet-node-actions button:hover{color:var(--text);background:rgba(148,163,184,.15)}
+.fleet-node-actions button.danger:hover{color:#fda4af;background:rgba(244,63,94,.15)}
+.fleet-node-actions svg{width:14px;height:14px}
+.fleet-splitter{flex:0 0 12px;cursor:col-resize;position:relative;border-radius:6px}
+.fleet-splitter::after{content:"";position:absolute;top:0;bottom:0;left:4px;right:4px;border-radius:4px}
+.fleet-splitter:hover::after,.fleet-splitter:focus-visible::after{background:rgba(59,130,246,.45)}
+.fleet-splitter:focus{outline:none}
+.fleet-content-pane{flex:1;min-width:0}
+@media(min-width:851px){
+.app.collapsed{grid-template-columns:78px 1fr}
+.app.collapsed .sidebar{padding:26px 12px}
+.app.collapsed .sidebar-top{flex-direction:column;gap:12px}
+.app.collapsed .brand span{display:none}
+.app.collapsed .nav-item{justify-content:center;padding:12px 0}
+.app.collapsed .nav-label{display:none}
+.app.collapsed .sidebar-collapse svg{transform:rotate(180deg)}
+.app.collapsed .account-identifiers{display:none}
+.app.collapsed #logoutButton{padding:11px 0}
+.app.collapsed #logoutButton .nav-label{display:none}
+}
+@media(max-width:850px){
+.fleet-explorer{flex-direction:column}
+.fleet-tree-pane{width:100%;max-width:none}
+.fleet-tree{max-height:220px}
+.fleet-splitter{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+.sidebar-collapse svg,.fleet-chevron svg{transition:none}
+}
+/* Correctif dépassement menu : la piste de grille ne doit jamais excéder la sidebar */
+.sidebar nav{grid-template-columns:minmax(0,1fr)}
+@media(max-width:850px){
+.nav-item{width:auto;flex:0 0 auto}
+}

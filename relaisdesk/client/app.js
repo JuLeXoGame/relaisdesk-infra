@@ -19,7 +19,8 @@ const state = {
   deviceQuotas: [],
   folders: [],
   activeFolderId: '',
-  viewAllDevices: false
+  viewAllDevices: false,
+  treeCollapsed: loadTreeCollapsed()
 };
 
 const byId = (id) => document.getElementById(id);
@@ -1162,6 +1163,41 @@ function renderFleetQuotas() {
 }
 
 // --- Folder and Navigation Helpers ---
+function loadTreeCollapsed() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('rd_fleet_tree_collapsed') || '[]');
+    return new Set(Array.isArray(raw) ? raw : []);
+  } catch (_) {
+    return new Set();
+  }
+}
+
+function saveTreeCollapsed() {
+  try {
+    localStorage.setItem('rd_fleet_tree_collapsed', JSON.stringify([...state.treeCollapsed].slice(0, 200)));
+  } catch (_) { /* stockage indisponible */ }
+}
+
+function getFolderSubtreeIds(id) {
+  const ids = new Set([id]);
+  let added = true;
+  while (added) {
+    added = false;
+    for (const f of (state.folders || [])) {
+      if (f.parent_folder_id && ids.has(f.parent_folder_id) && !ids.has(f.folder_id)) {
+        ids.add(f.folder_id);
+        added = true;
+      }
+    }
+  }
+  return ids;
+}
+
+function isValidMoveTarget(srcId, dstId) {
+  if (!srcId || srcId === dstId) return false;
+  return !getFolderSubtreeIds(srcId).has(dstId);
+}
+
 function getFolderById(id) {
   if (!id) return null;
   return (state.folders || []).find((f) => f.folder_id === id) || null;
@@ -1220,7 +1256,7 @@ function getFolderTreeOptions(currentDeviceFolderId = '', excludeDescendantsOf =
     const children = (state.folders || []).filter((f) => (f.parent_folder_id || '') === parentId && !excluded.has(f.folder_id));
     children.sort((a, b) => a.name.localeCompare(b.name));
     for (const child of children) {
-      const prefix = level > 0 ? '  '.repeat(level) + '↳ 📁 ' : '📁 ';
+      const prefix = level > 0 ? '  '.repeat(level) + '↳ ' : '';
       options.push({ id: child.folder_id, label: prefix + child.name, level });
       addChildren(child.folder_id, level + 1);
     }
@@ -1238,15 +1274,8 @@ function renderFolderBreadcrumbs() {
 
   const rootItem = document.createElement('span');
   rootItem.className = `breadcrumb-item ${state.activeFolderId === '' && !state.viewAllDevices ? 'active' : ''}`;
-  rootItem.textContent = '🏠 ' + t('root_folder_name');
-  rootItem.addEventListener('click', () => {
-    state.activeFolderId = '';
-    state.viewAllDevices = false;
-    renderFolderBreadcrumbs();
-    renderFolderPills();
-    updateFolderActionButtons();
-    renderDevices(filterDevicesList(state.devices));
-  });
+  rootItem.textContent = t('root_folder_name');
+  rootItem.addEventListener('click', () => selectFleetFolder('', false));
   container.append(rootItem);
 
   if (state.viewAllDevices) {
@@ -1255,7 +1284,7 @@ function renderFolderBreadcrumbs() {
     sep.textContent = '>';
     const allItem = document.createElement('span');
     allItem.className = 'breadcrumb-item active';
-    allItem.textContent = '👁️ ' + t('all_devices_view');
+    allItem.textContent = t('all_devices_view');
     container.append(sep, allItem);
     return;
   }
@@ -1270,77 +1299,230 @@ function renderFolderBreadcrumbs() {
       sep.textContent = '>';
       const crumb = document.createElement('span');
       crumb.className = `breadcrumb-item ${isLast ? 'active' : ''}`;
-      crumb.textContent = '📁 ' + f.name;
+      crumb.textContent = f.name;
       if (!isLast) {
-        crumb.addEventListener('click', () => {
-          state.activeFolderId = f.folder_id;
-          state.viewAllDevices = false;
-          renderFolderBreadcrumbs();
-          renderFolderPills();
-          updateFolderActionButtons();
-          renderDevices(filterDevicesList(state.devices));
-        });
+        crumb.addEventListener('click', () => selectFleetFolder(f.folder_id, false));
       }
       container.append(sep, crumb);
     }
   }
 }
 
-function renderFolderPills() {
-  const container = byId('deviceFoldersList');
-  if (!container) return;
-  container.replaceChildren();
+const FLEET_SVG = {
+  folder: '<svg class="fleet-node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
+  home: '<svg class="fleet-node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>',
+  all: '<svg class="fleet-node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+  chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
+  pencil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
+  move: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>'
+};
+
+let fleetDragFolderId = '';
+
+function selectFleetFolder(folderId, viewAll) {
+  if (!viewAll) state.activeFolderId = folderId || '';
+  state.viewAllDevices = viewAll === true;
+  refreshFleetView();
+}
+
+function refreshFleetView() {
+  renderFolderBreadcrumbs();
+  renderFleetTree();
+  updateFolderActionButtons();
+  renderDevices(filterDevicesList(state.devices));
+}
+
+function sortedFolderChildren(parentId) {
+  const children = getFolderChildren(parentId);
+  children.sort((a, b) => a.name.localeCompare(b.name));
+  return children;
+}
+
+function treeActionButton(svg, label, onClick, danger = false) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.innerHTML = svg;
+  button.title = label;
+  button.setAttribute('aria-label', label);
+  if (danger) button.classList.add('danger');
+  button.addEventListener('click', (event) => { event.stopPropagation(); onClick(); });
+  return button;
+}
+
+function buildFleetNodeRow({ folderId, icon, name, count, selected, hasChildren, collapsed, special, draggable }) {
   const t = (window.RdI18n && window.RdI18n.t) ? window.RdI18n.t : (k) => k;
+  const row = document.createElement('div');
+  row.className = `fleet-node${selected ? ' selected' : ''}`;
+  row.setAttribute('role', 'treeitem');
+  row.setAttribute('aria-selected', selected ? 'true' : 'false');
+  row.tabIndex = 0;
+  if (folderId) row.dataset.folderId = folderId;
+  if (special) row.dataset.special = special;
 
-  const viewAllPill = document.createElement('button');
-  viewAllPill.type = 'button';
-  viewAllPill.className = `folder-pill ${state.viewAllDevices ? 'active' : ''}`;
-  const viewAllIcon = document.createTextNode('👁️ ' + t('all_devices_view') + ' ');
-  const viewAllCount = document.createElement('span');
-  viewAllCount.className = 'folder-pill-count';
-  viewAllCount.textContent = state.devices.length;
-  viewAllPill.append(viewAllIcon, viewAllCount);
-  viewAllPill.addEventListener('click', () => {
-    state.viewAllDevices = !state.viewAllDevices;
-    renderFolderBreadcrumbs();
-    renderFolderPills();
-    updateFolderActionButtons();
-    renderDevices(filterDevicesList(state.devices));
+  const chevron = document.createElement('button');
+  chevron.type = 'button';
+  chevron.className = `fleet-chevron${hasChildren ? (collapsed ? '' : ' expanded') : ' leaf'}`;
+  chevron.innerHTML = FLEET_SVG.chevron;
+  const chevronLabel = collapsed ? t('tree_expand') : t('tree_collapse');
+  chevron.title = chevronLabel;
+  chevron.setAttribute('aria-label', `${chevronLabel} — ${name}`);
+  if (hasChildren) row.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  chevron.addEventListener('click', (event) => {
+    event.stopPropagation();
+    if (!hasChildren) return;
+    if (state.treeCollapsed.has(folderId)) state.treeCollapsed.delete(folderId);
+    else state.treeCollapsed.add(folderId);
+    saveTreeCollapsed();
+    renderFleetTree();
   });
-  container.append(viewAllPill);
+  row.append(chevron);
 
-  if (state.viewAllDevices) {
-    return;
+  const iconWrap = document.createElement('span');
+  iconWrap.innerHTML = icon;
+  iconWrap.setAttribute('aria-hidden', 'true');
+  row.append(iconWrap.firstChild || iconWrap);
+
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'fleet-node-name';
+  nameSpan.textContent = name;
+  nameSpan.title = name;
+  row.append(nameSpan);
+
+  const countBadge = document.createElement('span');
+  countBadge.className = 'fleet-count';
+  countBadge.textContent = count;
+  row.append(countBadge);
+
+  const activate = () => {
+    if (special === 'all') selectFleetFolder('', true);
+    else selectFleetFolder(folderId, false);
+  };
+  row.addEventListener('click', activate);
+  row.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(); }
+  });
+
+  if (!special && folderId) {
+    const actions = document.createElement('span');
+    actions.className = 'fleet-node-actions';
+    actions.append(
+      treeActionButton(FLEET_SVG.plus, t('btn_new_subfolder'), () => openCreateFolderModal(true, folderId)),
+      treeActionButton(FLEET_SVG.pencil, t('btn_rename_folder'), () => openRenameFolderModal(folderId)),
+      treeActionButton(FLEET_SVG.move, t('btn_move_folder'), () => openMoveFolderModal(folderId)),
+      treeActionButton(FLEET_SVG.trash, t('btn_delete_folder'), () => handleDeleteFolder(folderId), true)
+    );
+    row.append(actions);
   }
 
-  const children = getFolderChildren(state.activeFolderId);
-  children.sort((a, b) => a.name.localeCompare(b.name));
-
-  children.forEach((child) => {
-    const pill = document.createElement('button');
-    pill.type = 'button';
-    pill.className = 'folder-pill';
-    const pillText = document.createTextNode('📁 ' + child.name + ' ');
-    const countSpan = document.createElement('span');
-    countSpan.className = 'folder-pill-count';
-    countSpan.textContent = countFolderDevices(child.folder_id);
-    pill.append(pillText, countSpan);
-    pill.addEventListener('click', () => {
-      state.activeFolderId = child.folder_id;
-      state.viewAllDevices = false;
-      renderFolderBreadcrumbs();
-      renderFolderPills();
-      updateFolderActionButtons();
-      renderDevices(filterDevicesList(state.devices));
+  if (draggable) {
+    row.draggable = true;
+    row.addEventListener('dragstart', (event) => {
+      fleetDragFolderId = folderId;
+      try { event.dataTransfer.setData('text/plain', folderId); } catch (_) { /* presse-papiers DnD indisponible */ }
+      event.dataTransfer.effectAllowed = 'move';
     });
-    container.append(pill);
-  });
+    row.addEventListener('dragend', () => {
+      fleetDragFolderId = '';
+      document.querySelectorAll('.fleet-node.drag-over').forEach((n) => n.classList.remove('drag-over'));
+    });
+  }
+
+  if (!special || special === 'root') {
+    row.addEventListener('dragover', (event) => {
+      if (!fleetDragFolderId || !isValidMoveTarget(fleetDragFolderId, folderId)) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      row.classList.add('drag-over');
+    });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('drop', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      row.classList.remove('drag-over');
+      const srcId = fleetDragFolderId;
+      fleetDragFolderId = '';
+      if (srcId) confirmMoveFolder(srcId, folderId);
+    });
+  }
+
+  return row;
+}
+
+function buildFleetFolderLi(folder) {
+  const li = document.createElement('li');
+  li.setAttribute('role', 'none');
+  const children = sortedFolderChildren(folder.folder_id);
+  const collapsed = state.treeCollapsed.has(folder.folder_id);
+  const selected = !state.viewAllDevices && state.activeFolderId === folder.folder_id;
+  li.append(buildFleetNodeRow({
+    folderId: folder.folder_id,
+    icon: FLEET_SVG.folder,
+    name: folder.name,
+    count: countFolderDevices(folder.folder_id),
+    selected,
+    hasChildren: children.length > 0,
+    collapsed,
+    draggable: true
+  }));
+  if (children.length && !collapsed) {
+    const group = document.createElement('ul');
+    group.setAttribute('role', 'group');
+    for (const child of children) group.append(buildFleetFolderLi(child));
+    li.append(group);
+  }
+  return li;
+}
+
+function renderFleetTree() {
+  const tree = byId('fleetTree');
+  if (!tree) return;
+  tree.replaceChildren();
+  const t = (window.RdI18n && window.RdI18n.t) ? window.RdI18n.t : (k) => k;
+
+  const allLi = document.createElement('li');
+  allLi.setAttribute('role', 'none');
+  allLi.append(buildFleetNodeRow({
+    folderId: '',
+    icon: FLEET_SVG.all,
+    name: t('all_devices_view'),
+    count: (state.devices || []).length,
+    selected: state.viewAllDevices,
+    hasChildren: false,
+    collapsed: true,
+    special: 'all'
+  }));
+  tree.append(allLi);
+
+  const rootLi = document.createElement('li');
+  rootLi.setAttribute('role', 'none');
+  const rootChildren = sortedFolderChildren('');
+  const rootCollapsed = state.treeCollapsed.has('');
+  rootLi.append(buildFleetNodeRow({
+    folderId: '',
+    icon: FLEET_SVG.home,
+    name: t('root_folder_name'),
+    count: countFolderDevices(''),
+    selected: !state.viewAllDevices && !state.activeFolderId,
+    hasChildren: rootChildren.length > 0,
+    collapsed: rootCollapsed,
+    special: 'root'
+  }));
+  if (rootChildren.length && !rootCollapsed) {
+    const group = document.createElement('ul');
+    group.setAttribute('role', 'group');
+    for (const child of rootChildren) group.append(buildFleetFolderLi(child));
+    rootLi.append(group);
+  }
+  tree.append(rootLi);
 }
 
 function updateFolderActionButtons() {
   const btnNewFolder = byId('btnNewFolder');
   const btnNewSubFolder = byId('btnNewSubFolder');
   const btnRenameFolder = byId('btnRenameFolder');
+  const btnMoveFolder = byId('btnMoveFolder');
   const btnDeleteFolder = byId('btnDeleteFolder');
 
   const inFolder = Boolean(state.activeFolderId) && !state.viewAllDevices;
@@ -1348,7 +1530,70 @@ function updateFolderActionButtons() {
   if (btnNewFolder) btnNewFolder.style.display = 'inline-block';
   if (btnNewSubFolder) btnNewSubFolder.style.display = inFolder ? 'inline-block' : 'none';
   if (btnRenameFolder) btnRenameFolder.style.display = inFolder ? 'inline-block' : 'none';
+  if (btnMoveFolder) btnMoveFolder.style.display = inFolder ? 'inline-block' : 'none';
   if (btnDeleteFolder) btnDeleteFolder.style.display = inFolder ? 'inline-block' : 'none';
+}
+
+function applySidebarCollapsed(collapsed, persist = true) {
+  const app = byId('appScreen');
+  if (!app) return;
+  app.classList.toggle('collapsed', collapsed);
+  const btn = byId('sidebarCollapseBtn');
+  if (btn) btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  if (persist) {
+    try { localStorage.setItem('rd_sidebar_collapsed', collapsed ? '1' : '0'); } catch (_) { /* stockage indisponible */ }
+  }
+}
+
+function initSidebarCollapse() {
+  let collapsed = false;
+  try { collapsed = localStorage.getItem('rd_sidebar_collapsed') === '1'; } catch (_) { /* stockage indisponible */ }
+  applySidebarCollapsed(collapsed, false);
+  const btn = byId('sidebarCollapseBtn');
+  if (btn) btn.addEventListener('click', () => applySidebarCollapsed(!byId('appScreen').classList.contains('collapsed')));
+}
+
+function applyFleetTreeWidth(pct, persist = true) {
+  const pane = byId('fleetTreePane');
+  const splitter = byId('fleetSplitter');
+  if (!pane || !splitter) return;
+  pct = Math.min(48, Math.max(15, pct));
+  pane.style.setProperty('--fleet-tree-w', pct + '%');
+  splitter.setAttribute('aria-valuenow', String(Math.round(pct)));
+  if (persist) {
+    try { localStorage.setItem('rd_fleet_tree_width', String(pct)); } catch (_) { /* stockage indisponible */ }
+  }
+}
+
+function initFleetSplitter() {
+  const splitter = byId('fleetSplitter');
+  const explorer = splitter ? splitter.closest('.fleet-explorer') : null;
+  if (!splitter || !explorer) return;
+  let saved = 0;
+  try { saved = parseFloat(localStorage.getItem('rd_fleet_tree_width') || ''); } catch (_) { /* stockage indisponible */ }
+  if (saved >= 15 && saved <= 48) applyFleetTreeWidth(saved, false);
+  let dragging = false;
+  splitter.addEventListener('pointerdown', (event) => {
+    dragging = true;
+    try { splitter.setPointerCapture(event.pointerId); } catch (_) { /* capture indisponible */ }
+    event.preventDefault();
+  });
+  splitter.addEventListener('pointermove', (event) => {
+    if (!dragging) return;
+    const rect = explorer.getBoundingClientRect();
+    if (rect.width > 0) applyFleetTreeWidth(((event.clientX - rect.left) / rect.width) * 100);
+  });
+  const stop = () => { dragging = false; };
+  splitter.addEventListener('pointerup', stop);
+  splitter.addEventListener('pointercancel', stop);
+  splitter.addEventListener('keydown', (event) => {
+    const pane = byId('fleetTreePane');
+    const current = parseFloat(getComputedStyle(pane).getPropertyValue('--fleet-tree-w')) || 28;
+    if (event.key === 'ArrowLeft') { applyFleetTreeWidth(current - 2); event.preventDefault(); }
+    else if (event.key === 'ArrowRight') { applyFleetTreeWidth(current + 2); event.preventDefault(); }
+    else if (event.key === 'Home') { applyFleetTreeWidth(15); event.preventDefault(); }
+    else if (event.key === 'End') { applyFleetTreeWidth(48); event.preventDefault(); }
+  });
 }
 
 async function fetchDevices(append = false) {
@@ -1375,10 +1620,7 @@ async function fetchDevices(append = false) {
     renderFleetQuotas();
     byId('moreDevicesButton').hidden = !state.deviceNextCursor;
     updateDeviceStats(state.devices);
-    renderFolderBreadcrumbs();
-    renderFolderPills();
-    updateFolderActionButtons();
-    renderDevices(filterDevicesList(state.devices));
+    refreshFleetView();
   } catch (err) {
     setMessage(byId('appMessage'), err.message, true);
   } finally {
@@ -1542,17 +1784,10 @@ function renderDevices(devices) {
     if (item.folder_id) {
       const fTag = document.createElement('span');
       fTag.className = 'device-folder-tag';
-      fTag.textContent = '📁 ' + getFolderName(item.folder_id);
+      fTag.textContent = getFolderName(item.folder_id);
       fTag.title = 'Naviguer dans ce dossier';
       fTag.style.cursor = 'pointer';
-      fTag.addEventListener('click', () => {
-        state.activeFolderId = item.folder_id;
-        state.viewAllDevices = false;
-        renderFolderBreadcrumbs();
-        renderFolderPills();
-        updateFolderActionButtons();
-        renderDevices(filterDevicesList(state.devices));
-      });
+      fTag.addEventListener('click', () => selectFleetFolder(item.folder_id, false));
       folderCell.append(fTag);
     } else {
       const noFolder = document.createElement('span');
@@ -1665,11 +1900,12 @@ function renderDevices(devices) {
   });
 }
 
-function openCreateFolderModal(isSubfolder = false) {
+function openCreateFolderModal(isSubfolder = false, parentId) {
   const t = (window.RdI18n && window.RdI18n.t) ? window.RdI18n.t : (k) => k;
+  const parent = parentId !== undefined ? parentId : (state.activeFolderId || '');
   byId('folderModalMode').value = 'create';
   byId('folderModalId').value = '';
-  byId('folderModalParentId').value = isSubfolder ? (state.activeFolderId || '') : '';
+  byId('folderModalParentId').value = isSubfolder ? parent : '';
   byId('folderModalTitle').textContent = isSubfolder ? t('btn_new_subfolder') : t('btn_new_folder');
   byId('folderModalName').value = '';
   setMessage(byId('folderModalMessage'), '');
@@ -1686,7 +1922,7 @@ function openCreateFolderModal(isSubfolder = false) {
         const o = document.createElement('option');
         o.value = opt.id;
         o.textContent = opt.label;
-        if (opt.id === state.activeFolderId) o.selected = true;
+        if (opt.id === parent) o.selected = true;
         select.append(o);
       });
     } else {
@@ -1697,9 +1933,10 @@ function openCreateFolderModal(isSubfolder = false) {
   byId('folderModal').showModal();
 }
 
-function openRenameFolderModal() {
-  if (!state.activeFolderId) return;
-  const current = getFolderById(state.activeFolderId);
+function openRenameFolderModal(folderId) {
+  const targetId = folderId !== undefined ? folderId : state.activeFolderId;
+  if (!targetId) return;
+  const current = getFolderById(targetId);
   if (!current) return;
   const t = (window.RdI18n && window.RdI18n.t) ? window.RdI18n.t : (k) => k;
 
@@ -1759,9 +1996,10 @@ async function handleFolderSubmit(event) {
   }
 }
 
-async function handleDeleteActiveFolder() {
-  if (!state.activeFolderId) return;
-  const current = getFolderById(state.activeFolderId);
+async function handleDeleteFolder(folderId) {
+  const targetId = folderId !== undefined ? folderId : state.activeFolderId;
+  if (!targetId) return;
+  const current = getFolderById(targetId);
   if (!current) return;
   const t = (window.RdI18n && window.RdI18n.t) ? window.RdI18n.t : (k) => k;
 
@@ -1772,10 +2010,102 @@ async function handleDeleteActiveFolder() {
       method: 'DELETE'
     });
     setMessage(byId('appMessage'), t('folder_deleted_success'));
-    state.activeFolderId = current.parent_folder_id || '';
+    if (state.activeFolderId === current.folder_id || getFolderSubtreeIds(current.folder_id).has(state.activeFolderId)) {
+      state.activeFolderId = current.parent_folder_id || '';
+    }
     await fetchDevices();
   } catch (err) {
     setMessage(byId('appMessage'), err.message, true);
+  }
+}
+
+async function confirmMoveFolder(srcId, dstId) {
+  const src = getFolderById(srcId);
+  if (!src) return;
+  const t = (window.RdI18n && window.RdI18n.t) ? window.RdI18n.t : (k) => k;
+
+  if (!isValidMoveTarget(srcId, dstId)) {
+    setMessage(byId('appMessage'), t('move_folder_invalid_target'), true);
+    return;
+  }
+  if ((src.parent_folder_id || '') === (dstId || '')) return;
+  const dstName = getFolderName(dstId);
+  if (!confirm(t('confirm_move_folder').replace('{src}', src.name).replace('{dst}', dstName))) return;
+
+  try {
+    await api(`/api/v1/customer/device-folders/${encodeURIComponent(srcId)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ parent_folder_id: dstId || '' })
+    });
+    setMessage(byId('appMessage'), t('folder_moved_success'));
+    state.activeFolderId = srcId;
+    state.viewAllDevices = false;
+    await fetchDevices();
+  } catch (err) {
+    setMessage(byId('appMessage'), err.message, true);
+  }
+}
+
+function openMoveFolderModal(folderId) {
+  const targetId = folderId !== undefined ? folderId : state.activeFolderId;
+  if (!targetId) return;
+  const current = getFolderById(targetId);
+  if (!current) return;
+  const t = (window.RdI18n && window.RdI18n.t) ? window.RdI18n.t : (k) => k;
+  byId('moveFolderModalId').value = current.folder_id;
+  byId('moveFolderModalDesc').textContent = `${t('select_target_folder')} « ${current.name} » :`;
+  setMessage(byId('moveFolderMessage'), '');
+  byId('moveFolderSubmitBtn').disabled = false;
+
+  const select = byId('moveFolderSelect');
+  select.replaceChildren();
+  const options = getFolderTreeOptions('', current.folder_id);
+  options.forEach((opt) => {
+    const o = document.createElement('option');
+    o.value = opt.id;
+    o.textContent = opt.label;
+    if (opt.id === (current.parent_folder_id || '')) o.selected = true;
+    select.append(o);
+  });
+
+  byId('moveFolderModal').showModal();
+}
+
+async function handleMoveFolderSubmit(event) {
+  event.preventDefault();
+  const folderId = byId('moveFolderModalId').value;
+  const targetFolderId = byId('moveFolderSelect').value;
+  const msg = byId('moveFolderMessage');
+  const btn = byId('moveFolderSubmitBtn');
+  const t = (window.RdI18n && window.RdI18n.t) ? window.RdI18n.t : (k) => k;
+  const current = getFolderById(folderId);
+
+  if ((current && (current.parent_folder_id || '') === targetFolderId)) {
+    byId('moveFolderModal').close();
+    return;
+  }
+  if (!isValidMoveTarget(folderId, targetFolderId)) {
+    setMessage(msg, t('move_folder_invalid_target'), true);
+    return;
+  }
+  if (!confirm(t('confirm_move_folder').replace('{src}', current ? current.name : '').replace('{dst}', getFolderName(targetFolderId)))) return;
+
+  btn.disabled = true;
+  setMessage(msg, 'Déplacement en cours…');
+
+  try {
+    await api(`/api/v1/customer/device-folders/${encodeURIComponent(folderId)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ parent_folder_id: targetFolderId })
+    });
+    byId('moveFolderModal').close();
+    setMessage(byId('appMessage'), t('folder_moved_success'));
+    state.activeFolderId = folderId;
+    state.viewAllDevices = false;
+    await fetchDevices();
+  } catch (err) {
+    setMessage(msg, err.message, true);
+    btn.disabled = false;
   }
 }
 
@@ -2114,6 +2444,7 @@ async function logout(callAPI = true, sessionExpired = false) {
     safeCloseDialog('recoveryCodesDialog');
     safeCloseDialog('folderModal');
     safeCloseDialog('moveDeviceModal');
+    safeCloseDialog('moveFolderModal');
     byId('devicesBody').replaceChildren();
   } finally {
     try { sessionStorage.removeItem('rd_customer_token'); } catch (_) { /* stockage indisponible */ }
@@ -2133,7 +2464,7 @@ function getPanelTitles() {
     licenses: t('nav_licenses'),
     billing: t('nav_billing'),
     interventions: t('nav_interventions'),
-    services: 'Prestations & paiements clients',
+    services: t('nav_services'),
     settings: t('nav_settings')
   };
 }
@@ -2296,10 +2627,13 @@ if (byId('btnNewSubFolder')) {
   byId('btnNewSubFolder').addEventListener('click', () => openCreateFolderModal(true));
 }
 if (byId('btnRenameFolder')) {
-  byId('btnRenameFolder').addEventListener('click', openRenameFolderModal);
+  byId('btnRenameFolder').addEventListener('click', () => openRenameFolderModal());
+}
+if (byId('btnMoveFolder')) {
+  byId('btnMoveFolder').addEventListener('click', () => openMoveFolderModal());
 }
 if (byId('btnDeleteFolder')) {
-  byId('btnDeleteFolder').addEventListener('click', handleDeleteActiveFolder);
+  byId('btnDeleteFolder').addEventListener('click', () => handleDeleteFolder());
 }
 if (byId('closeFolderModal')) {
   byId('closeFolderModal').addEventListener('click', () => byId('folderModal').close());
@@ -2313,7 +2647,15 @@ if (byId('closeMoveDeviceModal')) {
 if (byId('moveDeviceForm')) {
   byId('moveDeviceForm').addEventListener('submit', handleMoveDeviceSubmit);
 }
+if (byId('closeMoveFolderModal')) {
+  byId('closeMoveFolderModal').addEventListener('click', () => byId('moveFolderModal').close());
+}
+if (byId('moveFolderForm')) {
+  byId('moveFolderForm').addEventListener('submit', handleMoveFolderSubmit);
+}
 byId('moreDevicesButton').addEventListener('click', () => fetchDevices(true));
+initSidebarCollapse();
+initFleetSplitter();
 
 // React to language switch
 window.addEventListener('relaisdesk:langchange', () => {

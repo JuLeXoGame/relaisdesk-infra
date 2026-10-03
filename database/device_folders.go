@@ -14,6 +14,7 @@ import (
 var (
 	ErrFolderNotFound = errors.New("dossier introuvable")
 	ErrInvalidFolder  = errors.New("nom de dossier invalide")
+	ErrFolderCycle    = errors.New("déplacement impossible : un dossier ne peut pas être placé dans lui-même ou l'un de ses sous-dossiers")
 )
 
 type DeviceFolder struct {
@@ -228,6 +229,79 @@ func UpdateDeviceFolder(db *sql.DB, customerID int64, licenseID, folderID, newNa
 		return ErrFolderNotFound
 	}
 
+	return nil
+}
+
+// MoveDeviceFolder déplace un dossier vers un nouveau parent ("" = racine).
+// Le déplacement vers soi-même, vers l'un de ses descendants ou vers un
+// dossier d'un autre propriétaire est refusé.
+func MoveDeviceFolder(db *sql.DB, customerID int64, licenseID, folderID, newParentID string) error {
+	if db == nil {
+		return errors.New("base de données non initialisée")
+	}
+	folderID = strings.TrimSpace(folderID)
+	newParentID = strings.TrimSpace(newParentID)
+	if folderID == "" {
+		return ErrFolderNotFound
+	}
+	licenseID = strings.ToUpper(strings.TrimSpace(licenseID))
+
+	allFolders, err := ListDeviceFolders(db, customerID, licenseID)
+	if err != nil {
+		return err
+	}
+	byID := make(map[string]DeviceFolder, len(allFolders))
+	for _, f := range allFolders {
+		byID[f.FolderID] = f
+	}
+	target, ok := byID[folderID]
+	if !ok {
+		return ErrFolderNotFound
+	}
+	if newParentID == target.ParentFolderID {
+		return nil
+	}
+	if newParentID == folderID {
+		return ErrFolderCycle
+	}
+	if newParentID != "" {
+		if _, ok := byID[newParentID]; !ok {
+			return ErrFolderNotFound
+		}
+		for current := newParentID; current != ""; {
+			if current == folderID {
+				return ErrFolderCycle
+			}
+			next, ok := byID[current]
+			if !ok {
+				break
+			}
+			current = next.ParentFolderID
+		}
+	}
+
+	now := time.Now().UTC()
+	var res sql.Result
+	if licenseID != "" {
+		res, err = db.Exec(`
+			UPDATE device_folders SET parent_folder_id = ?, updated_at = ?
+			WHERE folder_id = ? AND license_id = ?
+		`, newParentID, now, folderID, licenseID)
+	} else if customerID > 0 {
+		res, err = db.Exec(`
+			UPDATE device_folders SET parent_folder_id = ?, updated_at = ?
+			WHERE folder_id = ? AND customer_id = ?
+		`, newParentID, now, folderID, customerID)
+	} else {
+		return ErrFolderNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("erreur déplacement dossier: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrFolderNotFound
+	}
 	return nil
 }
 

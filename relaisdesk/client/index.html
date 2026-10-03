@@ -39,7 +39,7 @@
     .lang-check{font-size:12px;color:#60a5fa;display:none;margin-left:auto;font-weight:700}
     .lang-dropdown-item.active .lang-check{display:inline-block}
   </style>
-  <link rel="stylesheet" href="styles.css?v=20260912-titles">
+  <link rel="stylesheet" href="styles.css?v=20261003-fleet-explorer">
 </head>
 <body>
   <div class="glow glow-one"></div>
@@ -203,26 +203,29 @@
   </main>
 
   <div id="appScreen" class="app" hidden>
-    <aside class="sidebar">
-      <a class="brand" href="../"><img src="../logo.avif" alt="" width="38" height="38"><span>Relais<span>Desk</span></span></a>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-top">
+        <a class="brand" href="../"><img src="../logo.avif" alt="" width="38" height="38"><span>Relais<span>Desk</span></span></a>
+        <button id="sidebarCollapseBtn" class="sidebar-collapse" type="button" data-i18n-title="sidebar_toggle_menu" title="Réduire / agrandir le menu" aria-expanded="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/></svg></button>
+      </div>
       <nav aria-label="Navigation de l'espace client">
-        <button class="nav-item active" data-panel="overview" data-i18n="nav_overview">Vue d’ensemble</button>
-        <button class="nav-item" data-panel="codes" data-i18n="nav_codes">🔑 Téléassistance & Codes</button>
-        <button class="nav-item" data-panel="devices" data-i18n="nav_devices">🖥️ Parc & Postes permanents</button>
-        <button class="nav-item" data-panel="team" id="teamNav" data-i18n="nav_team" hidden>Équipe & droits</button>
-        <button class="nav-item" data-panel="team-devices" id="teamDevicesNav" data-i18n="nav_team_devices" hidden>Mes postes autorisés</button>
-        <button class="nav-item" data-panel="licenses" data-i18n="nav_licenses">Licences</button>
-        <button class="nav-item" data-panel="billing" data-i18n="nav_billing">Commandes & factures</button>
-        <button class="nav-item" data-panel="interventions" data-i18n="nav_interventions">Historique</button>
-        <button class="nav-item" data-panel="services" id="servicesNav" hidden>Prestations & paiements clients</button>
-        <button class="nav-item" data-panel="settings" data-i18n="nav_settings">Préférences</button>
+        <button class="nav-item active" data-panel="overview" data-i18n-title="nav_overview" title="Vue d’ensemble"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="nav-label" data-i18n="nav_overview">Vue d’ensemble</span></button>
+        <button class="nav-item" data-panel="codes" data-i18n-title="nav_codes" title="Téléassistance & Codes"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9"/><path d="m17 5 2 2"/><path d="m14 8 2 2"/></svg><span class="nav-label" data-i18n="nav_codes">Téléassistance & Codes</span></button>
+        <button class="nav-item" data-panel="devices" data-i18n-title="nav_devices" title="Parc & Postes permanents"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg><span class="nav-label" data-i18n="nav_devices">Parc & Postes permanents</span></button>
+        <button class="nav-item" data-panel="team" id="teamNav" data-i18n-title="nav_team" hidden><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="nav-label" data-i18n="nav_team">Équipe & droits</span></button>
+        <button class="nav-item" data-panel="team-devices" id="teamDevicesNav" data-i18n-title="nav_team_devices" hidden><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg><span class="nav-label" data-i18n="nav_team_devices">Mes postes autorisés</span></button>
+        <button class="nav-item" data-panel="licenses" data-i18n-title="nav_licenses" title="Licences"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="M15.5 13 17 22l-5-3-5 3 1.5-9"/></svg><span class="nav-label" data-i18n="nav_licenses">Licences</span></button>
+        <button class="nav-item" data-panel="billing" data-i18n-title="nav_billing" title="Commandes & factures"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span class="nav-label" data-i18n="nav_billing">Commandes & factures</span></button>
+        <button class="nav-item" data-panel="interventions" data-i18n-title="nav_interventions" title="Historique"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span class="nav-label" data-i18n="nav_interventions">Historique</span></button>
+        <button class="nav-item" data-panel="services" id="servicesNav" data-i18n-title="nav_services" hidden><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg><span class="nav-label" data-i18n="nav_services">Prestations & paiements clients</span></button>
+        <button class="nav-item" data-panel="settings" data-i18n-title="nav_settings" title="Préférences"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/></svg><span class="nav-label" data-i18n="nav_settings">Préférences</span></button>
       </nav>
       <div class="account">
         <div class="account-identifiers">
           <span id="accountCustomerID"></span><br>
           <span id="accountEmail"></span>
         </div>
-        <button id="logoutButton" class="button subtle" type="button" data-i18n="nav_logout">Déconnexion</button>
+        <button id="logoutButton" class="button subtle" type="button" data-i18n-title="nav_logout" title="Déconnexion"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg><span class="nav-label" data-i18n="nav_logout">Déconnexion</span></button>
       </div>
     </aside>
 
@@ -403,36 +406,44 @@
               <button id="btnNewFolder" class="button secondary" type="button" data-i18n="btn_new_folder">➕ Nouveau dossier</button>
               <button id="btnNewSubFolder" class="button secondary" type="button" data-i18n="btn_new_subfolder" style="display: none;">➕ Sous-dossier</button>
               <button id="btnRenameFolder" class="button secondary" type="button" data-i18n="btn_rename_folder" style="display: none;">✏️ Renommer</button>
+              <button id="btnMoveFolder" class="button secondary" type="button" data-i18n="btn_move_folder" style="display: none;">⇄ Déplacer</button>
               <button id="btnDeleteFolder" class="button btn-danger" type="button" data-i18n="btn_delete_folder" style="display: none;">🗑️ Supprimer</button>
             </div>
           </div>
 
-          <!-- Fil d'Ariane (Breadcrumbs) pour la navigation dans les dossiers -->
-          <div id="deviceFolderBreadcrumbs" class="folder-breadcrumbs"></div>
+          <!-- Explorateur : arborescence des dossiers à gauche, contenu à droite -->
+          <div class="fleet-explorer">
+            <div id="fleetTreePane" class="fleet-tree-pane">
+              <div class="fleet-pane-head"><span data-i18n="fleet_tree_title">Dossiers</span></div>
+              <ul id="fleetTree" class="fleet-tree" role="tree" aria-label="Dossiers du parc"></ul>
+            </div>
+            <div id="fleetSplitter" class="fleet-splitter" role="separator" aria-orientation="vertical" tabindex="0" data-i18n-title="fleet_resize_panes" title="Redimensionner les panneaux (glisser ou flèches gauche/droite)" aria-valuemin="15" aria-valuemax="50" aria-valuenow="28"></div>
+            <div id="fleetContentPane" class="fleet-content-pane">
+              <!-- Fil d'Ariane (Breadcrumbs) pour la navigation dans les dossiers -->
+              <div id="deviceFolderBreadcrumbs" class="folder-breadcrumbs"></div>
 
-          <!-- Liste des sous-dossiers (Pills / Badges cliquables) -->
-          <div id="deviceFoldersList" class="folder-pills-list"></div>
-
-          <div class="table-wrap" style="margin-top: 12px;">
-            <table>
-              <thead>
-                <tr>
-                  <th data-i18n="th_device_status">Statut</th>
-                  <th data-i18n="th_device_alias">Nom / Machine</th>
-                  <th data-i18n="th_device_os">Système</th>
-                  <th data-i18n="th_device_folder">Dossier</th>
-                  <th data-i18n="th_rustdesk_id">ID RustDesk</th>
-                  <th data-i18n="th_perm_code">Code Permanent</th>
-                  <th data-i18n="th_last_seen">Dernière activité</th>
-                  <th style="text-align: right;" data-i18n="th_action">Action</th>
-                </tr>
-              </thead>
-              <tbody id="devicesBody">
-                <tr><td colspan="8" class="empty" data-i18n="loading_devices">Chargement du parc de machines...</td></tr>
-              </tbody>
-            </table>
+              <div class="table-wrap" style="margin-top: 12px;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th data-i18n="th_device_status">Statut</th>
+                      <th data-i18n="th_device_alias">Nom / Machine</th>
+                      <th data-i18n="th_device_os">Système</th>
+                      <th data-i18n="th_device_folder">Dossier</th>
+                      <th data-i18n="th_rustdesk_id">ID RustDesk</th>
+                      <th data-i18n="th_perm_code">Code Permanent</th>
+                      <th data-i18n="th_last_seen">Dernière activité</th>
+                      <th style="text-align: right;" data-i18n="th_action">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="devicesBody">
+                    <tr><td colspan="8" class="empty" data-i18n="loading_devices">Chargement du parc de machines...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <button id="moreDevicesButton" class="button secondary" type="button" hidden data-i18n="fleet_more">Charger les postes suivants</button>
+            </div>
           </div>
-          <button id="moreDevicesButton" class="button secondary" type="button" hidden data-i18n="fleet_more">Charger les postes suivants</button>
         </div>
       </section>
 
@@ -769,10 +780,27 @@
     </form>
   </dialog>
 
+  <!-- Modale : Déplacer un dossier vers un autre dossier -->
+  <dialog id="moveFolderModal">
+    <form id="moveFolderForm" class="dialog-card" style="max-width: 480px;">
+      <button id="closeMoveFolderModal" class="dialog-close" type="button" aria-label="Fermer">×</button>
+      <p class="eyebrow">Organisation du parc</p>
+      <h2 data-i18n="move_folder_title">Déplacer le dossier</h2>
+      <p class="muted" id="moveFolderModalDesc" style="font-size: 0.9rem;"></p>
+      <div class="stack" style="margin-top: 10px;">
+        <input type="hidden" id="moveFolderModalId" value="">
+        <label for="moveFolderSelect">Dossier de destination</label>
+        <select id="moveFolderSelect"></select>
+        <button id="moveFolderSubmitBtn" class="button primary" type="submit" style="margin-top: 8px;" data-i18n="btn_move_folder">⇄ Déplacer</button>
+        <p id="moveFolderMessage" class="message" role="status"></p>
+      </div>
+    </form>
+  </dialog>
+
   <script src="../i18n.js?v=20260920-interventions" defer></script>
   <script src="qrcode.min.js?v=20260911-2fa" defer></script>
   <script src="subscription-cancellation.js?v=20260912-legal-ui" defer></script>
-  <script src="app.js?v=20260922-okx-crypto-v1" defer></script>
+  <script src="app.js?v=20261003-fleet-explorer" defer></script>
   <script src="teams.js?v=20260919-prestations" defer></script>
   <script src="services.js?v=20260919-prestations-legal" defer></script>
   <script src="../maintenance.js"></script>

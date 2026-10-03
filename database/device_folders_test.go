@@ -147,4 +147,94 @@ func TestDeviceFoldersSecurityBoundary(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Tech 2 should NOT be able to delete Tech 1's folder")
 	}
+
+	// Tech 2 tries to move Tech 1's folder -> must fail
+	own, err := CreateDeviceFolder(db, 0, lic2.LicenseID, "Dossier Tech 2", "")
+	if err != nil {
+		t.Fatalf("Create folder 2 failed: %v", err)
+	}
+	if err = MoveDeviceFolder(db, 0, lic2.LicenseID, folder1.FolderID, own.FolderID); err == nil {
+		t.Fatalf("Tech 2 should NOT be able to move Tech 1's folder")
+	}
+	if err = MoveDeviceFolder(db, 0, lic2.LicenseID, own.FolderID, folder1.FolderID); err == nil {
+		t.Fatalf("Tech 2 should NOT be able to nest under Tech 1's folder")
+	}
+}
+
+func TestDeviceFolderMove(t *testing.T) {
+	db, err := InitDatabase(filepath.Join(t.TempDir(), "folders_move_test.db"))
+	if err != nil {
+		t.Fatalf("InitDatabase failed: %v", err)
+	}
+	defer db.Close()
+
+	lic, err := CreateLicense(db, "move@example.com", 30, 2, "Pro")
+	if err != nil {
+		t.Fatalf("CreateLicense failed: %v", err)
+	}
+	rootA, err := CreateDeviceFolder(db, 0, lic.LicenseID, "Agence A", "")
+	if err != nil {
+		t.Fatalf("CreateDeviceFolder root A failed: %v", err)
+	}
+	rootB, err := CreateDeviceFolder(db, 0, lic.LicenseID, "Agence B", "")
+	if err != nil {
+		t.Fatalf("CreateDeviceFolder root B failed: %v", err)
+	}
+	sub, err := CreateDeviceFolder(db, 0, lic.LicenseID, "Compta", rootA.FolderID)
+	if err != nil {
+		t.Fatalf("CreateDeviceFolder sub failed: %v", err)
+	}
+	leaf, err := CreateDeviceFolder(db, 0, lic.LicenseID, "Facturation", sub.FolderID)
+	if err != nil {
+		t.Fatalf("CreateDeviceFolder leaf failed: %v", err)
+	}
+
+	// Move subfolder across roots: name preserved, parent updated.
+	if err = MoveDeviceFolder(db, 0, lic.LicenseID, sub.FolderID, rootB.FolderID); err != nil {
+		t.Fatalf("MoveDeviceFolder across roots failed: %v", err)
+	}
+	moved, err := GetDeviceFolder(db, 0, lic.LicenseID, sub.FolderID)
+	if err != nil || moved.ParentFolderID != rootB.FolderID || moved.Name != "Compta" {
+		t.Fatalf("Unexpected moved folder: %+v, err: %v", moved, err)
+	}
+	// Descendants follow their parent implicitly.
+	leafAfter, err := GetDeviceFolder(db, 0, lic.LicenseID, leaf.FolderID)
+	if err != nil || leafAfter.ParentFolderID != sub.FolderID {
+		t.Fatalf("Descendant lost its parent after move: %+v, err: %v", leafAfter, err)
+	}
+
+	// Move back to the root.
+	if err = MoveDeviceFolder(db, 0, lic.LicenseID, sub.FolderID, ""); err != nil {
+		t.Fatalf("MoveDeviceFolder to root failed: %v", err)
+	}
+	atRoot, err := GetDeviceFolder(db, 0, lic.LicenseID, sub.FolderID)
+	if err != nil || atRoot.ParentFolderID != "" {
+		t.Fatalf("Expected folder at root, got: %+v, err: %v", atRoot, err)
+	}
+
+	// No-op move to the same parent succeeds silently.
+	if err = MoveDeviceFolder(db, 0, lic.LicenseID, sub.FolderID, ""); err != nil {
+		t.Fatalf("No-op move failed: %v", err)
+	}
+
+	// Moving into itself or one of its descendants is refused.
+	if err = MoveDeviceFolder(db, 0, lic.LicenseID, sub.FolderID, sub.FolderID); err == nil {
+		t.Fatalf("Move into itself should fail")
+	}
+	if err = MoveDeviceFolder(db, 0, lic.LicenseID, sub.FolderID, leaf.FolderID); err == nil {
+		t.Fatalf("Move into own descendant should fail")
+	}
+
+	// Unknown folder or unknown parent is refused.
+	if err = MoveDeviceFolder(db, 0, lic.LicenseID, "FLD-FFFF-FFFF", rootB.FolderID); err == nil {
+		t.Fatalf("Move of unknown folder should fail")
+	}
+	if err = MoveDeviceFolder(db, 0, lic.LicenseID, sub.FolderID, "FLD-FFFF-FFFF"); err == nil {
+		t.Fatalf("Move to unknown parent should fail")
+	}
+	// Structure untouched after refused moves.
+	intact, err := GetDeviceFolder(db, 0, lic.LicenseID, sub.FolderID)
+	if err != nil || intact.ParentFolderID != "" {
+		t.Fatalf("Refused move altered the folder: %+v, err: %v", intact, err)
+	}
 }
