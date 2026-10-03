@@ -233,13 +233,22 @@ func restartRustDeskForConfig(rustdeskPath string) error {
 }
 
 func launchRustDeskSession(rustdeskPath string, targetID string, password ...string) error {
+	_, err := launchRustDeskSessionCmd(rustdeskPath, targetID, password...)
+	return err
+}
+
+func launchRustDeskSessionCmd(rustdeskPath string, targetID string, password ...string) (*exec.Cmd, error) {
 	cleanID := strings.ReplaceAll(strings.TrimSpace(targetID), " ", "")
 	if cleanID == "" {
-		return fmt.Errorf("identifiant distant manquant")
+		return nil, fmt.Errorf("identifiant distant manquant")
 	}
 	args := []string{"--connect", cleanID}
 	if len(password) > 0 && strings.TrimSpace(password[0]) != "" {
 		args = append(args, strings.TrimSpace(password[0]))
 	}
-	return launchRustDesk(rustdeskPath, args...)
+	cmd := exec.Command(rustdeskPath, args...)
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	return cmd, nil
 }

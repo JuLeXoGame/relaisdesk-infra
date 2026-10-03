@@ -49,3 +49,21 @@ func TestTomlEscapeDarwin(t *testing.T) {
 		}
 	}
 }
+
+func TestDarwinLaunchRustDeskSessionRejectsEmptyID(t *testing.T) {
+	if err := launchRustDeskSession("/usr/bin/false", ""); err == nil {
+		t.Fatal("expected error when launching session with empty targetID")
+	}
+	if err := launchRustDeskSession("/usr/bin/false", "   "); err == nil {
+		t.Fatal("expected error when launching session with whitespace targetID")
+	}
+}
+
+func TestDarwinLaunchRustDeskSessionCmdRejectsEmptyID(t *testing.T) {
+	if _, err := launchRustDeskSessionCmd("/usr/bin/false", ""); err == nil {
+		t.Fatal("expected error from session cmd with empty targetID")
+	}
+	if _, err := launchRustDeskSessionCmd("/usr/bin/false", " \t "); err == nil {
+		t.Fatal("expected error from session cmd with whitespace targetID")
+	}
+}
