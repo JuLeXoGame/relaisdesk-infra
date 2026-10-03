@@ -159,8 +159,12 @@ if (-not $SkipTests) {
 }
 
 Invoke-InDirectory -Directory $RustDeskDir -FilePath "python" -Arguments @("res\inline-sciter.py")
+# RelaisDesk reactivity: vram + hwcodec enable GPU encode/decode (NVENC/AMF/QSV).
+# Matches upstream flutter-build.yml (inline,vram,hwcodec). Requires the ffmpeg
+# + mfx-dispatch entries in scripts/rustdesk-sciter-vcpkg/vcpkg.json and
+# LIBCLANG_PATH (libclang 18) for bindgen; first build compiles ffmpeg (~30 min).
 Invoke-InDirectory -Directory $RustDeskDir -FilePath "cargo" -Arguments @(
-    "build", "--locked", "--release", "--features", "inline"
+    "build", "--locked", "--release", "--features", "inline,vram,hwcodec"
 )
 Invoke-InDirectory -Directory (Join-Path $RustDeskDir "libs\virtual_display\dylib") `
     -FilePath "cargo" -Arguments @("build", "--locked", "--release")

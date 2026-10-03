@@ -7,7 +7,22 @@
     "aom",
     "libvpx",
     "libyuv",
-    "opus"
+    "opus",
+    "mfx-dispatch",
+    {
+      "name": "ffmpeg",
+      "features": ["amf", "nvcodec", "qsv"]
+    }
+  ],
+  "overrides": [
+    {
+      "name": "ffnvcodec",
+      "version": "12.1.14.0"
+    },
+    {
+      "name": "amd-amf",
+      "version": "1.4.35"
+    }
   ],
   "vcpkg-configuration": {
     "overlay-ports": [

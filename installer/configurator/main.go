@@ -11,6 +11,13 @@ var technicianCLI func() error
 
 func main() {
 	args := os.Args[1:]
+	if len(args) == 2 && args[0] == "--set-hwcodec" && (args[1] == "on" || args[1] == "off") {
+		if _, err := setHwCodecEverywhere(args[1] == "on"); err != nil {
+			fmt.Fprintf(os.Stderr, "set-hwcodec: %s\n", err)
+			os.Exit(1)
+		}
+		return
+	}
 	wantCLI := false
 	if runtime.GOOS == "linux" && technicianCLI != nil {
 		var rest []string

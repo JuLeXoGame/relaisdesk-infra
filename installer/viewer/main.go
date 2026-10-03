@@ -63,6 +63,30 @@ func main() {
 			fmt.Println("Autorisation permanente locale et services retirés. Supprimez également la fiche dans votre console.")
 			return
 		}
+		if arg == "--set-hwcodec" {
+			if len(os.Args) < 3 {
+				log.Fatal("Usage : viewer --set-hwcodec on|off")
+			}
+			var enable bool
+			switch strings.ToLower(strings.TrimSpace(os.Args[2])) {
+			case "on", "1", "true", "yes", "y", "enable", "enabled", "auto":
+				enable = true
+			case "off", "0", "false", "no", "n", "disable", "disabled", "software", "vp9":
+				enable = false
+			default:
+				log.Fatal("Valeur invalide (on|off) : " + os.Args[2])
+			}
+			n, err := setHwCodecEverywhere(enable)
+			if err != nil {
+				log.Fatal(err)
+			}
+			mode := "auto (matériel si disponible)"
+			if !enable {
+				mode = "logiciel VP9 forcé"
+			}
+			fmt.Printf("Codec vidéo : %s (%d fichier(s) mis à jour). Redémarrez RustDesk.\n", mode, n)
+			return
+		}
 		if arg == "--gui-enroll" {
 			preset := ""
 			if len(os.Args) >= 3 {

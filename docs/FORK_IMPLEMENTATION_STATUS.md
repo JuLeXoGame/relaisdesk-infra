@@ -54,6 +54,24 @@ baseline vcpkg RustDesk `120deac...`, moteur vcpkg `0ac8df3...`, NASM 2.16.03,
 libclang 18.1.1, Brotli 1.2.0 et Sciter au commit `f33df075...` avec contrôle
 SHA-256.
 
+## Réactivité vidéo (2026-10-03)
+
+- Core : `INIT_FPS` passé de 15 à 30 dans
+  `rustdesk/src/server/video_qos.rs` (le QoS adaptatif continue de baisser
+  sur liens lents après les premières sondes).
+- Core Windows : build avec `--features inline,vram,hwcodec` (comme l'amont),
+  via `scripts/build-rustdesk-windows.ps1`. Le manifeste
+  `scripts/rustdesk-sciter-vcpkg/vcpkg.json` ajoute `mfx-dispatch`, `ffmpeg`
+  (amf/nvcodec/qsv) et les overrides `ffnvcodec 12.1.14.0` / `amd-amf 1.4.35`.
+  Premier build : prévoir ~30 min pour ffmpeg.
+- Core Linux : pas de script repo (build manuel). Reconstruire avec :
+  `cargo build --locked --release --features inline,hwcodec,unix-file-copy-paste --bins`
+  (ligne amont `flutter-build.yml` pour x86_64).
+- Lanceurs : preset écrit dans `RustDesk2.toml` (`codec-preference='auto'`,
+  `av1-test='N'`, `enable-hwcodec='Y'`). Forçage logiciel :
+  `RELAISDESK_DISABLE_HWCODEC=1` ou `--set-hwcodec off` (retour : `on`).
+  Le core désactive déjà le matériel seul en cas d'échec (repli VP9).
+
 ## Artefacts CI serveur
 
 - `hbbs` Linux amd64 : SHA-256

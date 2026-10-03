@@ -163,8 +163,7 @@ func generateRustDesk2Toml(rendezvousWithPort, rendezvousHost, relayServer, publ
 	sb.WriteString(fmt.Sprintf("key = '%s'\r\n", publicKey))
 	sb.WriteString(fmt.Sprintf("relaisdesk-token-file = '%s'\r\n", tomlEscape(tokenFile)))
 	sb.WriteString(fmt.Sprintf("relaisdesk-proof-key-file = '%s'\r\n", tomlEscape(proofKeyFile)))
-	sb.WriteString("codec-preference = 'vp9'\r\n")
-	sb.WriteString("av1-test = 'N'\r\n")
+	sb.WriteString(videoCodecTomlLines(true))
 
 	return sb.String()
 }
@@ -531,5 +530,11 @@ func launchRustDeskSession(path string, targetID string, password ...string) err
 	return err
 }
 
-
-
+// rustDesk2TomlPaths lists known RustDesk2.toml locations for --set-hwcodec.
+func rustDesk2TomlPaths() []string {
+	var paths []string
+	for _, dir := range rustDeskConfigDirs() {
+		paths = append(paths, filepath.Join(dir, RUSTDESK_CONFIG2_FILE))
+	}
+	return paths
+}

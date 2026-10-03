@@ -159,7 +159,7 @@ func configureRustDesk(activation *ActivationResponse, _ string) error {
 		activation.PublicKey,
 		activation.NetworkTokenFile,
 		activation.NetworkProofKeyFile,
-	)
+	) + videoCodecTomlLines(false)
 
 	rustdesk2Path := filepath.Join(configDir, RUSTDESK_CONFIG2_FILE)
 	return os.WriteFile(rustdesk2Path, []byte(configData), 0600)
@@ -252,3 +252,12 @@ func launchRustDeskSessionCmd(rustdeskPath string, targetID string, password ...
 	}
 	return cmd, nil
 }
+// rustDesk2TomlPaths lists known RustDesk2.toml locations for --set-hwcodec.
+func rustDesk2TomlPaths() []string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	return []string{filepath.Join(homeDir, RUSTDESK_CONFIG_DIR_SUFFIX, RUSTDESK_CONFIG2_FILE)}
+}
+

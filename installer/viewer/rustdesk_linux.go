@@ -201,9 +201,14 @@ func configureRustDesk(activation *ActivationResponse, _ string) error {
 		tomlEscapeLinux(APIURL),
 		tomlEscapeLinux(activation.PublicKey),
 		tomlEscapeLinux(activation.NetworkTokenFile),
-		tomlEscapeLinux(activation.NetworkProofKeyFile))
+		tomlEscapeLinux(activation.NetworkProofKeyFile)) + videoCodecTomlLines(false)
 
 	return os.WriteFile(filepath.Join(RUSTDESK_CONFIG_DIR, RUSTDESK_CONFIG2_FILE), []byte(configData), 0600)
+}
+
+// rustDesk2TomlPaths lists known RustDesk2.toml locations for --set-hwcodec.
+func rustDesk2TomlPaths() []string {
+	return []string{filepath.Join(RUSTDESK_CONFIG_DIR, RUSTDESK_CONFIG2_FILE)}
 }
 
 func tomlEscapeLinux(value string) string {

@@ -108,7 +108,7 @@ func generateViewerRustDesk2Toml(rendezvousWithPort, rendezvousHost, relayServer
 		tomlEscapeDarwin(APIURL),
 		tomlEscapeDarwin(publicKey),
 		tomlEscapeDarwin(tokenFile),
-		tomlEscapeDarwin(proofKeyFile))
+		tomlEscapeDarwin(proofKeyFile)) + videoCodecTomlLines(false)
 }
 
 func configureRustDesk(activation *ActivationResponse, _ string) error {
@@ -156,6 +156,11 @@ func configureRustDesk(activation *ActivationResponse, _ string) error {
 	)
 
 	return os.WriteFile(filepath.Join(RUSTDESK_CONFIG_DIR, RUSTDESK_CONFIG2_FILE), []byte(configData), 0600)
+}
+
+// rustDesk2TomlPaths lists known RustDesk2.toml locations for --set-hwcodec.
+func rustDesk2TomlPaths() []string {
+	return []string{filepath.Join(RUSTDESK_CONFIG_DIR, RUSTDESK_CONFIG2_FILE)}
 }
 
 func tomlEscapeDarwin(value string) string {
