@@ -44,6 +44,41 @@ func buildFolderOptions(folders []DeviceFolderItem, includeAll bool) []folderOpt
 	return options
 }
 
+// buildFolderMoveOptions lists valid move destinations for a folder: the root
+// plus every folder outside the moved subtree (a folder can never land
+// inside itself or one of its descendants).
+func buildFolderMoveOptions(folders []DeviceFolderItem, excludeID string) []folderOption {
+	excluded := map[string]bool{}
+	if excludeID != "" {
+		excluded = getFolderAndDescendantIDs(excludeID, folders)
+	}
+	options := []folderOption{{id: "", label: T("folder_root")}}
+
+	var addChildren func(parentID string, level int)
+	addChildren = func(parentID string, level int) {
+		var children []DeviceFolderItem
+		for _, f := range folders {
+			if f.ParentFolderID == parentID && !excluded[f.FolderID] {
+				children = append(children, f)
+			}
+		}
+		sort.Slice(children, func(i, j int) bool {
+			return strings.ToLower(children[i].Name) < strings.ToLower(children[j].Name)
+		})
+
+		for _, f := range children {
+			prefix := ""
+			if level > 0 {
+				prefix = strings.Repeat("  ", level) + "↳ "
+			}
+			options = append(options, folderOption{id: f.FolderID, label: prefix + f.Name})
+			addChildren(f.FolderID, level+1)
+		}
+	}
+	addChildren("", 0)
+	return options
+}
+
 // getDeviceFolderName returns the display name for a folder ID.
 func getDeviceFolderName(folderID string, folders []DeviceFolderItem) string {
 	if folderID == "" || folderID == "ALL" {

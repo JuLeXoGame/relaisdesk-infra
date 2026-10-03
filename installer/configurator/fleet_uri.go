@@ -10,6 +10,20 @@ var fleetDevicePattern = regexp.MustCompile(`^DEV-[A-Z0-9]{4}(?:-[A-Z0-9]{4}){1,
 var pendingFleetDevice string
 var pendingFleetError string
 
+// splitCLIArgs extracts the Linux-only --cli flag (terminal mode instead of
+// the graphical interface) and returns the remaining arguments untouched.
+func splitCLIArgs(args []string) (cli bool, rest []string) {
+	rest = make([]string, 0, len(args))
+	for _, a := range args {
+		if a == "--cli" {
+			cli = true
+			continue
+		}
+		rest = append(rest, a)
+	}
+	return cli, rest
+}
+
 // parseConnectURIArgs interprets CLI args. Empty args mean a normal launch.
 func parseConnectURIArgs(args []string) (string, error) {
 	if len(args) == 0 {

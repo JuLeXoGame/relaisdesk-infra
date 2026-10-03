@@ -188,3 +188,23 @@ func TestFolderCycleProtection(t *testing.T) {
 		t.Errorf("expected loop prevention to return at most 2 items, got %d", len(anc))
 	}
 }
+
+func TestBuildFolderMoveOptionsExcludesSubtree(t *testing.T) {
+	folders := []DeviceFolderItem{
+		{FolderID: "A", Name: "Agence", ParentFolderID: ""},
+		{FolderID: "B", Name: "Compta", ParentFolderID: "A"},
+		{FolderID: "C", Name: "Factures", ParentFolderID: "B"},
+		{FolderID: "D", Name: "Dépôt", ParentFolderID: ""},
+	}
+	options := buildFolderMoveOptions(folders, "B")
+	ids := map[string]bool{}
+	for _, o := range options {
+		ids[o.id] = true
+	}
+	if ids["B"] || ids["C"] {
+		t.Fatalf("le sous-arbre déplacé doit être exclu: %+v", options)
+	}
+	if !ids[""] || !ids["A"] || !ids["D"] {
+		t.Fatalf("destinations valides manquantes: %+v", options)
+	}
+}

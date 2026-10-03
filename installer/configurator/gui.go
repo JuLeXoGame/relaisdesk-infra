@@ -1,5 +1,3 @@
-//go:build !linux
-
 package main
 
 import (
@@ -34,6 +32,7 @@ var (
 	sessionLicenseKey           string
 	sessionActivation           *ActivationResponse
 	sessionNetworkAuthorization *NetworkAuthorization
+	pendingFleetFolder          string
 )
 
 // relaisDeskTheme provides a sober dark-navy and light-blue modern aesthetic
@@ -172,7 +171,7 @@ func RunGUI() error {
 	}
 
 	mainWindow = fyneApp.NewWindow(T("app_title"))
-	mainWindow.Resize(fyne.NewSize(820, 520))
+	mainWindow.Resize(fyne.NewSize(1020, 640))
 	mainWindow.CenterOnScreen()
 
 	if len(appIconBytes) > 0 {
@@ -720,11 +719,17 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 				requestFleetConnection(id)
 			}
 
-			selectedTab := 0
-			if len(targetTab) > 0 && targetTab[0] >= 0 {
-				selectedTab = targetTab[0]
+			selectedPanel := PanelCodes
+			if len(targetTab) > 0 && targetTab[0] >= PanelOverview && targetTab[0] <= PanelSettings {
+				selectedPanel = targetTab[0]
 			}
-			var appTabs *container.AppTabs
+			restricted := dashResp.RestrictedToFolders
+			if restricted && selectedPanel == PanelCodes {
+				selectedPanel = PanelFleet
+			}
+			relaunch := func(panelID int) {
+				showDashboardScreen(email, expiresAt, panelID)
+			}
 
 			// Header Section
 			header := widget.NewLabelWithStyle(TF("tech_header", email, expiresAt), fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
@@ -733,11 +738,7 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 			// Language button
 			langBtn := widget.NewButton(T("lang_btn"), func() {
 				ToggleLang()
-				target := selectedTab
-				if appTabs != nil {
-					target = appTabs.SelectedIndex()
-				}
-				showDashboardScreen(email, expiresAt, target)
+				relaunch(selectedPanel)
 			})
 
 			var headerLeft fyne.CanvasObject
@@ -941,6 +942,10 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 
 			// Live search & folder controls
 			currentFolderID := "ALL"
+			if pendingFleetFolder != "" {
+				currentFolderID = pendingFleetFolder
+				pendingFleetFolder = ""
+			}
 			searchQuery := ""
 
 			searchEntry := widget.NewEntry()
@@ -1024,10 +1029,13 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 					go func() {
 						_, err := createTechnicianFolder(curToken, name, selectedParentID)
 						fyne.Do(func() {
+							if err == nil {
+								pendingFleetFolder = selectedParentID
+							}
 							if err != nil {
 								dialog.ShowError(err, mainWindow)
 							} else {
-								showDashboardScreen(email, expiresAt, 1)
+								showDashboardScreen(email, expiresAt, PanelFleet)
 							}
 						})
 					}()
@@ -1067,7 +1075,8 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 							if err != nil {
 								dialog.ShowError(err, mainWindow)
 							} else {
-								showDashboardScreen(email, expiresAt, 1)
+								pendingFleetFolder = currentFolderID
+								showDashboardScreen(email, expiresAt, PanelFleet)
 							}
 						})
 					}()
@@ -1086,19 +1095,96 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 						return
 					}
 					curToken := sessionToken
+					deletedID := currentFolderID
 					go func() {
-						err := deleteTechnicianFolder(curToken, currentFolderID)
+						err := deleteTechnicianFolder(curToken, deletedID)
 						fyne.Do(func() {
 							if err != nil {
 								dialog.ShowError(err, mainWindow)
-							} else {
-								showDashboardScreen(email, expiresAt, 1)
+								return
 							}
+							for _, f := range foldersResp {
+								if f.FolderID == deletedID {
+									pendingFleetFolder = f.ParentFolderID
+								}
+							}
+							showDashboardScreen(email, expiresAt, PanelFleet)
 						})
 					}()
 				}, mainWindow)
 			})
 			deleteFolderBtn.Importance = widget.DangerImportance
+
+			var openMoveFolderDialog func()
+			moveFolderBtn := widget.NewButton(T("btn_move_folder"), func() {
+				if currentFolderID == "ALL" || currentFolderID == "" {
+					dialog.ShowInformation(T("btn_move_folder"), T("move_folder_select_first"), mainWindow)
+					return
+				}
+				openMoveFolderDialog()
+			})
+
+			openMoveFolderDialog = func() {
+				srcID := currentFolderID
+				srcName := getDeviceFolderName(srcID, foldersResp)
+				var currentParent string
+				for _, f := range foldersResp {
+					if f.FolderID == srcID {
+						currentParent = f.ParentFolderID
+					}
+				}
+				options := buildFolderMoveOptions(foldersResp, srcID)
+				labels := []string{}
+				byLabel := map[string]string{}
+				preselect := ""
+				for _, opt := range options {
+					labels = append(labels, opt.label)
+					byLabel[opt.label] = opt.id
+					if opt.id == currentParent {
+						preselect = opt.label
+					}
+				}
+				destSelect := widget.NewSelect(labels, nil)
+				if preselect != "" {
+					destSelect.SetSelected(preselect)
+				} else if len(labels) > 0 {
+					destSelect.SetSelected(labels[0])
+				}
+				content := container.NewVBox(
+					widget.NewLabel(TF("move_folder_dialog_sub", srcName)),
+					destSelect,
+				)
+				dialog.ShowCustomConfirm(T("move_folder_title"), T("dialog_confirm_btn"), T("dialog_cancel_btn"), content, func(ok bool) {
+					if !ok {
+						return
+					}
+					dstID := byLabel[destSelect.Selected]
+					if dstID == currentParent {
+						return
+					}
+					dstName := T("folder_root")
+					if dstID != "" {
+						dstName = getDeviceFolderName(dstID, foldersResp)
+					}
+					dialog.ShowConfirm(T("move_folder_title"), TF("move_folder_confirm", srcName, dstName), func(confirmed bool) {
+						if !confirmed {
+							return
+						}
+						curToken := sessionToken
+						go func() {
+							err := moveTechnicianFolder(curToken, srcID, dstID)
+							fyne.Do(func() {
+								if err != nil {
+									dialog.ShowError(err, mainWindow)
+									return
+								}
+								pendingFleetFolder = srcID
+								showDashboardScreen(email, expiresAt, PanelFleet)
+							})
+						}()
+					}, mainWindow)
+				}, mainWindow)
+			}
 
 			filterAndRender := func() {
 				filtered := []DeviceItem{}
@@ -1164,11 +1250,32 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 			}
 
 			breadcrumbsBox := container.NewHBox()
-			pillsBox := container.NewHBox()
+			fleetTreeBox := container.NewVBox()
+
+			fleetCollapsed := map[string]bool{}
+			for _, id := range strings.Split(fyneApp.Preferences().StringWithFallback("fleet_tree_collapsed", ""), ",") {
+				if id != "" {
+					fleetCollapsed[id] = true
+				}
+			}
+			saveFleetCollapsed := func() {
+				ids := []string{}
+				for id := range fleetCollapsed {
+					ids = append(ids, id)
+				}
+				fyneApp.Preferences().SetString("fleet_tree_collapsed", strings.Join(ids, ","))
+			}
+			collapseKey := func(folderID string) string {
+				if folderID == "" {
+					return "ROOT"
+				}
+				return folderID
+			}
 
 			var selectFolder func(string)
+			var renderFleetTree func()
 
-			updateBreadcrumbsAndPills := func() {
+			updateBreadcrumbs := func() {
 				breadcrumbsBox.Objects = nil
 
 				rootBtn := widget.NewButton(T("breadcrumb_root"), func() {
@@ -1211,63 +1318,72 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 					}
 				}
 				breadcrumbsBox.Refresh()
+			}
 
-				pillsBox.Objects = nil
-
-				allBtn := widget.NewButton(fmt.Sprintf("%s (%d)", T("breadcrumb_all_devices"), len(devicesResp)), func() {
-					selectFolder("ALL")
-				})
-				if currentFolderID == "ALL" {
-					allBtn.Importance = widget.HighImportance
-				} else {
-					allBtn.Importance = widget.MediumImportance
+			addTreeRow := func(id, label string, icon fyne.Resource, depth int, hasChildren bool) {
+				row := container.NewHBox()
+				if depth > 0 {
+					row.Add(widget.NewLabel(strings.Repeat("  ", depth)))
 				}
-				pillsBox.Add(allBtn)
-
-				if currentFolderID == "" || currentFolderID == "ALL" {
-					rootCount := 0
-					for _, d := range devicesResp {
-						if d.FolderID == "" {
-							rootCount++
-						}
+				if hasChildren {
+					glyph := "▾"
+					if fleetCollapsed[collapseKey(id)] {
+						glyph = "▸"
 					}
-					rootPillBtn := widget.NewButton(fmt.Sprintf("%s (%d)", T("folder_root"), rootCount), func() {
-						selectFolder("")
+					toggleID := id
+					toggleBtn := widget.NewButton(glyph, func() {
+						key := collapseKey(toggleID)
+						if fleetCollapsed[key] {
+							delete(fleetCollapsed, key)
+						} else {
+							fleetCollapsed[key] = true
+						}
+						saveFleetCollapsed()
+						renderFleetTree()
 					})
-					if currentFolderID == "" {
-						rootPillBtn.Importance = widget.HighImportance
-					} else {
-						rootPillBtn.Importance = widget.MediumImportance
-					}
-					pillsBox.Add(rootPillBtn)
-
-					topFolders := getDirectChildFolders("", foldersResp)
-					for _, tf := range topFolders {
-						folderItem := tf
-						count := countInFolderTree(folderItem.FolderID)
-						btn := widget.NewButton(fmt.Sprintf("📁 %s (%d)", folderItem.Name, count), func() {
-							selectFolder(folderItem.FolderID)
-						})
-						btn.Importance = widget.MediumImportance
-						pillsBox.Add(btn)
-					}
+					row.Add(toggleBtn)
 				} else {
-					children := getDirectChildFolders(currentFolderID, foldersResp)
-					if len(children) > 0 {
-						subLabel := widget.NewLabelWithStyle(T("subfolders_label"), fyne.TextAlignLeading, fyne.TextStyle{Italic: true})
-						pillsBox.Add(subLabel)
-						for _, ch := range children {
-							childItem := ch
-							count := countInFolderTree(childItem.FolderID)
-							btn := widget.NewButton(fmt.Sprintf("📁 %s (%d)", childItem.Name, count), func() {
-								selectFolder(childItem.FolderID)
-							})
-							btn.Importance = widget.MediumImportance
-							pillsBox.Add(btn)
-						}
+					row.Add(widget.NewLabel("   "))
+				}
+				navID := id
+				navBtn := widget.NewButtonWithIcon(label, icon, func() {
+					selectFolder(navID)
+				})
+				navBtn.Alignment = widget.ButtonAlignLeading
+				if currentFolderID == id {
+					navBtn.Importance = widget.HighImportance
+				} else {
+					navBtn.Importance = widget.MediumImportance
+				}
+				row.Add(navBtn)
+				fleetTreeBox.Add(row)
+			}
+
+			renderFleetTree = func() {
+				fleetTreeBox.Objects = nil
+				addTreeRow("ALL", fmt.Sprintf("%s (%d)", T("breadcrumb_all_devices"), len(devicesResp)), fleetTreeIcon("all"), 0, false)
+				rootCount := 0
+				for _, d := range devicesResp {
+					if d.FolderID == "" {
+						rootCount++
 					}
 				}
-				pillsBox.Refresh()
+				topFolders := getDirectChildFolders("", foldersResp)
+				addTreeRow("", fmt.Sprintf("%s (%d)", T("folder_root"), rootCount), fleetTreeIcon("root"), 0, len(topFolders) > 0)
+				if !fleetCollapsed[collapseKey("")] {
+					var addLevel func(parentID string, depth int)
+					addLevel = func(parentID string, depth int) {
+						for _, f := range getDirectChildFolders(parentID, foldersResp) {
+							children := getDirectChildFolders(f.FolderID, foldersResp)
+							addTreeRow(f.FolderID, fmt.Sprintf("%s (%d)", f.Name, countInFolderTree(f.FolderID)), fleetTreeIcon("folder"), depth, len(children) > 0)
+							if len(children) > 0 && !fleetCollapsed[collapseKey(f.FolderID)] {
+								addLevel(f.FolderID, depth+1)
+							}
+						}
+					}
+					addLevel("", 1)
+				}
+				fleetTreeBox.Refresh()
 			}
 
 			selectFolder = func(fID string) {
@@ -1275,27 +1391,29 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 				inFolder := currentFolderID != "ALL" && currentFolderID != ""
 				if inFolder {
 					renameFolderBtn.Show()
+					moveFolderBtn.Show()
 					deleteFolderBtn.Show()
 				} else {
 					renameFolderBtn.Hide()
+					moveFolderBtn.Hide()
 					deleteFolderBtn.Hide()
 				}
-				updateBreadcrumbsAndPills()
+				updateBreadcrumbs()
+				renderFleetTree()
 				filterAndRender()
 			}
 
-			updateBreadcrumbsAndPills()
+			updateBreadcrumbs()
+			renderFleetTree()
 
 			breadcrumbsScroll := container.NewHScroll(breadcrumbsBox)
 			breadcrumbsScroll.SetMinSize(fyne.NewSize(0, 42))
-
-			folderScroll := container.NewHScroll(pillsBox)
-			folderScroll.SetMinSize(fyne.NewSize(0, 40))
 
 			folderActions := container.NewHBox(
 				newFolderBtn,
 				newSubFolderBtn,
 				renameFolderBtn,
+				moveFolderBtn,
 				deleteFolderBtn,
 			)
 			if dashResp.RestrictedToFolders {
@@ -1313,16 +1431,9 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 				breadcrumbsScroll,
 			)
 
-			subfoldersAndActionsRow := container.NewBorder(
-				nil, nil,
-				nil,
-				folderActions,
-				folderScroll,
-			)
-
 			folderBar := container.NewVBox(
 				breadcrumbsRow,
-				subfoldersAndActionsRow,
+				folderActions,
 			)
 
 			folderBarCard := createCardBox(
@@ -1334,6 +1445,17 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 				color.NRGBA{R: 14, G: 20, B: 35, A: 255},
 			)
 
+			fleetTreePane := container.NewBorder(
+				container.NewVBox(
+					widget.NewLabelWithStyle(T("fleet_tree_title"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+					widget.NewSeparator(),
+				),
+				nil, nil, nil,
+				container.NewVScroll(fleetTreeBox),
+			)
+			fleetSplit := container.NewHSplit(fleetTreePane, permListContainer)
+			fleetSplit.Offset = 0.3
+
 			tab2Content := container.NewBorder(
 				container.NewVBox(
 					permStatsRow,
@@ -1341,26 +1463,69 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 					folderBarCard,
 				),
 				nil, nil, nil,
-				permListContainer,
+				fleetSplit,
 			)
 
-			appTabs = container.NewAppTabs(
-				container.NewTabItem(T("tab_temporary_codes"), tab1Content),
-				container.NewTabItem(T("tab_permanent_devices"), tab2Content),
-			)
-			if selectedTab < len(appTabs.Items) {
-				appTabs.SelectIndex(selectedTab)
-			}
+			// Menu latéral miroir du web : les rubriques technicien réutilisent
+			// les contenus existants, les autres passent par le compte client.
 			var fleetTabVisible atomic.Bool
-			if selectedTab == 1 {
-				fleetTabVisible.Store(true)
+			contentBox := container.NewMax()
+			builtPanels := map[int]fyne.CanvasObject{}
+			customerGate := func(panelID int, builder func(int, func(int)) fyne.CanvasObject) fyne.CanvasObject {
+				if !customerLoggedIn() {
+					return customerLoginPanel(panelID, relaunch, "")
+				}
+				return builder(panelID, relaunch)
 			}
-			appTabs.OnSelected = func(item *container.TabItem) { fleetTabVisible.Store(item == appTabs.Items[1]) }
-			if dashResp.RestrictedToFolders {
-				appTabs.DisableIndex(0)
-				appTabs.SelectIndex(1)
-				fleetTabVisible.Store(true)
+			navBox := container.NewMax()
+			collapsed := fyneApp.Preferences().BoolWithFallback("sidebar_collapsed", false)
+			var renderNav func()
+			selectPanel := func(panelID int) {
+				selectedPanel = panelID
+				fleetTabVisible.Store(panelID == PanelFleet)
+				if _, ok := builtPanels[panelID]; !ok {
+					switch panelID {
+					case PanelCodes:
+						builtPanels[panelID] = tab1Content
+					case PanelFleet:
+						builtPanels[panelID] = tab2Content
+					case PanelOverview:
+						builtPanels[panelID] = customerGate(panelID, overviewPanel)
+					case PanelTeam:
+						builtPanels[panelID] = customerGate(panelID, teamPanel)
+					case PanelLicenses:
+						builtPanels[panelID] = customerGate(panelID, licensesPanel)
+					case PanelBilling:
+						builtPanels[panelID] = customerGate(panelID, billingPanel)
+					case PanelHistory:
+						builtPanels[panelID] = customerGate(panelID, historyPanel)
+					case PanelServices:
+						builtPanels[panelID] = customerGate(panelID, servicesPanel)
+					case PanelSettings:
+						builtPanels[panelID] = customerGate(panelID, settingsPanel)
+					default:
+						builtPanels[panelID] = customerGate(panelID, overviewPanel)
+					}
+				}
+				contentBox.Objects = []fyne.CanvasObject{builtPanels[panelID]}
+				contentBox.Refresh()
+				renderNav()
 			}
+			accountFooter := container.NewVBox(
+				widget.NewLabelWithStyle(email, fyne.TextAlignLeading, fyne.TextStyle{Italic: true}),
+			)
+			renderNav = func() {
+				collapseBtn := widget.NewButtonWithIcon("", collapseIconResource(), func() {
+					fyneApp.Preferences().SetBool("sidebar_collapsed", !collapsed)
+					relaunch(selectedPanel)
+				})
+				nav := buildSidebarNav(selectedPanel, collapsed, restricted, selectPanel, accountFooter)
+				navBox.Objects = []fyne.CanvasObject{container.NewBorder(collapseBtn, nil, nil, nil, nav)}
+				navBox.Refresh()
+			}
+			selectPanel(selectedPanel)
+			mainSplit := container.NewHSplit(navBox, contentBox)
+			mainSplit.Offset = 0.24
 
 			// Polling automatique toutes les 30 secondes pour rafraîchir codes et postes
 			currentCancel := make(chan struct{})
@@ -1444,11 +1609,7 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 			launchBtn.Importance = widget.HighImportance
 
 			refreshBtn := widget.NewButton(T("refresh_btn"), func() {
-				target := selectedTab
-				if appTabs != nil {
-					target = appTabs.SelectedIndex()
-				}
-				showDashboardScreen(email, expiresAt, target)
+				relaunch(selectedPanel)
 			})
 
 			diagnosticBtn := widget.NewButton(T("diagnostic_btn"), func() {
@@ -1578,6 +1739,11 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 				if token != "" {
 					go logoutTechnician(token)
 				}
+				if customerSessionToken != "" {
+					ct := customerSessionToken
+					go func() { _ = customerLogout(ct) }()
+				}
+				clearCustomerSession()
 				cleanupRustDesk2Toml()
 				removeNetworkToken(sessionNetworkAuthorization)
 				ClearLicense()
@@ -1594,7 +1760,7 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 				headerBox,
 				container.NewVBox(widget.NewSeparator(), footer),
 				nil, nil,
-				appTabs,
+				mainSplit,
 			)
 
 			mainWindow.SetContent(container.NewPadded(content))
@@ -1799,7 +1965,7 @@ func buildDevicesObjects(devices []DeviceItem, folders []DeviceFolderItem, email
 								if err != nil {
 									dialog.ShowError(err, mainWindow)
 								} else {
-									showDashboardScreen(email, expiresAt, 1)
+									showDashboardScreen(email, expiresAt, PanelFleet)
 								}
 							})
 						}()
@@ -1825,7 +1991,7 @@ func buildDevicesObjects(devices []DeviceItem, folders []DeviceFolderItem, email
 							} else {
 								fyne.Do(func() {
 									dialog.ShowInformation(T("success"), T("delete_device_success"), mainWindow)
-									showDashboardScreen(email, expiresAt, 1)
+									showDashboardScreen(email, expiresAt, PanelFleet)
 								})
 							}
 						}()

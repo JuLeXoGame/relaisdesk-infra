@@ -639,6 +639,642 @@ var messages = map[string]map[Lang]string{
 		LangFR: "Mise à jour programmée avec succès. Le poste se mettra à jour en tâche de fond.",
 		LangEN: "Update successfully scheduled. The device will update silently in the background.",
 	},
+	"nav_overview": {
+		LangFR: "Vue d'ensemble",
+		LangEN: "Overview",
+	},
+	"nav_codes": {
+		LangFR: "Téléassistance & Codes",
+		LangEN: "Remote support & Codes",
+	},
+	"nav_fleet": {
+		LangFR: "Parc & Postes",
+		LangEN: "Fleet & Devices",
+	},
+	"nav_team": {
+		LangFR: "Équipe & droits",
+		LangEN: "Team & access",
+	},
+	"nav_licenses": {
+		LangFR: "Licences",
+		LangEN: "Licenses",
+	},
+	"nav_billing": {
+		LangFR: "Commandes & factures",
+		LangEN: "Orders & invoices",
+	},
+	"nav_history": {
+		LangFR: "Historique",
+		LangEN: "History",
+	},
+	"nav_services": {
+		LangFR: "Prestations & paiements",
+		LangEN: "Services & payments",
+	},
+	"nav_settings": {
+		LangFR: "Préférences",
+		LangEN: "Preferences",
+	},
+	"coming_soon": {
+		LangFR: "Rubrique en cours d'intégration…",
+		LangEN: "Section being integrated…",
+	},
+	"customer_login_title": {
+		LangFR: "Connexion — Espace client",
+		LangEN: "Sign in — Customer portal",
+	},
+	"customer_session_expired": {
+		LangFR: "Votre session a expiré, reconnectez-vous.",
+		LangEN: "Your session has expired, please sign in again.",
+	},
+	"totp_subtitle_customer": {
+		LangFR: "Saisissez le code à 6 chiffres pour %s",
+		LangEN: "Enter the 6-digit code for %s",
+	},
+	"overview_account_title": {
+		LangFR: "Mon compte",
+		LangEN: "My account",
+	},
+	"overview_account_line": {
+		LangFR: "Client %s — %s",
+		LangEN: "Customer %s — %s",
+	},
+	"overview_metric_licenses": {
+		LangFR: "Licences",
+		LangEN: "Licenses",
+	},
+	"overview_metric_invoices": {
+		LangFR: "Factures",
+		LangEN: "Invoices",
+	},
+	"overview_metric_interventions": {
+		LangFR: "Interventions",
+		LangEN: "Interventions",
+	},
+	"licenses_title": {
+		LangFR: "Mes licences",
+		LangEN: "My licenses",
+	},
+	"licenses_empty": {
+		LangFR: "Aucune licence pour le moment.",
+		LangEN: "No licenses yet.",
+	},
+	"license_expiry_line": {
+		LangFR: "Expire le %s — %d connexion(s) simultanée(s)",
+		LangEN: "Expires %s — %d simultaneous connection(s)",
+	},
+	"license_no_end_date": {
+		LangFR: "Sans date de fin",
+		LangEN: "No end date",
+	},
+	"subscriptions_title": {
+		LangFR: "Abonnements",
+		LangEN: "Subscriptions",
+	},
+	"subscriptions_empty": {
+		LangFR: "Aucun abonnement pour le moment.",
+		LangEN: "No subscriptions yet.",
+	},
+	"subscription_active": {
+		LangFR: "Actif",
+		LangEN: "Active",
+	},
+	"subscription_cancelled": {
+		LangFR: "Résilié (fin de période)",
+		LangEN: "Cancelled (end of period)",
+	},
+	"subscription_cancel_pending": {
+		LangFR: "Résiliation demandée",
+		LangEN: "Cancellation requested",
+	},
+	"subscription_withdrawn": {
+		LangFR: "Rétracté",
+		LangEN: "Withdrawn",
+	},
+	"subscription_detail_line": {
+		LangFR: "%s / mois — prochaine échéance : %s",
+		LangEN: "%s / month — next billing: %s",
+	},
+	"subscription_cancel_btn": {
+		LangFR: "Résilier",
+		LangEN: "Cancel",
+	},
+	"subscription_cancel_confirm": {
+		LangFR: "Résilier cet abonnement à la fin de la période en cours ?",
+		LangEN: "Cancel this subscription at the end of the current period?",
+	},
+	"settings_account_title": {
+		LangFR: "Compte client",
+		LangEN: "Customer account",
+	},
+	"settings_prefs_title": {
+		LangFR: "Notifications",
+		LangEN: "Notifications",
+	},
+	"settings_reminders_label": {
+		LangFR: "M'avertir avant l'expiration de mes licences",
+		LangEN: "Warn me before my licenses expire",
+	},
+	"settings_password_title": {
+		LangFR: "Mot de passe",
+		LangEN: "Password",
+	},
+	"password_old_placeholder": {
+		LangFR: "Mot de passe actuel",
+		LangEN: "Current password",
+	},
+	"password_new_placeholder": {
+		LangFR: "Nouveau mot de passe",
+		LangEN: "New password",
+	},
+	"password_confirm_placeholder": {
+		LangFR: "Confirmer le nouveau mot de passe",
+		LangEN: "Confirm new password",
+	},
+	"password_change_btn": {
+		LangFR: "Changer le mot de passe",
+		LangEN: "Change password",
+	},
+	"password_mismatch": {
+		LangFR: "Les deux mots de passe ne correspondent pas.",
+		LangEN: "The two passwords do not match.",
+	},
+	"password_changed_ok": {
+		LangFR: "Mot de passe modifié. Les anciennes sessions sont fermées.",
+		LangEN: "Password changed. Previous sessions are closed.",
+	},
+	"settings_2fa_title": {
+		LangFR: "Double authentification",
+		LangEN: "Two-factor authentication",
+	},
+	"twofa_disabled": {
+		LangFR: "2FA désactivée",
+		LangEN: "2FA disabled",
+	},
+	"twofa_enabled": {
+		LangFR: "2FA activée — %d code(s) de secours restant(s)",
+		LangEN: "2FA enabled — %d recovery code(s) left",
+	},
+	"twofa_manage_btn": {
+		LangFR: "Gérer sur le site",
+		LangEN: "Manage on website",
+	},
+	"settings_session_title": {
+		LangFR: "Session client",
+		LangEN: "Customer session",
+	},
+	"logout_customer_btn": {
+		LangFR: "Déconnecter le compte client",
+		LangEN: "Sign out customer account",
+	},
+	"dialog_save_btn": {
+		LangFR: "Enregistrer",
+		LangEN: "Save",
+	},
+	"dialog_confirm_btn": {
+		LangFR: "Confirmer",
+		LangEN: "Confirm",
+	},
+	"dialog_cancel_btn": {
+		LangFR: "Annuler",
+		LangEN: "Cancel",
+	},
+	"download_saved_title": {
+		LangFR: "Fichier enregistré",
+		LangEN: "File saved",
+	},
+	"download_saved_msg": {
+		LangFR: "Enregistré sous %s",
+		LangEN: "Saved as %s",
+	},
+	"team_licenses_title": {
+		LangFR: "Licences éligibles",
+		LangEN: "Eligible licenses",
+	},
+	"team_no_licenses": {
+		LangFR: "Aucune licence éligible à l'équipe.",
+		LangEN: "No team-eligible licenses.",
+	},
+	"team_license_line": {
+		LangFR: "%s (%s) — %d/%d place(s)",
+		LangEN: "%s (%s) — %d/%d seat(s)",
+	},
+	"team_members_title": {
+		LangFR: "Membres invités",
+		LangEN: "Invited members",
+	},
+	"team_no_members": {
+		LangFR: "Aucun membre pour le moment.",
+		LangEN: "No members yet.",
+	},
+	"team_member_line": {
+		LangFR: "Licence %s — dossiers : %s",
+		LangEN: "License %s — folders: %s",
+	},
+	"team_all_folders": {
+		LangFR: "tous",
+		LangEN: "all",
+	},
+	"team_resend_btn": {
+		LangFR: "Renvoyer",
+		LangEN: "Resend",
+	},
+	"team_resend_ok": {
+		LangFR: "Invitation renvoyée.",
+		LangEN: "Invitation resent.",
+	},
+	"team_folders_btn": {
+		LangFR: "Dossiers",
+		LangEN: "Folders",
+	},
+	"team_revoke_btn": {
+		LangFR: "Révoquer",
+		LangEN: "Revoke",
+	},
+	"team_revoke_confirm": {
+		LangFR: "Révoquer l'accès de %s ?",
+		LangEN: "Revoke access for %s?",
+	},
+	"team_invite_title": {
+		LangFR: "Inviter un membre",
+		LangEN: "Invite a member",
+	},
+	"team_invite_no_capacity": {
+		LangFR: "Aucune licence avec des places disponibles.",
+		LangEN: "No license with available seats.",
+	},
+	"team_license_label": {
+		LangFR: "Licence",
+		LangEN: "License",
+	},
+	"team_folders_label": {
+		LangFR: "Dossiers autorisés (vide = tout le parc)",
+		LangEN: "Allowed folders (empty = whole fleet)",
+	},
+	"team_invite_btn": {
+		LangFR: "Envoyer l'invitation",
+		LangEN: "Send invitation",
+	},
+	"team_joined_title": {
+		LangFR: "Équipes que j'ai rejointes",
+		LangEN: "Teams I joined",
+	},
+	"team_no_memberships": {
+		LangFR: "Vous n'avez rejoint aucune équipe.",
+		LangEN: "You have not joined any team.",
+	},
+	"team_membership_line": {
+		LangFR: "Licence %s — %s",
+		LangEN: "License %s — %s",
+	},
+	"team_folders_dialog_sub": {
+		LangFR: "Dossiers autorisés pour %s (vide = tout le parc) :",
+		LangEN: "Allowed folders for %s (empty = whole fleet):",
+	},
+	"license_detail_line": {
+		LangFR: "Créée le %s — expire le %s — %d connexion(s)",
+		LangEN: "Created %s — expires %s — %d connection(s)",
+	},
+	"license_pending_renewal": {
+		LangFR: "Renouvellement en attente",
+		LangEN: "Renewal pending",
+	},
+	"license_renew_btn": {
+		LangFR: "Renouveler",
+		LangEN: "Renew",
+	},
+	"pay_method_stripe": {
+		LangFR: "Carte bancaire (Stripe)",
+		LangEN: "Credit card (Stripe)",
+	},
+	"pay_method_bank": {
+		LangFR: "Virement bancaire",
+		LangEN: "Bank transfer",
+	},
+	"pay_method_btc": {
+		LangFR: "Crypto — Bitcoin",
+		LangEN: "Crypto — Bitcoin",
+	},
+	"pay_method_xrp": {
+		LangFR: "Crypto — XRP",
+		LangEN: "Crypto — XRP",
+	},
+	"renew_dialog_sub": {
+		LangFR: "Renouvellement de %s :",
+		LangEN: "Renewing %s:",
+	},
+	"renew_terms_label": {
+		LangFR: "J'accepte les CGV en vigueur (version %s)",
+		LangEN: "I accept the current T&Cs (version %s)",
+	},
+	"renew_terms_link": {
+		LangFR: "Lire les CGV",
+		LangEN: "Read T&Cs",
+	},
+	"renew_terms_required": {
+		LangFR: "Vous devez accepter les CGV en vigueur.",
+		LangEN: "You must accept the current T&Cs.",
+	},
+	"renew_immediate_label": {
+		LangFR: "Exécution immédiate demandée (consommateurs)",
+		LangEN: "Immediate performance requested (consumers)",
+	},
+	"renew_order_created": {
+		LangFR: "Commande %s créée. Finalisez le paiement dans le navigateur.",
+		LangEN: "Order %s created. Complete payment in the browser.",
+	},
+	"renew_bank_details": {
+		LangFR: "Virez %s à %s — IBAN %s — BIC %s — référence %s. Les instructions ont aussi été envoyées par e-mail.",
+		LangEN: "Transfer %s to %s — IBAN %s — BIC %s — reference %s. Instructions were also emailed.",
+	},
+	"renew_crypto_title": {
+		LangFR: "Paiement crypto",
+		LangEN: "Crypto payment",
+	},
+	"renew_crypto_details": {
+		LangFR: "%s %s à envoyer à %s (commande %s).",
+		LangEN: "Send %s %s to %s (order %s).",
+	},
+	"orders_title": {
+		LangFR: "Commandes",
+		LangEN: "Orders",
+	},
+	"orders_empty": {
+		LangFR: "Aucune commande pour le moment.",
+		LangEN: "No orders yet.",
+	},
+	"order_detail_line": {
+		LangFR: "%s — %d technicien(s) — %s (%s) — %s",
+		LangEN: "%s — %d technician(s) — %s (%s) — %s",
+	},
+	"invoices_title": {
+		LangFR: "Factures",
+		LangEN: "Invoices",
+	},
+	"invoices_empty": {
+		LangFR: "Aucune facture pour le moment.",
+		LangEN: "No invoices yet.",
+	},
+	"invoice_detail_line": {
+		LangFR: "%s TTC — %s",
+		LangEN: "%s incl. tax — %s",
+	},
+	"invoice_pdf_btn": {
+		LangFR: "PDF",
+		LangEN: "PDF",
+	},
+	"invoice_cii_btn": {
+		LangFR: "Factur-X",
+		LangEN: "Factur-X",
+	},
+	"billing_portal_btn": {
+		LangFR: "Gérer le paiement",
+		LangEN: "Manage payment",
+	},
+	"billing_portal_invalid": {
+		LangFR: "Lien du portail de paiement invalide.",
+		LangEN: "Invalid billing portal link.",
+	},
+	"history_create_btn": {
+		LangFR: "Nouvelle intervention",
+		LangEN: "New intervention",
+	},
+	"history_export_btn": {
+		LangFR: "Exporter CSV",
+		LangEN: "Export CSV",
+	},
+	"history_empty": {
+		LangFR: "Aucune intervention pour le moment.",
+		LangEN: "No interventions yet.",
+	},
+	"history_item_line": {
+		LangFR: "%s — réf. %s — %s",
+		LangEN: "%s — ref. %s — %s",
+	},
+	"history_dates_line": {
+		LangFR: "%s → %s (%d min)",
+		LangEN: "%s → %s (%d min)",
+	},
+	"history_start_btn": {
+		LangFR: "Démarrer",
+		LangEN: "Start",
+	},
+	"history_complete_btn": {
+		LangFR: "Clôturer",
+		LangEN: "Complete",
+	},
+	"history_cancel_btn": {
+		LangFR: "Annuler",
+		LangEN: "Cancel",
+	},
+	"history_ref_label": {
+		LangFR: "Référence client",
+		LangEN: "Client reference",
+	},
+	"history_ref_placeholder": {
+		LangFR: "ex. DUPONT-2026",
+		LangEN: "e.g. SMITH-2026",
+	},
+	"history_title_label": {
+		LangFR: "Titre",
+		LangEN: "Title",
+	},
+	"history_title_placeholder": {
+		LangFR: "ex. Remplacement du disque",
+		LangEN: "e.g. Disk replacement",
+	},
+	"history_summary_placeholder": {
+		LangFR: "Compte-rendu de l'intervention…",
+		LangEN: "Intervention report…",
+	},
+	"history_complete_sub": {
+		LangFR: "Clôturer « %s » :",
+		LangEN: "Complete \"%s\":",
+	},
+	"services_unavailable": {
+		LangFR: "Prestations non activées sur le serveur.",
+		LangEN: "Services not enabled on the server.",
+	},
+	"services_merchant_title": {
+		LangFR: "Compte d'encaissement",
+		LangEN: "Payout account",
+	},
+	"services_no_account": {
+		LangFR: "Aucun compte Stripe relié.",
+		LangEN: "No Stripe account linked.",
+	},
+	"services_onboard_btn": {
+		LangFR: "Relier Stripe",
+		LangEN: "Connect Stripe",
+	},
+	"services_account_line": {
+		LangFR: "Compte %s",
+		LangEN: "Account %s",
+	},
+	"services_enabled_label": {
+		LangFR: "Encaissements activés",
+		LangEN: "Payments enabled",
+	},
+	"services_terms_title": {
+		LangFR: "Conditions de prestations",
+		LangEN: "Service terms",
+	},
+	"services_terms_accepted": {
+		LangFR: "Acceptées le %s",
+		LangEN: "Accepted on %s",
+	},
+	"services_terms_pending": {
+		LangFR: "Version %s en attente d'acceptation",
+		LangEN: "Version %s awaiting acceptance",
+	},
+	"services_terms_accept_btn": {
+		LangFR: "Accepter les conditions",
+		LangEN: "Accept terms",
+	},
+	"services_terms_read_btn": {
+		LangFR: "Lire les conditions",
+		LangEN: "Read terms",
+	},
+	"services_rates_title": {
+		LangFR: "Catalogue",
+		LangEN: "Catalog",
+	},
+	"services_no_rates": {
+		LangFR: "Aucun tarif pour le moment.",
+		LangEN: "No rates yet.",
+	},
+	"services_rate_prepaid": {
+		LangFR: "forfait",
+		LangEN: "flat",
+	},
+	"services_rate_hourly": {
+		LangFR: "/heure",
+		LangEN: "/hour",
+	},
+	"services_rate_delete_btn": {
+		LangFR: "Supprimer",
+		LangEN: "Delete",
+	},
+	"services_rate_delete_confirm": {
+		LangFR: "Supprimer le tarif « %s » ?",
+		LangEN: "Delete rate \"%s\"?",
+	},
+	"services_rate_add_btn": {
+		LangFR: "Ajouter un tarif",
+		LangEN: "Add a rate",
+	},
+	"services_rate_label_label": {
+		LangFR: "Intitulé",
+		LangEN: "Label",
+	},
+	"services_rate_label_placeholder": {
+		LangFR: "ex. Dépannage à domicile",
+		LangEN: "e.g. On-site repair",
+	},
+	"services_rate_mode_label": {
+		LangFR: "Mode",
+		LangEN: "Mode",
+	},
+	"services_rate_amount_label": {
+		LangFR: "Montant (€)",
+		LangEN: "Amount (€)",
+	},
+	"services_rate_amount_invalid": {
+		LangFR: "Montant invalide.",
+		LangEN: "Invalid amount.",
+	},
+	"services_work_title": {
+		LangFR: "Prestations",
+		LangEN: "Jobs",
+	},
+	"services_no_work": {
+		LangFR: "Aucune prestation pour le moment.",
+		LangEN: "No jobs yet.",
+	},
+	"services_paid": {
+		LangFR: "payée",
+		LangEN: "paid",
+	},
+	"services_unpaid": {
+		LangFR: "impayée",
+		LangEN: "unpaid",
+	},
+	"services_work_line": {
+		LangFR: "%s — %s",
+		LangEN: "%s — %s",
+	},
+	"services_open_link_btn": {
+		LangFR: "Ouvrir le lien",
+		LangEN: "Open link",
+	},
+	"services_copy_link_btn": {
+		LangFR: "Copier",
+		LangEN: "Copy",
+	},
+	"services_checkout_btn": {
+		LangFR: "Préparer le paiement",
+		LangEN: "Prepare payment",
+	},
+	"services_finish_btn": {
+		LangFR: "Terminer",
+		LangEN: "Finish",
+	},
+	"services_cancel_btn": {
+		LangFR: "Annuler",
+		LangEN: "Cancel",
+	},
+	"fleet_tree_title": {
+		LangFR: "Dossiers",
+		LangEN: "Folders",
+	},
+	"btn_move_folder": {
+		LangFR: "⇄ Déplacer",
+		LangEN: "⇄ Move",
+	},
+	"move_folder_title": {
+		LangFR: "Déplacer le dossier",
+		LangEN: "Move folder",
+	},
+	"move_folder_dialog_sub": {
+		LangFR: "Destination de « %s » :",
+		LangEN: "Destination for \"%s\":",
+	},
+	"move_folder_confirm": {
+		LangFR: "Déplacer « %s » vers « %s » ?",
+		LangEN: "Move \"%s\" to \"%s\"?",
+	},
+	"move_folder_select_first": {
+		LangFR: "Sélectionnez d'abord un dossier dans l'arbre.",
+		LangEN: "Select a folder in the tree first.",
+	},
+	"twofa_enable_btn": {
+		LangFR: "Activer la 2FA",
+		LangEN: "Enable 2FA",
+	},
+	"twofa_disable_btn": {
+		LangFR: "Désactiver la 2FA",
+		LangEN: "Disable 2FA",
+	},
+	"twofa_disable_sub": {
+		LangFR: "Confirmez avec votre mot de passe et un code :",
+		LangEN: "Confirm with your password and a code:",
+	},
+	"twofa_scan_label": {
+		LangFR: "Scannez ce code avec votre application d'authentification :",
+		LangEN: "Scan this code with your authenticator app:",
+	},
+	"twofa_secret_label": {
+		LangFR: "Clé secrète (saisie manuelle) :",
+		LangEN: "Secret key (manual entry):",
+	},
+	"twofa_recovery_label": {
+		LangFR: "Codes de secours (à conserver précieusement) :",
+		LangEN: "Recovery codes (keep them safe):",
+	},
+	"twofa_code_label": {
+		LangFR: "Code à 6 chiffres",
+		LangEN: "6-digit code",
+	},
 }
 
 func T(key string) string {

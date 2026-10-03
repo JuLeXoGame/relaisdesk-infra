@@ -610,6 +610,14 @@ func updateTechnicianFolder(token, folderID, name string) error {
 	return doTechnicianReq(http.MethodPut, "/api/v1/technician/device-folders/"+folderID, token, req, &envelope)
 }
 
+func moveTechnicianFolder(token, folderID, parentFolderID string) error {
+	req := map[string]string{
+		"parent_folder_id": strings.TrimSpace(parentFolderID),
+	}
+	var res map[string]any
+	return doTechnicianReq(http.MethodPut, "/api/v1/technician/device-folders/"+folderID, token, req, &res)
+}
+
 func deleteTechnicianFolder(token, folderID string) error {
 	var res map[string]interface{}
 	return doTechnicianReq(http.MethodDelete, "/api/v1/technician/device-folders/"+folderID, token, nil, &res)

@@ -10,8 +10,6 @@ import (
 
 var linuxServiceTokenFile string
 
-func closeServiceBillingUI() {}
-
 func handleServiceCodesLinux(token, tokenFile, binary string) {
 	dash, err := getDashboard(token)
 	if err != nil {
