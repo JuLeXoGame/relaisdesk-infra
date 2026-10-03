@@ -754,7 +754,7 @@ func servicesPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 								relaunch(panelID)
 								return
 							}
-							dialog.ShowError(err, mainWindow)
+							showErrorWithLinks(err, mainWindow)
 							return
 						}
 						if linkURL != "" {
@@ -775,7 +775,7 @@ func servicesPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 					fyne.Do(func() {
 						if err != nil {
 							enabledCheck.SetChecked(!on)
-							dialog.ShowError(err, mainWindow)
+							showErrorWithLinks(err, mainWindow)
 						}
 					})
 				}()

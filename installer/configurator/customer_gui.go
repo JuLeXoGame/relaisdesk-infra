@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"image/color"
+	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -257,6 +259,59 @@ func centeredCardScroll(card fyne.CanvasObject) fyne.CanvasObject {
 	scroll := container.NewVScroll(container.NewPadded(card))
 	scroll.SetMinSize(fyne.NewSize(customerCardWidth, 0))
 	return container.NewHBox(layout.NewSpacer(), scroll, layout.NewSpacer())
+}
+
+var errorURLPattern = regexp.MustCompile(`https?://[^\s<>"')\]]+`)
+
+// errorURLs extrait les liens http(s) d'un message d'erreur (dédupliqués,
+// ponctuation finale retirée, hôte requis).
+func errorURLs(msg string) []string {
+	raw := errorURLPattern.FindAllString(msg, -1)
+	seen := map[string]bool{}
+	out := []string{}
+	for _, u := range raw {
+		u = strings.TrimRight(u, ".,;:!?")
+		if u == "" || seen[u] {
+			continue
+		}
+		if parsed, err := url.Parse(u); err != nil || parsed.Host == "" {
+			continue
+		}
+		seen[u] = true
+		out = append(out, u)
+	}
+	return out
+}
+
+// errorWithLinksContent rend un message d'erreur suivi d'un lien cliquable
+// par URL détectée (ouverture dans le navigateur).
+func errorWithLinksContent(msg string) fyne.CanvasObject {
+	label := widget.NewLabel(msg)
+	label.Wrapping = fyne.TextWrapWord
+	rows := []fyne.CanvasObject{label}
+	for _, u := range errorURLs(msg) {
+		link := u
+		parsed, _ := url.Parse(link)
+		hl := widget.NewHyperlink(link, parsed)
+		hl.OnTapped = func() { _ = openBrowserCrossPlatform(link) }
+		rows = append(rows, hl)
+	}
+	return container.NewVBox(rows...)
+}
+
+// showErrorWithLinks affiche une erreur comme dialog.ShowError, sauf que
+// les URL du message deviennent des liens cliquables sous le texte.
+func showErrorWithLinks(err error, parent fyne.Window) {
+	if err == nil {
+		return
+	}
+	if len(errorURLs(err.Error())) == 0 {
+		dialog.ShowError(err, parent)
+		return
+	}
+	scroll := container.NewVScroll(errorWithLinksContent(err.Error()))
+	scroll.SetMinSize(fyne.NewSize(520, 160))
+	dialog.ShowCustom(T("error"), "OK", scroll, parent)
 }
 
 // customerGatePanel affiche le contenu client si la session est ouverte,

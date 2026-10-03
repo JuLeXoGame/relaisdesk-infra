@@ -8,6 +8,7 @@ package main
 // exigent un scroll à taille réelle.
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -144,6 +145,58 @@ func TestSidebarNavLabelsFollowCollapsed(t *testing.T) {
 			t.Fatal("icone manquante en mode replie")
 		}
 	}
+}
+
+func TestErrorURLsExtraction(t *testing.T) {
+	stripeMsg := "Stripe : You must complete your platform profile to use Connect and create live connected accounts. Visit your dashboard at https://dashboard.stripe.com/connect/accounts/overview to answer the questionnaire."
+	urls := errorURLs(stripeMsg)
+	if len(urls) != 1 || urls[0] != "https://dashboard.stripe.com/connect/accounts/overview" {
+		t.Fatalf("lien Stripe attendu: %v", urls)
+	}
+	if len(errorURLs("erreur simple sans lien")) != 0 {
+		t.Fatal("aucun lien attendu")
+	}
+	dupes := errorURLs("voir https://a.example/x. puis https://a.example/x")
+	if len(dupes) != 1 || dupes[0] != "https://a.example/x" {
+		t.Fatalf("ponctuation/dedoublonnage: %v", dupes)
+	}
+}
+
+func collectPanelLinks(obj fyne.CanvasObject, out *[]*widget.Hyperlink) {
+	switch o := obj.(type) {
+	case *widget.Hyperlink:
+		*out = append(*out, o)
+	case *container.Scroll:
+		if o.Content != nil {
+			collectPanelLinks(o.Content, out)
+		}
+	case *fyne.Container:
+		for _, child := range o.Objects {
+			collectPanelLinks(child, out)
+		}
+	}
+}
+
+func TestErrorWithLinksContentHasHyperlinks(t *testing.T) {
+	a := test.NewApp()
+	defer a.Quit()
+	content := errorWithLinksContent("Stripe : complétez votre profil sur https://dashboard.stripe.com/connect/accounts/overview merci.")
+	var links []*widget.Hyperlink
+	collectPanelLinks(content, &links)
+	if len(links) != 1 {
+		t.Fatalf("1 lien cliquable attendu, obtenu %d", len(links))
+	}
+	if links[0].URL == nil || links[0].URL.Host != "dashboard.stripe.com" {
+		t.Fatalf("URL lien inattendue: %+v", links[0].URL)
+	}
+	if links[0].OnTapped == nil {
+		t.Fatal("lien sans action (ouverture navigateur manquante)")
+	}
+	w := a.NewWindow("err")
+	defer w.Close()
+	showErrorWithLinks(errors.New("avec https://a.example/x lien"), w)
+	showErrorWithLinks(errors.New("sans lien"), w)
+	showErrorWithLinks(nil, w)
 }
 
 func TestFolderRootLabelHasNoEmojiIcon(t *testing.T) {
