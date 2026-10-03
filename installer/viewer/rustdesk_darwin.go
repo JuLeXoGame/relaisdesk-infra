@@ -28,7 +28,7 @@ func findRustDesk() (string, error) {
 		RUSTDESK_LEGACY_APP_PATH,
 	}
 
-	// Si l'ex�cutable courant est dans un bundle .app macOS, v�rifier s'il contient le binaire RustDesk
+	// Si l'exécutable courant est dans un bundle .app macOS, vérifier s'il contient le binaire RustDesk
 	if self, err := os.Executable(); err == nil {
 		bundleDir := filepath.Dir(self)
 		candidates = append(candidates, filepath.Join(bundleDir, "rustdesk"), filepath.Join(bundleDir, "RelaisDesk"))
@@ -38,7 +38,7 @@ func findRustDesk() (string, error) {
 		if fileMatchesSHA256(c, RUSTDESK_EXPECTED_SHA256) {
 			return c, nil
 		}
-		// Si pas de hash �pingl� en mode dev, v�rifier l'existence
+		// Si pas de hash épinglé en mode dev, vérifier l'existence
 		if RUSTDESK_EXPECTED_SHA256 == "" {
 			if info, err := os.Stat(c); err == nil && !info.IsDir() {
 				return c, nil
@@ -113,7 +113,7 @@ func generateViewerRustDesk2Toml(rendezvousWithPort, rendezvousHost, relayServer
 
 func configureRustDesk(activation *ActivationResponse, _ string) error {
 	if activation == nil {
-		return fmt.Errorf("configuration serveur incompl�te")
+		return fmt.Errorf("configuration serveur incomplète")
 	}
 	rendezvousHost := strings.TrimSpace(activation.ServerIP)
 	if err := validateRendezvousHost(rendezvousHost); err != nil {
@@ -159,8 +159,8 @@ func configureRustDesk(activation *ActivationResponse, _ string) error {
 }
 
 func tomlEscapeDarwin(value string) string {
-	value = strings.ReplaceAll(value, \, \\)
-	return strings.ReplaceAll(value, ', \')
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	return strings.ReplaceAll(value, `'`, `\'`)
 }
 
 func cleanupRustDesk2Toml() {
@@ -212,7 +212,7 @@ func getRustDeskID(rustdeskPath string) string {
 			if strings.HasPrefix(line, "id =") {
 				parts := strings.SplitN(line, "=", 2)
 				if len(parts) == 2 {
-					id := strings.Trim(strings.TrimSpace(parts[1]), "')
+					id := strings.Trim(strings.TrimSpace(parts[1]), `"'`)
 					if isNumericRustDeskID(id) {
 						return id
 					}
@@ -224,7 +224,7 @@ func getRustDeskID(rustdeskPath string) string {
 }
 
 func createDesktopShortcut(rustdeskPath string) error {
-	// Sur macOS, l'application est plac�e dans /Applications ou lanc�e depuis le DMG.
+	// Sur macOS, l'application est placée dans /Applications ou lancée depuis le DMG.
 	return nil
 }
 
