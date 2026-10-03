@@ -10,8 +10,8 @@
 #
 # La cle par defaut est .secrets\oracle private.ppk (parametre -PpkPath).
 # Par defaut, le script transfere 3 fichiers (RelaisDesk_Portable.exe et
-# metadonnees). Avec -Full, il transfere la release complete (8 binaires
-# + SHA256SUMS.txt + release-manifest.json). Dans les deux cas, il les
+# metadonnees). Avec -Full, il transfere la release complete (12 binaires
+# dont 4 DMG macOS + SHA256SUMS.txt + release-manifest.json). Dans les deux cas, il les
 # installe dans /opt/relaisdesk/downloads (avec rollback), verifie les
 # sommes cote serveur et controle que le manifeste public correspond au local.
 # =============================================================================
@@ -43,6 +43,10 @@ if ($Full) {
         "RelaisDesk_Technicien_Setup_1.0.0.exe",
         "RelaisDesk_viewer.deb",
         "RelaisDesk_Viewer_Linux",
+        "RelaisDesk_Mac.dmg",
+        "RelaisDesk_Technicien_Mac.dmg",
+        "RelaisDesk_Mac_Intel.dmg",
+        "RelaisDesk_Technicien_Mac_Intel.dmg",
         "SHA256SUMS.txt",
         "release-manifest.json"
     )

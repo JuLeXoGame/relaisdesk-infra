@@ -13,8 +13,8 @@
 # puis : install -m 0600 cle-openssh ~/.ssh/oracle
 #
 # Par defaut, le script transfere 3 fichiers (RelaisDesk_Portable.exe et
-# metadonnees). Avec --full, il transfere la release complete (8 binaires
-# + SHA256SUMS.txt + release-manifest.json). Dans les deux cas, il les
+# metadonnees). Avec --full, il transfere la release complete (12 binaires
+# dont 4 DMG macOS + SHA256SUMS.txt + release-manifest.json). Dans les deux cas, il les
 # installe dans /opt/relaisdesk/downloads (avec rollback), verifie les
 # sommes cote serveur et controle que le manifeste public correspond au local.
 # =============================================================================
@@ -42,10 +42,10 @@ if [ ! -f "$SSH_KEY" ]; then echo "Cle introuvable : $SSH_KEY (convertir le .ppk
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DOWNLOADS_DIR="$ROOT/relaisdesk/downloads"
-SSH_OPTS=(-o BatchMode=yes -i "$SSH_KEY")
+SSH_OPTS=(-o BatchMode=yes -o StrictHostKeyChecking=accept-new -i "$SSH_KEY")
 FILES="RelaisDesk_Portable.exe SHA256SUMS.txt release-manifest.json"
 if [ "$FULL" = "1" ]; then
-    FILES="RelaisDesk_Portable.exe RelaisDesk_Setup.exe RelaisDesk_Technicien.deb RelaisDesk_Technicien_Linux RelaisDesk_Technicien_Portable.exe RelaisDesk_Technicien_Setup_1.0.0.exe RelaisDesk_viewer.deb RelaisDesk_Viewer_Linux SHA256SUMS.txt release-manifest.json"
+    FILES="RelaisDesk_Portable.exe RelaisDesk_Setup.exe RelaisDesk_Technicien.deb RelaisDesk_Technicien_Linux RelaisDesk_Technicien_Portable.exe RelaisDesk_Technicien_Setup_1.0.0.exe RelaisDesk_viewer.deb RelaisDesk_Viewer_Linux RelaisDesk_Mac.dmg RelaisDesk_Technicien_Mac.dmg RelaisDesk_Mac_Intel.dmg RelaisDesk_Technicien_Mac_Intel.dmg SHA256SUMS.txt release-manifest.json"
 fi
 
 for f in $FILES; do
