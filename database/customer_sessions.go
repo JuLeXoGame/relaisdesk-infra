@@ -183,9 +183,7 @@ func ValidateCustomerSessionIdentity(db *sql.DB, token string) (*CustomerIdentit
 		_, _ = db.Exec(`DELETE FROM customer_sessions WHERE token_hash = ?`, tokenHash)
 		return nil, errors.New("session client expirée")
 	}
-	if _, err := db.Exec(`UPDATE customer_sessions SET last_used_at = ? WHERE token_hash = ?`, now.Format(time.RFC3339), tokenHash); err != nil {
-		return nil, err
-	}
+	touchSessionLastUsed(db, "customer_sessions", "token_hash", tokenHash, now.Format(time.RFC3339))
 	identity, err := GetCustomerIdentityByID(db, customerID, email)
 	if err != nil {
 		return nil, errors.New("identité de session client invalide")

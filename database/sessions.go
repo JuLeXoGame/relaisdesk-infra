@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 )
@@ -74,10 +75,7 @@ func ValidateTechnicianSession(db *sql.DB, token string) (string, error) {
 		return "", fmt.Errorf("session d'équipe révoquée ou licence non éligible")
 	}
 
-	_, err = db.Exec(`UPDATE technician_sessions SET last_used_at = ? WHERE token = ?`, time.Now().UTC().Format("2006-01-02 15:04:05"), tokenHash)
-	if err != nil {
-		return "", fmt.Errorf("failed to update session usage: %w", err)
-	}
+	touchSessionLastUsed(db, "technician_sessions", "token", tokenHash, time.Now().UTC().Format("2006-01-02 15:04:05"))
 
 	return licenseID, nil
 }
@@ -140,8 +138,8 @@ func ValidateAdminSession(db *sql.DB, token string) error {
 		_, _ = db.Exec(`DELETE FROM admin_sessions WHERE token_hash = ?`, tokenHash)
 		return fmt.Errorf("session admin expirée")
 	}
-	_, err = db.Exec(`UPDATE admin_sessions SET last_used_at = ? WHERE token_hash = ?`, now.Format("2006-01-02 15:04:05"), tokenHash)
-	return err
+	touchSessionLastUsed(db, "admin_sessions", "token_hash", tokenHash, now.Format("2006-01-02 15:04:05"))
+	return nil
 }
 
 func DeleteAdminSession(db *sql.DB, token string) error {
@@ -177,6 +175,42 @@ func PurgeExpiredSessions(db *sql.DB) error {
 func hashSessionToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
+}
+
+// isSQLiteBusyError reports lock contention (SQLITE_BUSY / SQLITE_LOCKED)
+// from the driver error text, without depending on driver internals.
+func isSQLiteBusyError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "database is locked") ||
+		strings.Contains(msg, "database table is locked") ||
+		strings.Contains(msg, "database is busy") ||
+		strings.Contains(msg, "sqlite_busy")
+}
+
+// touchSessionLastUsed refreshes last_used_at on a best-effort basis. The
+// session row was already authenticated by the caller, so a transient write
+// failure (SQLITE_BUSY when the dashboard fires parallel requests, slow disk,
+// read-only replica...) must never turn a valid session into a 401. It
+// retries lock contention briefly, then logs and lets validation succeed.
+func touchSessionLastUsed(db *sql.DB, table, column, tokenHash, timestamp string) {
+	const attempts = 5
+	var err error
+	for i := 0; i < attempts; i++ {
+		if i > 0 {
+			time.Sleep(time.Duration(5*i) * time.Millisecond)
+		}
+		_, err = db.Exec(`UPDATE `+table+` SET last_used_at = ? WHERE `+column+` = ?`, timestamp, tokenHash)
+		if err == nil {
+			return
+		}
+		if !isSQLiteBusyError(err) {
+			break
+		}
+	}
+	log.Printf("[sessions] mise à jour last_used_at impossible pour %s (session acceptée) : %v", table, err)
 }
 
 // HashSessionToken computes SHA-256 hex string for tokens.

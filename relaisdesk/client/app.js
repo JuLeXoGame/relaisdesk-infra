@@ -82,7 +82,7 @@ async function api(path, options = {}) {
   if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
   if (state.token) headers.set('Authorization', `Bearer ${state.token}`);
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, cache: 'no-store' });
-  if (response.status === 401 && !path.includes('/login') && !path.includes('/password/')) logout(false);
+  if (response.status === 401 && !path.includes('/login') && !path.includes('/password/')) void logout(false, true).catch(() => {});
   if (!response.ok) {
     let message = 'Une erreur est survenue.';
     let payload = null;
@@ -699,6 +699,7 @@ async function loadDashboard() {
     const response = await api('/api/v1/customer/dashboard');
     state.data = await response.json();
     renderDashboard();
+    setMessage(byId('appMessage'), '');
     showApp();
   } catch (error) {
     setMessage(byId('appMessage'), error.message, true);
@@ -2084,25 +2085,41 @@ async function updateReminders() {
   catch (error) { byId('remindersToggle').checked = !enabled; setMessage(byId('appMessage'), error.message, true); }
 }
 
-async function logout(callAPI = true) {
-  if (window.rdServices) window.rdServices.clear();
-  if (window.rdTeams) window.rdTeams.clear();
-  cancellationReview.dismiss();
-  if (callAPI && state.token) { try { await api('/api/v1/customer/logout', { method: 'POST' }); } catch (_) { /* session déjà expirée */ } }
-  state.token = ''; state.data = null; state.devices = []; state.deviceNextCursor = 0;
-  state.deviceQuotas = []; renderFleetQuotas();
-  state.folders = []; state.activeFolderId = ''; state.viewAllDevices = false;
-  state.lastGeneratedEnrollCode = ''; state.lastGeneratedCode = '';
-  byId('displayEnrollCode').textContent = '----';
-  byId('enrollResultBox').style.display = 'none';
-  byId('enrollDeviceDialog').close();
-  byId('setup2FADialog')?.close();
-  byId('disable2FADialog')?.close();
-  byId('recoveryCodesDialog')?.close();
-  byId('folderModal')?.close();
-  byId('moveDeviceModal')?.close();
-  byId('devicesBody').replaceChildren();
-  sessionStorage.removeItem('rd_customer_token'); showAuth();
+function safeCloseDialog(id) {
+  // dialog.close() throws InvalidStateError when the dialog is not open:
+  // never let that interrupt a logout.
+  try {
+    const dialog = byId(id);
+    if (dialog && dialog.open) dialog.close();
+  } catch (_) { /* already closed or missing */ }
+}
+
+async function logout(callAPI = true, sessionExpired = false) {
+  // Never throws: cleanup must always reach showAuth(), even if a widget
+  // or dialog call fails.
+  try {
+    if (window.rdServices) window.rdServices.clear();
+    if (window.rdTeams) window.rdTeams.clear();
+    try { cancellationReview.dismiss(); } catch (_) { /* no review pending */ }
+    if (callAPI && state.token) { try { await api('/api/v1/customer/logout', { method: 'POST' }); } catch (_) { /* session déjà expirée */ } }
+    state.token = ''; state.data = null; state.devices = []; state.deviceNextCursor = 0;
+    state.deviceQuotas = []; renderFleetQuotas();
+    state.folders = []; state.activeFolderId = ''; state.viewAllDevices = false;
+    state.lastGeneratedEnrollCode = ''; state.lastGeneratedCode = '';
+    byId('displayEnrollCode').textContent = '----';
+    byId('enrollResultBox').style.display = 'none';
+    safeCloseDialog('enrollDeviceDialog');
+    safeCloseDialog('setup2FADialog');
+    safeCloseDialog('disable2FADialog');
+    safeCloseDialog('recoveryCodesDialog');
+    safeCloseDialog('folderModal');
+    safeCloseDialog('moveDeviceModal');
+    byId('devicesBody').replaceChildren();
+  } finally {
+    try { sessionStorage.removeItem('rd_customer_token'); } catch (_) { /* stockage indisponible */ }
+    if (sessionExpired) setMessage(byId('authMessage'), 'Votre session a expiré ou a été fermée. Veuillez vous reconnecter.', true);
+    showAuth();
+  }
 }
 
 function getPanelTitles() {
@@ -2181,7 +2198,7 @@ if (byId('btnCopyRegenCodes')) {
   });
 }
 
-byId('logoutButton').addEventListener('click', () => logout(true));
+byId('logoutButton').addEventListener('click', () => { logout(true).catch(() => {}); });
 byId('refreshButton').addEventListener('click', loadDashboard);
 byId('renewForm').addEventListener('submit', submitRenewal);
 byId('renewCryptoRefresh').addEventListener('click', refreshRenewCryptoQuote);
