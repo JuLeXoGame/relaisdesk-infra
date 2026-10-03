@@ -33,7 +33,7 @@ function catalog(extra = {}) { return { available: true, merchant: {enabled:fals
 test('Terms require an unchecked explicit acceptance and matching document', async () => {
   const calls=[];
   const digest = require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(root,'api/servicelegal/conditions-2026-09-19.txt'))).digest('hex');
-  const data=catalog({active_license:true,terms:{version:'2026-09-19-prestations-v1',sha256:digest,accepted_at:0}});
+  const data=catalog({active_license:true,terms:{version:'2026-09-24-prestations-v2',sha256:digest,accepted_at:0}});
   const f=fixture(async(url,options)=>{calls.push({url,options});return{json:async()=>data};});
   await f.services.load();
   assert.equal(f.byId('serviceTermsAccept').checked,false);

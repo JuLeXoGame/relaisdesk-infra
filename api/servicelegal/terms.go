@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-const Version = "2026-09-19-prestations-v1"
+const Version = "2026-09-24-prestations-v2"
 const URL = "/prestations/conditions-2026-09-19.html"
 
 //go:embed conditions-2026-09-19.txt

@@ -1,7 +1,7 @@
 'use strict';
 (() => {
   let current = null, generation = 0;
-  const termsHash = '9f6136a3785dcd03cfc330d28eea3eee2f1c39f71eaf74cd4036f71cf5c296bf';
+  const termsHash = '26ba39877c9d6a90189c1e3054eebb9ba901626fe11f412b102efb62b121a3f8';
   const node = (tag, value) => { const n = document.createElement(tag); n.textContent = value; return n; };
   const request = async (suffix = '', method = 'GET', body) => (await api(`/api/v1/customer/service-billing${suffix}`, { method, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) })).json();
   const report = error => setMessage(byId('serviceStatus'), error.message, true);
@@ -66,7 +66,7 @@
     if (!current?.terms || !byId('serviceTermsAccept').checked) return;
     const button = event.currentTarget.querySelector('button'); button.disabled = true;
     try {
-      if (current.terms.version !== '2026-09-19-prestations-v1' || current.terms.sha256 !== termsHash) throw new Error('Actualisez le portail pour lire les nouvelles conditions avant acceptation.');
+      if (current.terms.version !== '2026-09-24-prestations-v2' || current.terms.sha256 !== termsHash) throw new Error('Actualisez le portail pour lire les nouvelles conditions avant acceptation.');
       await request('/terms/accept', 'POST', { accepted: true, version: current.terms.version, sha256: current.terms.sha256 });
       await load();
     } catch (e) { report(e); } finally { button.disabled = false; }
