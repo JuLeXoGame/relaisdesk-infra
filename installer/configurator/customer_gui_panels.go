@@ -788,8 +788,8 @@ func servicesPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 		), customerCardBorder, customerCardFill)
 
 		termsRows := container.NewVBox()
-		if nav.Terms.AcceptedAt != "" {
-			termsRows.Add(widget.NewLabel(TF("services_terms_accepted", formatCustomerDateRFC3339(nav.Terms.AcceptedAt))))
+		if nav.Terms.AcceptedAt > 0 {
+			termsRows.Add(widget.NewLabel(TF("services_terms_accepted", formatCustomerDateUnix(nav.Terms.AcceptedAt))))
 		} else {
 			termsRows.Add(widget.NewLabel(TF("services_terms_pending", nav.Terms.Version)))
 			acceptBtn := widget.NewButton(T("services_terms_accept_btn"), func() {

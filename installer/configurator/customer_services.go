@@ -40,10 +40,11 @@ type customerServiceWork struct {
 }
 
 type customerServiceTerms struct {
-	Version    string `json:"version"`
-	SHA256     string `json:"sha256"`
-	URL        string `json:"url"`
-	AcceptedAt string `json:"accepted_at"`
+	Version string `json:"version"`
+	SHA256  string `json:"sha256"`
+	URL     string `json:"url"`
+	// Secondes Unix, 0 = jamais accepté (comme le web).
+	AcceptedAt int64 `json:"accepted_at"`
 }
 
 type customerServiceBilling struct {

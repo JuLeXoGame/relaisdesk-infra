@@ -138,7 +138,7 @@ func TestCustomerServicesFlow(t *testing.T) {
 			`"merchant":{"enabled":true,"account_id":"acct_1"},` +
 			`"rates":[{"id":"RT-1","label":"Forfait","mode":"prepaid","cents":5000,"active":true}],` +
 			`"work":[{"id":"W-1","license_id":"LIC-1","label":"Dépannage","mode":"prepaid","rate_cents":5000,"state":"prepared","paid":false,"amount_cents":5000,"created_at":1}],` +
-			`"terms":{"version":"2026-09-01","sha256":"abc","url":"https://relaisdesk.fr/cgv","accepted_at":"2026-09-02T00:00:00Z"}}`,
+			`"terms":{"version":"2026-09-01","sha256":"abc","url":"https://relaisdesk.fr/cgv","accepted_at":1756771200}}`,
 		"POST /api/v1/customer/service-billing/terms/accept":      `{"ok":true}`,
 		"PUT /api/v1/customer/service-billing":                    `{"ok":true}`,
 		"POST /api/v1/customer/service-billing/onboarding":        `{"url":"https://connect.stripe.com/setup/abc"}`,
@@ -150,6 +150,10 @@ func TestCustomerServicesFlow(t *testing.T) {
 	nav, err := getCustomerServiceBilling("sess-9")
 	if err != nil || !nav.Available || len(nav.Rates) != 1 || len(nav.Work) != 1 || nav.Terms.Version == "" {
 		t.Fatalf("navigation: %+v %v", nav, err)
+	}
+	// Le serveur envoie accepted_at en secondes Unix (0 = jamais accepté).
+	if nav.Terms.AcceptedAt != 1756771200 {
+		t.Fatalf("accepted_at Unix attendu: %+v", nav.Terms)
 	}
 	if err := acceptCustomerServiceTerms("sess-9", "2026-09-01", "abc"); err != nil {
 		t.Fatal("cgv", err)
