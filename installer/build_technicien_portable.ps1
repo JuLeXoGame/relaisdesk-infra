@@ -13,7 +13,7 @@ try {
     Set-Content -Path $rcPath -Value "100 ICON `"$iconPath`"`r`n1 24 `"$manifestPath`"" -Encoding UTF8
     & windres --target=pe-x86-64 -i $rcPath -O coff -o rsrc_windows_amd64.syso
 
-    $windowsHash = "b8ff64630042a8f41492d7893163de65f9376b2a2d27d404ebf3812033124ae6"
+    $windowsHash = "26ef612657f0edd0729275a341457cb96f2105eea4b4c5871244641fd0e35b7f"
     $version = "1.0.0"
     $flags = "-s -w -H windowsgui -X main.APIURL=https://api.relaisdesk.fr -X main.APP_VERSION=$version -X main.RELEASE_PUBLIC_KEY=K3k6oko00jMzl7hN3poS6KYjJzZvjNz9Tgdz73E2duo -X main.RUSTDESK_EXPECTED_SHA256=$windowsHash"
 

@@ -25,5 +25,5 @@ var (
 	RUSTDESK_PACKAGE_EXPECTED_SHA256 = "190b938b370284e091242e915ecebefdacd23eeba142f227d1decb11bc629b30"
 	// The Flutter runner can remain identical across engine updates. Pin the
 	// native library too; release builders must supply its exact digest.
-	RUSTDESK_SO_EXPECTED_SHA256 = ""
+	RUSTDESK_SO_EXPECTED_SHA256 = "0b36cca0afe53cb4f7e7a61710318304db6aa861e583475247445446ebd76eae"
 )

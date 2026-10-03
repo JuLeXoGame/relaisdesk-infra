@@ -13,10 +13,11 @@ try {
     $linuxConfBin = Join-Path $BuildDir "relaisdesk-configurator"
     $rustdeskElfSha = "58ef1e984727d827836c8ad84ad50a4971db4a3cb80ad7a646982594af155c52"
     $rustdeskDebSha = "190b938b370284e091242e915ecebefdacd23eeba142f227d1decb11bc629b30"
+    $rustdeskSoSha = "0b36cca0afe53cb4f7e7a61710318304db6aa861e583475247445446ebd76eae"
     $pubKey = "K3k6oko00jMzl7hN3poS6KYjJzZvjNz9Tgdz73E2duo"
     $version = "1.0.0"
 
-    $linuxLdFlags = "-s -w -X main.APIURL=https://api.relaisdesk.fr -X main.APP_VERSION=$version -X main.RELEASE_PUBLIC_KEY=$pubKey -X main.RUSTDESK_EXPECTED_SHA256=$rustdeskElfSha -X main.RUSTDESK_PACKAGE_EXPECTED_SHA256=$rustdeskDebSha"
+    $linuxLdFlags = "-s -w -X main.APIURL=https://api.relaisdesk.fr -X main.APP_VERSION=$version -X main.RELEASE_PUBLIC_KEY=$pubKey -X main.RUSTDESK_EXPECTED_SHA256=$rustdeskElfSha -X main.RUSTDESK_PACKAGE_EXPECTED_SHA256=$rustdeskDebSha -X main.RUSTDESK_SO_EXPECTED_SHA256=$rustdeskSoSha"
     & go build -ldflags $linuxLdFlags -o $linuxConfBin .
     if ($LASTEXITCODE -ne 0) { throw "Linux configurator build failed" }
 

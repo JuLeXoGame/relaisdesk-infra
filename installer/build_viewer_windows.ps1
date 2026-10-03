@@ -17,7 +17,7 @@ try {
     $winViewerBuild = Join-Path $BuildDir "viewer.exe"
     $winViewerDl = Join-Path $DownloadsDir "RelaisDesk_Portable.exe"
 
-    $forkWindowsSha256 = "b8ff64630042a8f41492d7893163de65f9376b2a2d27d404ebf3812033124ae6"
+    $forkWindowsSha256 = "26ef612657f0edd0729275a341457cb96f2105eea4b4c5871244641fd0e35b7f"
     $forkWindowsServiceSha256 = "260cb7c32e7b929c88262c0460de94ae86dfaf0123ff03337707a17b7e4a0251"
 
     $version = "1.0.0"
