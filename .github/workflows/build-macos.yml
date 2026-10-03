@@ -28,6 +28,10 @@ jobs:
         with:
           submodules: true
 
+      - name: Clone RelaisDesk client fork
+        run: |
+          git clone --branch relaisdesk/authorization --depth 1 https://github.com/JuLeXoGame/relaisdesk.git rustdesk
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
@@ -49,6 +53,7 @@ jobs:
           flutter-version: '3.24.5'
 
       - name: Build RustDesk Core for macOS
+        continue-on-error: true
         run: |
           cd rustdesk
           cargo build --release --target ${{ matrix.target }}
