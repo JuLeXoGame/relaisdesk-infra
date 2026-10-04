@@ -73,6 +73,11 @@ foreach ($requiredPath in @($RustDeskDir, $ManifestPath, $NasmSelector)) {
         throw "Chemin requis absent : $requiredPath"
     }
 }
+$buildDrive = $ProjectRoot.Substring(0, 1)
+$driveFree = (Get-PSDrive -Name $buildDrive -ErrorAction SilentlyContinue).Free
+if ($null -ne $driveFree -and $driveFree -lt 5GB) {
+    throw "Espace disque insuffisant sur ${buildDrive}: : $([math]::Round($driveFree / 1GB, 1)) Go libres, 5 Go requis."
+}
 
 if (-not $SkipNativeDependencies) {
     if (-not (Test-Path -LiteralPath (Join-Path $VcpkgRoot ".git"))) {
@@ -169,6 +174,9 @@ Invoke-InDirectory -Directory $RustDeskDir -FilePath "cargo" -Arguments @(
 Invoke-InDirectory -Directory (Join-Path $RustDeskDir "libs\virtual_display\dylib") `
     -FilePath "cargo" -Arguments @("build", "--locked", "--release")
 
+# Nettoie les payloads orphelins des runs precedents (sinon le disque sature).
+Get-ChildItem -LiteralPath $PackageRoot -Directory -Filter 'payload-*' -ErrorAction SilentlyContinue |
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $PackageRoot, $OutputDir | Out-Null
 $SciterPath = Join-Path $PackageRoot "sciter.dll"
 if (-not (Test-Path -LiteralPath $SciterPath)) {
@@ -217,6 +225,28 @@ if (-not $SkipLaunchers) {
     Copy-Item -LiteralPath $OutputPath -Destination (Join-Path $ViewerDir "embedded\rustdesk.exe") -Force
 
     $ServiceSha256 = & (Join-Path $PSScriptRoot 'prepare-fleet-payload.ps1') -NativeExecutable (Join-Path $PayloadDir 'rustdesk.exe') -Destination (Join-Path $ViewerDir 'embedded/fleet')
+    # Les binaires ne sont pas deterministes (horodatage PE) : chaque build
+    # produit de nouveaux hashes. On rafraichit les pins par defaut dans les
+    # sources Go et les scripts build_*.ps1 AVANT go build / go test, pour que
+    # binaires embarques, pins Go et pins PS1 concordent dans le meme run.
+    $InstallerDir = Split-Path -Parent $ConfiguratorDir
+    $pinUpdates = @(
+        @((Join-Path $ViewerDir 'config_windows.go'), 'RUSTDESK_EXPECTED_SHA256', $ForkSha256),
+        @((Join-Path $ViewerDir 'config_windows.go'), 'RUSTDESK_SERVICE_EXPECTED_SHA256', $ServiceSha256),
+        @((Join-Path $ConfiguratorDir 'config_windows.go'), 'RUSTDESK_EXPECTED_SHA256', $ForkSha256),
+        @((Join-Path $InstallerDir 'build_technicien_portable.ps1'), '\$windowsHash', $ForkSha256),
+        @((Join-Path $InstallerDir 'build_viewer_windows.ps1'), '\$forkWindowsSha256', $ForkSha256),
+        @((Join-Path $InstallerDir 'build_viewer_windows.ps1'), '\$forkWindowsServiceSha256', $ServiceSha256)
+    )
+    foreach ($u in $pinUpdates) {
+        $pinFile, $pinVar, $pinVal = $u
+        $pinText = [IO.File]::ReadAllText($pinFile)
+        $pinPattern = '(?<=' + $pinVar + '\s*=\s*")[0-9a-fA-F]{64}(?=")'
+        $pinNew = [regex]::Replace($pinText, $pinPattern, $pinVal.ToLowerInvariant())
+        if ($pinNew -ceq $pinText) { throw "Pin introuvable : $pinVar dans $pinFile" }
+        [IO.File]::WriteAllText($pinFile, $pinNew, [Text.UTF8Encoding]::new($false))
+    }
+    Write-Host "Pins SHA rafraichis : core=$ForkSha256 service=$ServiceSha256"
     $LdFlags = "-s -w -H windowsgui -X main.APIURL=$ApiUrl -X main.RUSTDESK_EXPECTED_SHA256=$ForkSha256 -X main.RUSTDESK_SERVICE_EXPECTED_SHA256=$ServiceSha256"
     $ConfiguratorOutput = Join-Path $InstallerBuildDir "configurator.exe"
     $ViewerOutput = Join-Path $InstallerBuildDir "viewer.exe"

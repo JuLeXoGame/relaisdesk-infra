@@ -24,4 +24,4 @@ const (
 
 // Injected by installer/build.ps1 after verifying the RelaisDesk client fork.
 // An empty value deliberately prevents the launcher from executing any binary.
-var RUSTDESK_EXPECTED_SHA256 = "26ef612657f0edd0729275a341457cb96f2105eea4b4c5871244641fd0e35b7f"
+var RUSTDESK_EXPECTED_SHA256 = "6e13fd769c0eb77ae899f6e96a4d112249aa42e3e285494ac6030d0d4b9900eb"
