@@ -112,7 +112,17 @@ $files = @(
   "rustdesk/src/relaisdesk_meter.rs",
   "rustdesk/src/relaisdesk_fleet_linux.rs",
   "rustdesk/libs/pam-safe/src/conv.rs",
+  "rustdesk/libs/pam-safe/src/functions.rs",
+  "rustdesk/src/server.rs",
   "rustdesk/vendor/glib-0.18.5/RELAISDESK-SECURITY.md",
+  "installer/configurator/updates.go",
+  "installer/configurator/updates_test.go",
+  "installer/configurator/storage.go",
+  "installer/configurator/storage_other.go",
+  "installer/configurator/credentials_test.go",
+  "installer/configurator/rustdesk_windows_test.go",
+  "installer/viewer/toml.go",
+  "installer/viewer/rustdesk_windows_test.go",
   "scripts/deploy-interventions-20260920.ps1"
 )
 foreach ($f in $files) {
@@ -136,7 +146,8 @@ $checks = @(
   @("installer\viewer\go.mod", "klauspost/compress", $false),
   @("installer\viewer\fleet_autoupdate.go", "openDataTar", $false),
   @("rustdesk\src\core_main.rs", "--password-file", $false),
-  @("installer\viewer\fleet_windows.go", "--password-file", $false)
+  @("installer\viewer\fleet_windows.go", "--password-file", $false),
+  @("installer\configurator\updates.go", "RELEASE_KEY_ID", $false)
 )
 foreach ($c in $checks) {
   $p = Join-Path $Win $c[0]
