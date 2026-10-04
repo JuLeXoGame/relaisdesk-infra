@@ -258,6 +258,7 @@ func RunGUI() error {
 		dialog.ShowError(errors.New(msg), mainWindow)
 	}
 
+	startSelfUpdateAtStartup(mainWindow)
 	mainWindow.ShowAndRun()
 	return nil
 }

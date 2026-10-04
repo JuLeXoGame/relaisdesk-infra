@@ -25,21 +25,9 @@ et la cle publique RustDesk.
 ## Configuration RustDesk
 
 Le configurateur ecrit `RustDesk2.toml` pour joindre directement le serveur
-RustDesk Community :
-
-```toml
-rendezvous_server = 'api.relaisdesk.fr:21116'
-nat_type = 1
-serial = 0
-
-[options]
-custom-rendezvous-server = 'api.relaisdesk.fr'
-relay-server = 'api.relaisdesk.fr'
-api-server = 'https://api.relaisdesk.fr'
-key = '{public_key}'
-relaisdesk-token-file = '<chemin-prive>/network-token'
-relaisdesk-proof-key-file = '<chemin-prive>/proof-key'
-```
+RustDesk Community. La configuration de référence est documentée dans
+[`docs/FORK_AUTHORIZATION.md`](../docs/FORK_AUTHORIZATION.md) (section
+« Configuration cliente générée »).
 
 La configuration ne contient ni proxy SOCKS5 ni `disable-udp`. `api-server`
 désigne ici l'API HTTPS RelaisDesk ; il n'active aucun proxy ou composant
@@ -62,23 +50,10 @@ Ce script épingle la chaîne native, exécute les tests du client, fabrique le
 packer portable et reconstruit les deux launchers avec l'empreinte du fork.
 Options utiles : `-SkipNativeDependencies`, `-SkipTests` et `-SkipLaunchers`.
 
-Le build de publication multiplateforme reste volontairement bloquant :
-
-```powershell
-cd installer
-.\build.ps1 `
-  -RustDeskForkWindowsPath C:\build\relaisdesk-rustdesk.exe `
-  -RustDeskForkLinuxDebPath C:\build\relaisdesk-rustdesk.deb `
-  -RustDeskForkLinuxBinaryPath C:\build\rustdesk `
-  -ReleaseSigningKeyPath C:\RelaisDesk-Secrets\release-signing-ed25519 `
-  -ReleasePublicKey <cle-publique-base64url>
-```
-
-`RustDeskForkWindowsPath` doit désigner le portable auto-extractible produit
-par la CI, pas le seul lanceur Flutter brut qui dépend de ses DLL et de son
-dossier `data`. `RustDeskForkLinuxBinaryPath` désigne le lanceur ELF extrait du
-DEB sous `usr/share/rustdesk/rustdesk` ; sa petite taille est normale, le code
-principal étant dans `librustdesk.so`.
+Le build de publication multiplateforme reste volontairement bloquant.
+Invocation complète et explication des paramètres dans
+[`docs/RELEASE_SIGNING.md`](../docs/RELEASE_SIGNING.md) (section
+« Construction et signature »).
 
 Options :
 
@@ -96,6 +71,32 @@ fichier présent dans `downloads` n'est repris implicitement. Voir
 `docs/RELEASE_SIGNING.md`. Les fichiers sous `embedded/` présents dans le dépôt
 ne sont pas des artefacts de publication tant que ce build n'a pas été exécuté
 avec le fork compilé.
+
+## Mises à jour automatiques
+
+Les deux launchers vérifient au démarrage (tâche de fond, silencieux si à jour,
+hors ligne ou installation non prise en charge) le manifeste signé
+`GET /api/v1/public/releases/latest`. Si une version strictement supérieure
+existe, l'utilisateur voit « La version X est disponible. L'installer et
+redémarrer ? » ; sur acceptation, l'artefact est téléchargé puis vérifié
+(URL HTTPS du manifeste, taille exacte, SHA-256) avant application.
+
+| Installation | Application |
+| --- | --- |
+| Portable Windows/Linux, binaire macOS hors .app | Remplacement atomique du binaire (`.old` conservé puis nettoyé) + redémarrage |
+| Windows installé (Program Files) | Nouveau Setup téléchargé et relancé en silencieux (`/S`, une invite UAC), redémarrage de l'app |
+| Linux installé (`.deb` : `/usr/bin`, `/opt`) | `pkexec dpkg -i`, sinon paquet vérifié ouvert dans le gestionnaire (assisté) |
+| macOS installé (`.app` dans `/Applications`) | `.dmg` vérifié monté, application copiée, relance ; repli : disque ouvert + consignes |
+| Lancement depuis le `.dmg` monté | Non pris en charge (installer d'abord l'application) |
+
+Garanties : anti-downgrade strict, aucune modification en cas d'échec (la
+version active reste intacte), pas de harcèlement après échec (silence 6 h par
+version) ni après « Plus tard » (session). Moteur partagé dans
+`selfupdate.go` (octet-identique dans les deux modules, voir l'en-tête du
+fichier), produit sélectionné par `selfupdate_product.go`, dialogue dans
+`selfupdate_gui*.go`. Mode technicien headless : simple mention console, jamais
+d'installation. Le service parc (fleet) garde son propre canal poussé
+(`fleet_autoupdate.go`), indépendant de celui-ci.
 
 ## Assets
 

@@ -17,8 +17,8 @@ try {
     $winViewerBuild = Join-Path $BuildDir "viewer.exe"
     $winViewerDl = Join-Path $DownloadsDir "RelaisDesk_Portable.exe"
 
-    $forkWindowsSha256 = "6e13fd769c0eb77ae899f6e96a4d112249aa42e3e285494ac6030d0d4b9900eb"
-    $forkWindowsServiceSha256 = "ef73d755800f2a20ccb811c1ba226723012f2aa5fac0c43971c301b1632db170"
+    $forkWindowsSha256 = "068898d94547f86a3322835f2580b9516e272ae3040f9b862310f49099665525"
+    $forkWindowsServiceSha256 = "be393ac8d8c8000787c564f7ddf7cd27b12e3dce3f94e210f266c76894bf5f5e"
 
     $version = "1.0.0"
     $windowsLdFlags = "-s -w -H windowsgui -X main.APIURL=$ApiUrl -X main.APP_VERSION=$version -X main.RUSTDESK_EXPECTED_SHA256=$forkWindowsSha256 -X main.RUSTDESK_SERVICE_EXPECTED_SHA256=$forkWindowsServiceSha256"

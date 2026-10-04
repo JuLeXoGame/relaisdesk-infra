@@ -72,7 +72,26 @@ $files = @(
   "rustdesk/src/plugin/native_handlers/session.rs",
   "rustdesk/src/relaisdesk_intervention.rs",
   "rustdesk/src/server/connection.rs",
-  "rustdesk/src/server/video_qos.rs"
+  "rustdesk/src/server/video_qos.rs",
+  "installer/viewer/selfupdate.go",
+  "installer/viewer/selfupdate_test.go",
+  "installer/viewer/selfupdate_product.go",
+  "installer/viewer/selfupdate_spawn_windows.go",
+  "installer/viewer/selfupdate_spawn_unix.go",
+  "installer/viewer/selfupdate_gui.go",
+  "installer/viewer/selfupdate_gui_linux.go",
+  "installer/viewer/gui.go",
+  "installer/viewer/gui_linux.go",
+  "installer/viewer/i18n.go",
+  "installer/configurator/selfupdate.go",
+  "installer/configurator/selfupdate_test.go",
+  "installer/configurator/selfupdate_product.go",
+  "installer/configurator/selfupdate_spawn_windows.go",
+  "installer/configurator/selfupdate_spawn_unix.go",
+  "installer/configurator/selfupdate_gui.go",
+  "installer/configurator/gui.go",
+  "installer/configurator/gui_linux.go",
+  "installer/configurator/i18n.go"
 )
 foreach ($f in $files) {
   $src = "$Wsl/$f"
@@ -91,7 +110,7 @@ $checks = @(
   @("scripts\rustdesk-sciter-vcpkg\vcpkg.json", "mfx-dispatch", $false),
   @("rustdesk\src\server\video_qos.rs", "INIT_FPS: u32 = 30", $false),
   @("rustdesk\Cargo.lock", 'name = "ringbuf"\r?\nversion = "0.5.2"', $true),
-  @("installer\viewer\config_windows.go", "6e13fd769c0eb77ae899f6e96a4d112249aa42e3e285494ac6030d0d4b9900eb", $false)
+  @("installer\viewer\config_windows.go", "068898d94547f86a3322835f2580b9516e272ae3040f9b862310f49099665525", $false)
 )
 foreach ($c in $checks) {
   $p = Join-Path $Win $c[0]

@@ -21,6 +21,7 @@ func init() {
 
 func runTechnicianCLI() error {
 	fmt.Printf("=== %s - Espace Technicien (v%s) ===\n", PRODUCT_NAME, APP_VERSION)
+	printSelfUpdateNoticeCLI()
 
 	// 1. Authentification / Chargement de la licence
 	loginResp, licenseID, licenseKey, err := authenticateTechnicianLinux()

@@ -68,6 +68,7 @@ func RunGUIWithPreset(presetCode string, autoStart bool) error {
 	})
 
 	renderViewerScreen(presetCode, autoStart)
+	startSelfUpdateAtStartup(viewerWindow)
 	viewerWindow.ShowAndRun()
 
 	return nil

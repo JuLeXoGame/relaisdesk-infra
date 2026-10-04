@@ -242,3 +242,23 @@ Une mise à jour de dépendances ne justifie pas à elle seule une rotation de c
 Le 19 septembre 2026 : 34 tests du moteur de maintenance réussis et 1 ignoré (création de liens symboliques non autorisée), 19 tests d'application/restauration et de politique des clés réussis, 13 tests d'intégration PowerShell réussis, et 7 contrôles de lots signés réussis. Les builds/audits des tests d'intégration sont simulés dans des dossiers temporaires ; le mode préparation a aussi été exercé avec le vrai moteur Python dans un projet factice. Les quatre scripts PowerShell modifiés passent l'analyse syntaxique.
 
 Aucune compilation complète des programmes, mise à jour réseau des dépendances, livraison Oracle ou rotation de clé n'a été exécutée pour cette révision. Les tests démontrent les garde-fous couverts, pas l'absence de toute faille ni la validité d'une future livraison.
+
+## Politique de publication des versions (2026-10-04)
+
+Un signalement de scanner ne déclenche jamais une release à lui seul. Triage
+obligatoire : la faille est-elle atteignable dans notre code, exploitable, et
+de quelle sévérité (contexte Windows/Linux/macOS réel, pas le score brut) ?
+
+- **Train mensuel** (premier mardi du mois) : regroupe correctifs et failles
+  non critiques. Prévisible pour l'exploitant comme pour les utilisateurs.
+- **Hors-bande critique sous 24-72 h** : CVE grave ET atteignable uniquement.
+- **Montée en charge** : publier d'abord pour ~10 % du parc (tirage sur
+  `license_id`), généraliser 48 h après si aucun retour négatif.
+- **Version minimale imposée** côté serveur (avec période de grâce) réservée
+  aux failles critiques ; sinon mise à jour proposée, jamais forcée.
+- **Changelog court** à chaque version, sans détails exploitables avant large
+  déploiement.
+
+Les launchers vérifient le manifeste signé au démarrage et proposent
+l'installation automatique (voir « Mises à jour automatiques » dans
+`installer/README.md`). Aucune réinstallation manuelle n'est demandée.

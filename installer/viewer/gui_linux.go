@@ -33,6 +33,8 @@ func RunGUI() error {
 		}
 	}
 
+	runSelfUpdateAtStartupLinux()
+
 	code, err := promptViewerCode()
 	if err != nil {
 		return err

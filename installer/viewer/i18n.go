@@ -79,6 +79,30 @@ var messages = map[string]map[Lang]string{
 		LangFR: "Erreur",
 		LangEN: "Error",
 	},
+	"su_title": {
+		LangFR: "Mise à jour",
+		LangEN: "Update",
+	},
+	"su_available": {
+		LangFR: "La version %s est disponible. L'installer et redémarrer ?",
+		LangEN: "Version %s is available. Install and restart?",
+	},
+	"su_install_restart": {
+		LangFR: "Installer et redémarrer",
+		LangEN: "Install and restart",
+	},
+	"su_later": {
+		LangFR: "Plus tard",
+		LangEN: "Later",
+	},
+	"su_working": {
+		LangFR: "Téléchargement et installation en cours…",
+		LangEN: "Downloading and installing…",
+	},
+	"su_failed": {
+		LangFR: "Échec de la mise à jour : %v",
+		LangEN: "Update failed: %v",
+	},
 	"err_empty_code": {
 		LangFR: "Veuillez entrer un code.",
 		LangEN: "Please enter a code.",
