@@ -4,6 +4,7 @@ import (
 	dbpkg "database"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	netmail "net/mail"
@@ -82,6 +83,7 @@ func AdminLoginHandler(db *sql.DB, adminToken string) http.HandlerFunc {
 				writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
 				return
 			}
+			auditLog(r, "ADMIN LOGIN", "2FA challenge success, licence "+MaskLicenseID(lic.LicenseID))
 			writeJSON(w, http.StatusOK, map[string]any{
 				"valid":      true,
 				"token":      authRes.SessionToken,
@@ -99,6 +101,7 @@ func AdminLoginHandler(db *sql.DB, adminToken string) http.HandlerFunc {
 				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Impossible de créer la session admin"})
 				return
 			}
+			auditLog(r, "ADMIN LOGIN", "master token session created")
 			writeJSON(w, http.StatusOK, map[string]any{
 				"valid": true,
 				"token": sessionToken,
@@ -131,6 +134,7 @@ func AdminLoginHandler(db *sql.DB, adminToken string) http.HandlerFunc {
 				return
 			}
 
+			auditLog(r, "ADMIN LOGIN", "email login success, licence "+MaskLicenseID(lic.LicenseID))
 			writeJSON(w, http.StatusOK, map[string]any{
 				"valid":      true,
 				"token":      authRes.SessionToken,
@@ -160,6 +164,7 @@ func AdminLoginHandler(db *sql.DB, adminToken string) http.HandlerFunc {
 					writeJSON(w, http.StatusOK, map[string]any{"valid": false, "requires_2fa": true, "challenge_token": auth.ChallengeToken})
 					return
 				}
+				auditLog(r, "ADMIN LOGIN", "licence login success, licence "+MaskLicenseID(lic.LicenseID))
 				writeJSON(w, http.StatusOK, map[string]any{"valid": true, "token": auth.SessionToken, "role": "admin", "email": lic.Email, "license_id": lic.LicenseID})
 				return
 			}
@@ -190,11 +195,25 @@ func AdminPasswordSetupHandler(db *sql.DB) http.HandlerFunc {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Requête invalide"})
 			return
 		}
+		// Malformed requests stay 400; credential failures below are 401 so
+		// the StrictAuthLimiter counts them toward its ban (a 400 here would
+		// let guessing run forever without ever triggering it).
+		if strings.TrimSpace(req.LicenseID) == "" || strings.TrimSpace(req.LicenseKey) == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Identifiant et clé de licence requis"})
+			return
+		}
+		if len(req.NewPassword) < 8 {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Le mot de passe doit comporter au moins 8 caractères"})
+			return
+		}
 
 		email, err := dbpkg.SetAdminPasswordWithLicense(db, req.LicenseID, req.LicenseKey, req.NewPassword)
 		if err != nil {
 			time.Sleep(350 * time.Millisecond)
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			// Generic 401: the raw errors distinguish "unknown license" from
+			// "valid license without admin rights", an oracle for attackers.
+			log.Printf("[Admin PasswordSetup] échec: %v", err)
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Identifiants incorrects"})
 			return
 		}
 
@@ -400,6 +419,7 @@ func AdminRevokeHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		auditLog(r, "LICENCE REVOKE", "licence "+MaskLicenseID(licenseID)+" révoquée")
 		writeJSON(w, http.StatusOK, map[string]string{"status": "revoked", "license_id": licenseID})
 	}
 }
@@ -426,6 +446,7 @@ func AdminExtendHandler(db *sql.DB) http.HandlerFunc {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			return
 		}
+		auditLog(r, "LICENCE EXTEND", fmt.Sprintf("licence %s prolongée de %d jours", MaskLicenseID(licenseID), req.Days))
 
 		lic, err := dbpkg.GetLicense(db, licenseID)
 		if err != nil {
@@ -503,6 +524,7 @@ func AdminCreateLicenseHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		auditLog(r, "LICENCE CREATE", "licence "+MaskLicenseID(lic.LicenseID)+" créée pour "+lic.Email)
 		writeJSON(w, http.StatusCreated, licensePayload(*lic, false))
 	}
 }
@@ -529,6 +551,9 @@ func AdminListLicensesHandler(db *sql.DB) http.HandlerFunc {
 		items := make([]map[string]any, 0, len(licences))
 		for _, lic := range licences {
 			items = append(items, licensePayload(lic, !unmask))
+		}
+		if unmask {
+			auditLog(r, "LICENCE EXPORT", fmt.Sprintf("export de %d clés de licence en clair", len(items)))
 		}
 
 		writeJSON(w, http.StatusOK, map[string]any{

@@ -137,11 +137,5 @@ func tomlLine(key, value string) string {
 	if key == "nat_type" || key == "serial" {
 		return fmt.Sprintf("%s = %s", key, value)
 	}
-	return fmt.Sprintf("%s = '%s'", key, tomlEscape(value))
-}
-
-func tomlEscape(value string) string {
-	value = strings.ReplaceAll(value, `\`, `\\`)
-	value = strings.ReplaceAll(value, `'`, `\'`)
-	return value
+	return fmt.Sprintf("%s = %s", key, tomlString(value))
 }

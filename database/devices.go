@@ -100,6 +100,23 @@ func deviceCodeHash(code string) string {
 func validDeviceText(s string, max int) bool {
 	return utf8.ValidString(s) && utf8.RuneCountInString(s) <= max && !strings.ContainsFunc(s, unicode.IsControl)
 }
+
+// sanitizeDeviceText strips control characters and caps length for free-form
+// device fields (agent version, subnet). Unlike validDeviceText it never
+// rejects: heartbeats must not flap on a weird agent build string, and the
+// values land in server logs where CR/LF or ANSI escapes would forge lines.
+func sanitizeDeviceText(s string, max int) string {
+	s = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, strings.TrimSpace(s))
+	if utf8.RuneCountInString(s) > max {
+		s = string([]rune(s)[:max])
+	}
+	return s
+}
 func ValidFleetRustDeskID(id string) bool {
 	if len(id) < 6 || len(id) > 16 {
 		return false
@@ -263,8 +280,8 @@ func EnrollDeviceWithFullInfo(db *sql.DB, code, rustdeskID, hostname, osName, pu
 		return nil, ErrDeviceAuthorization
 	}
 	macAddress = NormalizeMAC(macAddress)
-	subnetBroadcast = strings.TrimSpace(subnetBroadcast)
-	agentVersion = strings.TrimSpace(agentVersion)
+	subnetBroadcast = sanitizeDeviceText(subnetBroadcast, 64)
+	agentVersion = sanitizeDeviceText(agentVersion, 64)
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
@@ -345,8 +362,8 @@ func DeviceHeartbeatWithFullInfo(db *sql.DB, identifier, ip, macAddress, subnetB
 	}
 	now := time.Now().UTC()
 	macAddress = NormalizeMAC(macAddress)
-	subnetBroadcast = strings.TrimSpace(subnetBroadcast)
-	agentVersion = strings.TrimSpace(agentVersion)
+	subnetBroadcast = sanitizeDeviceText(subnetBroadcast, 64)
+	agentVersion = sanitizeDeviceText(agentVersion, 64)
 	if agentVersion != "" && macAddress != "" {
 		_, err = tx.Exec("UPDATE devices SET status=?,last_seen_at=?,last_ip=?,mac_address=?,subnet_broadcast=?,agent_version=?,updated_at=? WHERE id=?", status, now, ip, macAddress, subnetBroadcast, agentVersion, now, d.ID)
 	} else if agentVersion != "" {

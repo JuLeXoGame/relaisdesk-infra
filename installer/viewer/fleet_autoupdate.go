@@ -29,8 +29,11 @@ import (
 
 const (
 	ReleaseSigningPublicKey = "K3k6oko00jMzl7hN3poS6KYjJzZvjNz9Tgdz73E2duo"
-	MaxManifestBytes        = 1 << 20
-	MaxDownloadBytes        = 250 << 20 // 250 MB
+	// ReleaseSigningKeyID binds manifests to the trusted key: a manifest
+	// carrying any other key_id is rejected even if its payload is intact.
+	ReleaseSigningKeyID = "release-1"
+	MaxManifestBytes    = 1 << 20
+	MaxDownloadBytes    = 250 << 20 // 250 MB
 )
 
 type manifestArtifact struct {
@@ -62,12 +65,15 @@ var (
 	lastFailedAttemptTime time.Time
 )
 
-func verifyReleaseManifest(m *releaseManifest, encodedPublicKey string) error {
+func verifyReleaseManifest(m *releaseManifest, encodedPublicKey, keyID string) error {
 	if m == nil {
 		return errors.New("manifeste manquant")
 	}
 	if len(m.Artifacts) == 0 {
 		return errors.New("aucun artefact dans le manifeste")
+	}
+	if strings.TrimSpace(m.KeyID) == "" || m.KeyID != keyID {
+		return errors.New("identifiant de clé de signature inattendu")
 	}
 	publicKey, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(encodedPublicKey))
 	if err != nil || len(publicKey) != ed25519.PublicKeySize {
@@ -116,7 +122,7 @@ func fetchVerifiedManifest(apiURL, encodedPublicKey string) (*releaseManifest, e
 	if err := json.NewDecoder(io.LimitReader(resp.Body, MaxManifestBytes)).Decode(&m); err != nil {
 		return nil, fmt.Errorf("décodage du manifeste: %w", err)
 	}
-	if err := verifyReleaseManifest(&m, encodedPublicKey); err != nil {
+	if err := verifyReleaseManifest(&m, encodedPublicKey, ReleaseSigningKeyID); err != nil {
 		return nil, fmt.Errorf("vérification cryptographique: %w", err)
 	}
 	return &m, nil

@@ -6,8 +6,10 @@ require (
 	fyne.io/fyne/v2 v2.8.0
 	github.com/BurntSushi/toml v1.6.0
 	github.com/fyne-io/oksvg v0.2.0
+	github.com/klauspost/compress v1.20.1
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef
+	github.com/ulikunitz/xz v0.5.17
 	golang.org/x/sys v0.47.0
 )
 

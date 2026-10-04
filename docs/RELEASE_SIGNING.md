@@ -120,7 +120,21 @@ et [réputation SmartScreen](https://learn.microsoft.com/en-us/windows/apps/pack
 
 ## Rotation
 
-Une rotation de clé de version exige une version transitoire du configurateur
-qui connaît la nouvelle clé publique. Ne remplacer la clé côté API qu'après
-avoir diffusé cette version transitoire. Une rotation périodique n'est pas
+Les clients vérifient le `key_id` du manifeste contre un trousseau embarqué
+(`SelfUpdateCheckWithKeys`, `ReleaseSigningKeyID`/`RELEASE_KEY_ID`, paramètre
+`keyID` de `verifyReleaseManifest` côté parc) : un manifeste signé par une clé
+hors trousseau est rejeté même si sa signature est valide. Procédure :
+
+1. générer la nouvelle paire (`release-keygen`) sous l'identifiant suivant
+   (`release-2`, `release-3`, …) et la sauvegarder hors ligne ;
+2. diffuser une version transitoire dont le trousseau contient l'ancienne ET
+   la nouvelle clé, signée avec l'ancienne clé pour que les clients actuels
+   l'acceptent ;
+3. une fois la version transitoire largement diffusée, signer les manifestes
+   avec la nouvelle clé (`-KeyId release-2` dans `sign_manifest.ps1`) ;
+4. dans une version ultérieure, retirer l'ancienne clé du trousseau : les
+   manifestes qu'elle signe cessent alors d'être acceptés.
+
+Ne jamais signer avec la nouvelle clé avant l'étape 3 : les clients non encore
+à jour rejetteraient les manifestes. Une rotation périodique n'est pas
 nécessaire ; elle est surtout requise en cas de compromission.

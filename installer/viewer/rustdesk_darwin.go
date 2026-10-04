@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -22,32 +23,62 @@ func ensureRustDesk() (string, error) {
 	return "", fmt.Errorf("client RustDesk RelaisDesk introuvable sur macOS dans /Applications ou PATH: %w", err)
 }
 
+func darwinUnpinnedAllowed() bool {
+	// Development-only override: shipped builds never run unpinned code
+	// from user-writable locations without this explicit flag.
+	return os.Getenv("RELAISDESK_ALLOW_UNPINNED") == "1"
+}
+
+func darwinAdminInstalledPath(path string) bool {
+	return path == "/Applications" || strings.HasPrefix(path, "/Applications/")
+}
+
+// darwinCandidateUsable decides whether a candidate binary may be executed:
+// a matching pinned hash always wins; with no verifiable pin only
+// admin-installed locations (/Applications, root-owned) are accepted, plus
+// any location under the explicit development override.
+func darwinCandidateUsable(path, expectedSHA string, exists, unpinnedOverride bool) bool {
+	if !exists {
+		return false
+	}
+	if fileMatchesSHA256(path, expectedSHA) {
+		return true
+	}
+	if validPinnedSHA256(expectedSHA) {
+		return false
+	}
+	if darwinAdminInstalledPath(path) {
+		return true
+	}
+	return unpinnedOverride
+}
+
 func findRustDesk() (string, error) {
 	candidates := []string{
 		RUSTDESK_DEFAULT_APP_PATH,
 		RUSTDESK_LEGACY_APP_PATH,
 	}
 
-	// Si l'exécutable courant est dans un bundle .app macOS, vérifier s'il contient le binaire RustDesk
 	if self, err := os.Executable(); err == nil {
 		bundleDir := filepath.Dir(self)
 		candidates = append(candidates, filepath.Join(bundleDir, "rustdesk"), filepath.Join(bundleDir, "RelaisDesk"))
 	}
 
 	for _, c := range candidates {
-		if fileMatchesSHA256(c, RUSTDESK_EXPECTED_SHA256) {
-			return c, nil
-		}
-		// Si pas de hash épinglé en mode dev, vérifier l'existence
-		if RUSTDESK_EXPECTED_SHA256 == "" {
-			if info, err := os.Stat(c); err == nil && !info.IsDir() {
-				return c, nil
+		info, err := os.Stat(c)
+		exists := err == nil && !info.IsDir()
+		if darwinCandidateUsable(c, RUSTDESK_EXPECTED_SHA256, exists, darwinUnpinnedAllowed()) {
+			if !validPinnedSHA256(RUSTDESK_EXPECTED_SHA256) {
+				log.Printf("[macOS] binaire RustDesk non epingle accepte : %s", c)
 			}
+			return c, nil
 		}
 	}
 
 	if path, err := exec.LookPath("rustdesk"); err == nil {
-		if fileMatchesSHA256(path, RUSTDESK_EXPECTED_SHA256) || RUSTDESK_EXPECTED_SHA256 == "" {
+		// PATH entries are user-writable: a matching hash is mandatory,
+		// with no unpinned fallback.
+		if fileMatchesSHA256(path, RUSTDESK_EXPECTED_SHA256) {
 			return path, nil
 		}
 	}
@@ -92,23 +123,23 @@ func cleanupCorruptedConfig(dir string) {
 }
 
 func generateViewerRustDesk2Toml(rendezvousWithPort, rendezvousHost, relayServer, publicKey, tokenFile, proofKeyFile string) string {
-	return fmt.Sprintf("rendezvous_server = '%s'\n"+
+	return fmt.Sprintf("rendezvous_server = %s\n"+
 		"nat_type = 1\n"+
 		"serial = 0\n\n"+
 		"[options]\n"+
-		"custom-rendezvous-server = '%s'\n"+
-		"relay-server = '%s'\n"+
-		"api-server = '%s'\n"+
-		"key = '%s'\n"+
-		"relaisdesk-token-file = '%s'\n"+
-		"relaisdesk-proof-key-file = '%s'\n",
-		rendezvousWithPort,
-		rendezvousHost,
-		relayServer,
-		tomlEscapeDarwin(APIURL),
-		tomlEscapeDarwin(publicKey),
-		tomlEscapeDarwin(tokenFile),
-		tomlEscapeDarwin(proofKeyFile)) + videoCodecTomlLines(false)
+		"custom-rendezvous-server = %s\n"+
+		"relay-server = %s\n"+
+		"api-server = %s\n"+
+		"key = %s\n"+
+		"relaisdesk-token-file = %s\n"+
+		"relaisdesk-proof-key-file = %s\n",
+		tomlString(rendezvousWithPort),
+		tomlString(rendezvousHost),
+		tomlString(relayServer),
+		tomlString(APIURL),
+		tomlString(publicKey),
+		tomlString(tokenFile),
+		tomlString(proofKeyFile)) + videoCodecTomlLines(false)
 }
 
 func configureRustDesk(activation *ActivationResponse, _ string) error {
@@ -161,11 +192,6 @@ func configureRustDesk(activation *ActivationResponse, _ string) error {
 // rustDesk2TomlPaths lists known RustDesk2.toml locations for --set-hwcodec.
 func rustDesk2TomlPaths() []string {
 	return []string{filepath.Join(RUSTDESK_CONFIG_DIR, RUSTDESK_CONFIG2_FILE)}
-}
-
-func tomlEscapeDarwin(value string) string {
-	value = strings.ReplaceAll(value, `\`, `\\`)
-	return strings.ReplaceAll(value, `'`, `\'`)
 }
 
 func cleanupRustDesk2Toml() {

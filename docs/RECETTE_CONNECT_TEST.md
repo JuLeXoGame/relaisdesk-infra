@@ -93,7 +93,7 @@ rm -f /tmp/recette-relaisdesk.db*
 /tmp/recette-keygen --db /tmp/recette-relaisdesk.db server-key \
   --add RECETTE_SERVER_KEY
 set -a; source /tmp/recette-api.env; set +a
-/tmp/recette-api set-customer-password recette@example.test 'Recette-Test-2026'
+printf '%s' 'Recette-Test-2026' | /tmp/recette-api set-customer-password recette@example.test
 ```
 
 ## 5. Démarrer l'API (2e terminal WSL, gardé ouvert)

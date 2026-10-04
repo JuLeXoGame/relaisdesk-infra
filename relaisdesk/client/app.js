@@ -258,13 +258,7 @@ async function handlePasswordLogin(event) {
     sessionStorage.setItem('rd_customer_token', state.token);
     await loadDashboard();
   } catch (error) {
-    if (error.payload && error.payload.need_password_setup) {
-      showForgotPasswordView();
-      byId('forgotEmail').value = email;
-      setMessage(byId('authMessage'), 'Aucun mot de passe n’est configuré pour ce compte. Cliquez ci-dessous pour recevoir un lien par e-mail afin de le définir.', true);
-    } else {
-      setMessage(byId('authMessage'), error.message, true);
-    }
+    setMessage(byId('authMessage'), error.message, true);
   } finally {
     button.disabled = false;
   }

@@ -310,3 +310,42 @@ func TestSecurityAdminBootstrapCannotResetExistingPassword(t *testing.T) {
 		t.Fatal("existing password changed")
 	}
 }
+
+func TestSecurityAdminPasswordSetupFailuresAre401(t *testing.T) {
+	db, _ := auditFixture(t)
+	// A valid but non-admin license must be indistinguishable from garbage:
+	// same 401, same generic message (no oracle, and the limiter can ban).
+	plain, err := dbpkg.CreateLicense(db, "plain@example.invalid", 30, 1, "note")
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := handlers.AdminPasswordSetupHandler(db)
+	bodies := []map[string]string{
+		{"license_id": plain.LicenseID, "license_key": plain.LicenseKey, "new_password": "NewPassword2026!"},
+		{"license_id": "MP-UNKNOWN-0000-0000", "license_key": "garbage", "new_password": "NewPassword2026!"},
+	}
+	var first string
+	for i, body := range bodies {
+		w := auditRequest(t, handler, body, "")
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("case %d: status = %d, want 401", i, w.Code)
+		}
+		var decoded map[string]string
+		if err := json.Unmarshal(w.Body.Bytes(), &decoded); err != nil {
+			t.Fatal(err)
+		}
+		if decoded["error"] != "Identifiants incorrects" {
+			t.Fatalf("case %d: error = %q, want generic", i, decoded["error"])
+		}
+		if i == 0 {
+			first = w.Body.String()
+		} else if w.Body.String() != first {
+			t.Fatal("valid non-admin license distinguishable from garbage")
+		}
+	}
+	// Malformed requests stay 400.
+	w := auditRequest(t, handler, map[string]string{"license_id": "", "license_key": "", "new_password": "short"}, "")
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("malformed: status = %d, want 400", w.Code)
+	}
+}

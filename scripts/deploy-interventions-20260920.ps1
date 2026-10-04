@@ -20,17 +20,20 @@ param(
     [switch]$SkipBuild,
     [switch]$SkipApiDeploy,
     [switch]$SkipDownloads,
-    [switch]$SkipOvh
+    [switch]$SkipOvh,
+    [string]$SigningKey = ""
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$Root = "C:\Users\Administrator\Documents\Projets\projet"
+$Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $Stamp = "interventions-20260920"
 $PrebuiltDir = Join-Path $Root "prebuilt\api-$Stamp"
 $DownloadsDir = Join-Path $Root "relaisdesk\downloads"
-$SigningKey = "C:\RelaisDesk-Secrets\release-signing-ed25519"
+if ([string]::IsNullOrWhiteSpace($SigningKey)) {
+    $SigningKey = "C:\RelaisDesk-Secrets\release-signing-ed25519"
+}
 if ([string]::IsNullOrWhiteSpace($PpkPath)) {
     $PpkPath = Join-Path $Root ".secrets\oracle private.ppk"
 }

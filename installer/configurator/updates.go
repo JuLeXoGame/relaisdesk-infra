@@ -20,6 +20,9 @@ import (
 var (
 	APP_VERSION        = "1.0.0"
 	RELEASE_PUBLIC_KEY = "K3k6oko00jMzl7hN3poS6KYjJzZvjNz9Tgdz73E2duo"
+	// RELEASE_KEY_ID binds manifests to the trusted key: a manifest
+	// carrying any other key_id is rejected even if its payload is intact.
+	RELEASE_KEY_ID = "release-1"
 )
 
 type releaseArtifact struct {
@@ -113,6 +116,9 @@ func checkForUpdate(ctx context.Context, apiBase string) (*UpdateInfo, error) {
 }
 
 func verifyReleaseManifest(manifest releaseManifest) error {
+	if strings.TrimSpace(manifest.KeyID) == "" || manifest.KeyID != RELEASE_KEY_ID {
+		return errors.New("identifiant de clé de signature inattendu")
+	}
 	publicKey, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(RELEASE_PUBLIC_KEY))
 	if err != nil || len(publicKey) != ed25519.PublicKeySize {
 		return errors.New("clé publique des mises à jour invalide")
@@ -196,4 +202,3 @@ func IsDeviceUpdateAvailable(currentVersion string, targetVersion ...string) boo
 	}
 	return cmp > 0
 }
-

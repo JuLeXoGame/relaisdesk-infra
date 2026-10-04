@@ -22,7 +22,7 @@ func runSelfUpdateAtStartupLinux() {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	info, err := SelfUpdateCheck(ctx, APIURL, ReleaseSigningPublicKey, APP_VERSION)
+	info, err := SelfUpdateCheck(ctx, APIURL, ReleaseSigningPublicKey, ReleaseSigningKeyID, APP_VERSION)
 	if err != nil || info == nil || !info.Available {
 		return
 	}

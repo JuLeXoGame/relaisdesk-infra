@@ -304,9 +304,18 @@ func selfUpdateValidateURL(rawurl string) error {
 	return errors.New("schéma d'URL refusé (https requis)")
 }
 
-func selfUpdateVerifyManifest(manifest *selfUpdateManifest, encodedPublicKey string) error {
+// selfUpdateVerifyManifest checks the manifest against a key ring (key ID ->
+// base64url Ed25519 public key). The manifest's key_id selects the verifying
+// key and unknown IDs are rejected, so a signing-key rotation can ship as
+// {old, new} without clients ever trusting an unlisted key.
+func selfUpdateVerifyManifest(manifest *selfUpdateManifest, keys map[string]string) error {
 	if manifest == nil || len(manifest.Artifacts) == 0 {
 		return errors.New("manifeste de mise à jour vide")
+	}
+	keyID := strings.TrimSpace(manifest.KeyID)
+	encodedPublicKey, ok := keys[keyID]
+	if !ok || keyID == "" {
+		return errors.New("clé de signature inconnue")
 	}
 	publicKey, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(encodedPublicKey))
 	if err != nil || len(publicKey) != ed25519.PublicKeySize {
@@ -357,7 +366,7 @@ func selfUpdateVerifyManifest(manifest *selfUpdateManifest, encodedPublicKey str
 	return nil
 }
 
-func selfUpdateFetchManifest(ctx context.Context, apiURL, publicKey string) (*selfUpdateManifest, error) {
+func selfUpdateFetchManifest(ctx context.Context, apiURL string, keys map[string]string) (*selfUpdateManifest, error) {
 	base, err := url.Parse(strings.TrimSpace(apiURL))
 	if err != nil || base.Host == "" || base.User != nil {
 		return nil, errors.New("adresse API invalide")
@@ -397,7 +406,7 @@ func selfUpdateFetchManifest(ctx context.Context, apiURL, publicKey string) (*se
 	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
 		return nil, errors.New("manifeste de mise à jour ambigu")
 	}
-	if err := selfUpdateVerifyManifest(&manifest, publicKey); err != nil {
+	if err := selfUpdateVerifyManifest(&manifest, keys); err != nil {
 		return nil, err
 	}
 	return &manifest, nil
@@ -405,12 +414,22 @@ func selfUpdateFetchManifest(ctx context.Context, apiURL, publicKey string) (*se
 
 // SelfUpdateCheck fetches the signed release manifest and reports whether a
 // strictly newer version with a usable artifact exists for this machine.
-func SelfUpdateCheck(ctx context.Context, apiURL, publicKey, currentVersion string) (*SelfUpdateInfo, error) {
+// The manifest must be signed by the trusted keyID; anything else (unknown
+// ID, let alone a valid signature from an unlisted key) is rejected.
+func SelfUpdateCheck(ctx context.Context, apiURL, publicKey, keyID, currentVersion string) (*SelfUpdateInfo, error) {
+	return SelfUpdateCheckWithKeys(ctx, apiURL, map[string]string{keyID: publicKey}, currentVersion)
+}
+
+// SelfUpdateCheckWithKeys is SelfUpdateCheck over a key ring. During a
+// signing-key rotation the ring holds both the outgoing and the incoming
+// key ({oldID: oldKey, newID: newKey}); afterwards the old entry is dropped
+// and manifests signed by it stop verifying.
+func SelfUpdateCheckWithKeys(ctx context.Context, apiURL string, keys map[string]string, currentVersion string) (*SelfUpdateInfo, error) {
 	kind := SelfUpdateDetectKind()
 	if kind == kindUnsupported {
 		return nil, errors.New("mise à jour automatique non prise en charge sur cette installation")
 	}
-	manifest, err := selfUpdateFetchManifest(ctx, apiURL, publicKey)
+	manifest, err := selfUpdateFetchManifest(ctx, apiURL, keys)
 	if err != nil {
 		return nil, err
 	}
@@ -447,13 +466,28 @@ func SelfUpdateCheck(ctx context.Context, apiURL, publicKey, currentVersion stri
 // enforcing the manifest's exact size and SHA-256. The caller removes the
 // file when done.
 func SelfUpdateDownload(ctx context.Context, info *SelfUpdateInfo) (string, error) {
+	return selfUpdateDownloadWithBetaToken(ctx, info, os.Getenv("RELAISDESK_MAC_BETA_TOKEN"))
+}
+
+// selfUpdateDownloadWithBetaToken attaches the macOS beta token (when set)
+// to .dmg downloads: the API gates beta Mac builds behind ?beta=, and the
+// manifest URLs carry no credentials by design.
+func selfUpdateDownloadWithBetaToken(ctx context.Context, info *SelfUpdateInfo, macBetaToken string) (string, error) {
 	if info == nil || !info.Available {
 		return "", errors.New("aucune mise à jour à télécharger")
 	}
 	if err := selfUpdateValidateURL(info.ArtifactURL); err != nil {
 		return "", err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, info.ArtifactURL, nil)
+	downloadURL := info.ArtifactURL
+	if strings.HasSuffix(strings.ToLower(info.ArtifactName), ".dmg") && strings.TrimSpace(macBetaToken) != "" {
+		joiner := "?"
+		if strings.Contains(downloadURL, "?") {
+			joiner = "&"
+		}
+		downloadURL += joiner + "beta=" + url.QueryEscape(macBetaToken)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
 	if err != nil {
 		return "", err
 	}
@@ -630,7 +664,7 @@ func SelfUpdateApply(info *SelfUpdateInfo, filePath string) error {
 	case kindWindowsSetup:
 		return selfUpdateApplyWindowsSetup(exe, filePath, info.ArtifactSHA256)
 	case kindLinuxDeb:
-		return selfUpdateApplyLinuxDeb(exe, filePath)
+		return selfUpdateApplyLinuxDeb(exe, filePath, info.ArtifactSHA256, info.ArtifactSize)
 	case kindMacApp:
 		return selfUpdateApplyMacApp(exe, filePath, info.ArtifactSHA256)
 	default:
@@ -742,7 +776,13 @@ func selfUpdateDebPlan(debPath string, hasPkexec bool) (args []string, assisted 
 	return nil, true
 }
 
-func selfUpdateApplyLinuxDeb(exePath, debPath string) error {
+func selfUpdateApplyLinuxDeb(exePath, debPath, expectedSHA string, expectedSize int64) error {
+	// Re-verify now: pkexec prompts the user, leaving a swap window after
+	// the apply-time check. Verifying milliseconds before handing the file
+	// to root closes it (same-user attacker model).
+	if err := selfUpdateVerifyFile(debPath, expectedSHA, expectedSize); err != nil {
+		return err
+	}
 	hasPkexec := false
 	if _, err := exec.LookPath("pkexec"); err == nil {
 		hasPkexec = true
@@ -826,9 +866,24 @@ func SelfUpdateRelaunch(exePath string) {
 }
 
 func copyFile(dest, src string, perm os.FileMode) error {
-	data, err := os.ReadFile(src)
+	// Stream: staging a ~60 MB installer must not buffer it whole in RAM.
+	in, err := os.Open(src)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dest, data, perm)
+	defer in.Close()
+	out, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		_ = out.Close()
+		_ = os.Remove(dest)
+		return err
+	}
+	if err := out.Close(); err != nil {
+		_ = os.Remove(dest)
+		return err
+	}
+	return nil
 }

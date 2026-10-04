@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"strings"
+	"sync"
 )
 
 // Compte client (miroir de l'espace client web) : la session technicien
@@ -11,6 +12,10 @@ import (
 // licences, factures, historique, prestations, préférences).
 
 var (
+	// All fields below are only touched with customerSessionMu held: the
+	// silent session openers run in goroutines while the GUI thread reads
+	// and writes the same state (manual login, 2FA completion, logout).
+	customerSessionMu         sync.RWMutex
 	customerSessionToken      string
 	customerSessionEmail      string
 	customerSessionCustomerID string
@@ -24,6 +29,8 @@ var (
 )
 
 func clearCustomerSession() {
+	customerSessionMu.Lock()
+	defer customerSessionMu.Unlock()
 	customerSessionToken = ""
 	customerSessionEmail = ""
 	customerSessionCustomerID = ""
@@ -31,7 +38,41 @@ func clearCustomerSession() {
 }
 
 func customerLoggedIn() bool {
+	customerSessionMu.RLock()
+	defer customerSessionMu.RUnlock()
 	return customerSessionToken != ""
+}
+
+func getCustomerSessionToken() string {
+	customerSessionMu.RLock()
+	defer customerSessionMu.RUnlock()
+	return customerSessionToken
+}
+
+func getCustomerSessionEmail() string {
+	customerSessionMu.RLock()
+	defer customerSessionMu.RUnlock()
+	return customerSessionEmail
+}
+
+func getCustomerDeviceToken() string {
+	customerSessionMu.RLock()
+	defer customerSessionMu.RUnlock()
+	return customerDeviceToken
+}
+
+func setCustomerDeviceToken(token string) {
+	customerSessionMu.Lock()
+	defer customerSessionMu.Unlock()
+	customerDeviceToken = token
+}
+
+// getCustomerPending returns an atomic snapshot of the pending 2FA
+// challenge (never a mix of two concurrent logins).
+func getCustomerPending() (challenge, email string, emailAllowed bool) {
+	customerSessionMu.RLock()
+	defer customerSessionMu.RUnlock()
+	return customerPendingChallenge, customerPendingEmail, customerPendingEmailAllowed
 }
 
 // storeCustomerSession enregistre une session client authentifiée et
@@ -40,6 +81,8 @@ func storeCustomerSession(res *customerLoginResult) {
 	if res == nil {
 		return
 	}
+	customerSessionMu.Lock()
+	defer customerSessionMu.Unlock()
 	customerSessionToken = res.Token
 	customerSessionEmail = res.Email
 	customerSessionCustomerID = res.CustomerID
@@ -54,6 +97,8 @@ func stashCustomerChallenge(res *customerLoginResult) {
 	if res == nil || res.ChallengeToken == "" {
 		return
 	}
+	customerSessionMu.Lock()
+	defer customerSessionMu.Unlock()
 	customerPendingChallenge = res.ChallengeToken
 	customerPendingEmail = res.Email
 	customerPendingEmailAllowed = true

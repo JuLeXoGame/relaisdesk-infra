@@ -25,7 +25,7 @@ func startSelfUpdateAtStartup(win fyne.Window) {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		info, err := SelfUpdateCheck(ctx, APIURL, RELEASE_PUBLIC_KEY, APP_VERSION)
+		info, err := SelfUpdateCheck(ctx, APIURL, RELEASE_PUBLIC_KEY, RELEASE_KEY_ID, APP_VERSION)
 		if err != nil || info == nil || !info.Available {
 			return // offline, unsupported install or up to date: stay silent
 		}
@@ -88,7 +88,7 @@ func runSelfUpdate(win fyne.Window, info *SelfUpdateInfo) {
 func printSelfUpdateNoticeCLI() {
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
-	info, err := SelfUpdateCheck(ctx, APIURL, RELEASE_PUBLIC_KEY, APP_VERSION)
+	info, err := SelfUpdateCheck(ctx, APIURL, RELEASE_PUBLIC_KEY, RELEASE_KEY_ID, APP_VERSION)
 	if err != nil || info == nil || !info.Available {
 		return
 	}

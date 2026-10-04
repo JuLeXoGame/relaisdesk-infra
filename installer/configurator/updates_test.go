@@ -37,6 +37,31 @@ func TestVerifyReleaseManifestRejectsTampering(t *testing.T) {
 	}
 }
 
+func TestVerifyReleaseManifestRejectsUnexpectedKeyID(t *testing.T) {
+	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	previousKey, previousID := RELEASE_PUBLIC_KEY, RELEASE_KEY_ID
+	RELEASE_PUBLIC_KEY = base64.RawURLEncoding.EncodeToString(publicKey)
+	RELEASE_KEY_ID = "release-1"
+	defer func() { RELEASE_PUBLIC_KEY, RELEASE_KEY_ID = previousKey, previousID }()
+
+	manifest := releaseManifest{
+		Version: "1.2.3", PublishedAt: "2026-08-25T12:00:00Z", KeyID: "release-2",
+		Artifacts: []releaseArtifact{{Name: "RelaisDesk_Technicien_Portable.exe", URL: "https://api.example.test/download", SHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Size: 42}},
+	}
+	payload, err := json.Marshal(releasePayload{Version: manifest.Version, PublishedAt: manifest.PublishedAt, KeyID: manifest.KeyID, Artifacts: manifest.Artifacts})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Valid signature, but from an unlisted key: must still be rejected.
+	manifest.Signature = base64.RawURLEncoding.EncodeToString(ed25519.Sign(privateKey, payload))
+	if err := verifyReleaseManifest(manifest); err == nil {
+		t.Fatal("manifest from unlisted key accepted")
+	}
+}
+
 func TestCompareVersions(t *testing.T) {
 	comparison, err := compareVersions("1.10.0", "1.9.9")
 	if err != nil || comparison != 1 {
@@ -112,6 +137,3 @@ func TestIsDeviceUpdateAvailable(t *testing.T) {
 		}
 	}
 }
-
-
-

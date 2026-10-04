@@ -60,9 +60,12 @@ func Sign(manifest *Manifest, privateKey ed25519.PrivateKey) error {
 	return nil
 }
 
-func Verify(manifest Manifest, encodedPublicKey string) error {
+func Verify(manifest Manifest, encodedPublicKey, keyID string) error {
 	if err := validateUnsigned(manifest); err != nil {
 		return err
+	}
+	if strings.TrimSpace(manifest.KeyID) == "" || manifest.KeyID != keyID {
+		return errors.New("identifiant de clé de version inattendu")
 	}
 	publicKey, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(encodedPublicKey))
 	if err != nil || len(publicKey) != ed25519.PublicKeySize {
@@ -82,7 +85,7 @@ func Verify(manifest Manifest, encodedPublicKey string) error {
 	return nil
 }
 
-func LoadVerified(path, encodedPublicKey string) (*Manifest, error) {
+func LoadVerified(path, encodedPublicKey, keyID string) (*Manifest, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("ouverture du manifeste: %w", err)
@@ -102,7 +105,7 @@ func LoadVerified(path, encodedPublicKey string) (*Manifest, error) {
 	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
 		return nil, errors.New("contenu supplémentaire dans le manifeste")
 	}
-	if err := Verify(manifest, encodedPublicKey); err != nil {
+	if err := Verify(manifest, encodedPublicKey, keyID); err != nil {
 		return nil, err
 	}
 	return &manifest, nil

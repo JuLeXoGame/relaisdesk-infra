@@ -10,6 +10,8 @@ $files = @(
   "docs/FORK_IMPLEMENTATION_STATUS.md",
   "installer/configurator/codec_perf.go",
   "installer/configurator/codec_perf_test.go",
+  "installer/configurator/toml_quote.go",
+  "installer/configurator/toml_quote_test.go",
   "installer/configurator/main.go",
   "installer/configurator/rustdesk_darwin.go",
   "installer/configurator/rustdesk_linux.go",
@@ -47,10 +49,14 @@ $files = @(
   "installer/viewer/go.sum",
   "installer/viewer/codec_perf.go",
   "installer/viewer/codec_perf_test.go",
+  "installer/viewer/toml_quote.go",
+  "installer/viewer/toml_quote_test.go",
   "installer/viewer/fleet_autoupdate.go",
   "installer/viewer/fleet_autoupdate_test.go",
   "installer/viewer/main.go",
+  "installer/viewer/main_test.go",
   "installer/viewer/rustdesk_darwin.go",
+  "installer/viewer/rustdesk_darwin_test.go",
   "installer/viewer/rustdesk_linux.go",
   "installer/viewer/rustdesk_windows.go",
   "installer/viewer/config_windows.go",
@@ -87,6 +93,11 @@ $files = @(
   "installer/viewer/gui.go",
   "installer/viewer/gui_linux.go",
   "installer/viewer/i18n.go",
+  "installer/viewer/api.go",
+  "installer/viewer/api_status_test.go",
+  "installer/viewer/fleet_linux.go",
+  "installer/viewer/fleet_windows.go",
+  "installer/viewer/fleet_linux_test.go",
   "installer/configurator/selfupdate.go",
   "installer/configurator/selfupdate_test.go",
   "installer/configurator/selfupdate_product.go",
@@ -95,7 +106,14 @@ $files = @(
   "installer/configurator/selfupdate_gui.go",
   "installer/configurator/gui.go",
   "installer/configurator/gui_linux.go",
-  "installer/configurator/i18n.go"
+  "installer/configurator/i18n.go",
+  "installer/configurator/api_status_test.go",
+  "rustdesk/src/core_main.rs",
+  "rustdesk/src/relaisdesk_meter.rs",
+  "rustdesk/src/relaisdesk_fleet_linux.rs",
+  "rustdesk/libs/pam-safe/src/conv.rs",
+  "rustdesk/vendor/glib-0.18.5/RELAISDESK-SECURITY.md",
+  "scripts/deploy-interventions-20260920.ps1"
 )
 foreach ($f in $files) {
   $src = "$Wsl/$f"
@@ -116,7 +134,9 @@ $checks = @(
   @("rustdesk\Cargo.lock", 'name = "ringbuf"\r?\nversion = "0.5.2"', $true),
   @("installer\viewer\config_windows.go", "068898d94547f86a3322835f2580b9516e272ae3040f9b862310f49099665525", $false),
   @("installer\viewer\go.mod", "klauspost/compress", $false),
-  @("installer\viewer\fleet_autoupdate.go", "openDataTar", $false)
+  @("installer\viewer\fleet_autoupdate.go", "openDataTar", $false),
+  @("rustdesk\src\core_main.rs", "--password-file", $false),
+  @("installer\viewer\fleet_windows.go", "--password-file", $false)
 )
 foreach ($c in $checks) {
   $p = Join-Path $Win $c[0]

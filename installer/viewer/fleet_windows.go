@@ -288,7 +288,14 @@ func setFleetPermanentPassword(password string) error {
 	if err = startFleetRustDesk(); err != nil {
 		return fmt.Errorf("impossible de démarrer le service RustDesk pour appliquer le mot de passe : %w", err)
 	}
-	cmd := exec.Command(binary, "--password", password)
+	// Never on argv (visible via tasklist/ps): hand the secret to the core
+	// through a one-shot temp file and --password-file.
+	pwdFile, err := writeEnrollPasswordFile(password)
+	if err != nil {
+		return fmt.Errorf("fichier de mot de passe temporaire impossible: %w", err)
+	}
+	defer os.Remove(pwdFile)
+	cmd := exec.Command(binary, "--password-file", pwdFile)
 	cmd.SysProcAttr = hideWindowSysProcAttr()
 	out, err := cmd.CombinedOutput()
 	if err != nil {

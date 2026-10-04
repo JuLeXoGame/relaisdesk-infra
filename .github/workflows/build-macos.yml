@@ -67,6 +67,13 @@ jobs:
           cd flutter
           flutter build macos --release
 
+      - name: Run Go launcher tests (advisory)
+        if: matrix.goarch == 'arm64'
+        continue-on-error: true
+        run: |
+          cd installer/viewer && go test ./...
+          cd ../configurator && go test ./...
+
       - name: Build RelaisDesk Viewer macOS Launcher
         run: |
           cd installer/viewer
@@ -93,7 +100,7 @@ jobs:
             cp -R rustdesk/flutter/build/macos/Build/Products/Release/RustDesk.app/Contents/Frameworks build/RelaisDesk.app/Contents/ || true
           fi
 
-          # Création du DMG Viewer
+          # CrÃ©ation du DMG Viewer
           create-dmg \
             --volname "RelaisDesk Installer" \
             --window-pos 200 120 \
@@ -110,7 +117,7 @@ jobs:
           cp installer/configurator/RelaisDesk_Technicien_mac build_tech/RelaisDesk_Technicien.app/Contents/MacOS/RelaisDesk_Technicien
           chmod +x build_tech/RelaisDesk_Technicien.app/Contents/MacOS/RelaisDesk_Technicien
 
-          # Création du DMG Technicien
+          # CrÃ©ation du DMG Technicien
           create-dmg \
             --volname "RelaisDesk Technicien" \
             --window-pos 200 120 \
@@ -124,6 +131,17 @@ jobs:
         run: |
           shasum -a 256 RelaisDesk_Mac*.dmg RelaisDesk_Technicien_Mac*.dmg > SHA256SUMS-macos-${{ matrix.goarch }}.txt
           cat SHA256SUMS-macos-${{ matrix.goarch }}.txt
+
+      - name: Verify DMG artifacts (fail on missing/identical)
+        run: |
+          set -e
+          ls -la RelaisDesk_Mac*.dmg RelaisDesk_Technicien_Mac*.dmg
+          test -f "RelaisDesk_Mac${{ matrix.dmg_suffix }}.dmg"
+          test -f "RelaisDesk_Technicien_Mac${{ matrix.dmg_suffix }}.dmg"
+          A=$(shasum -a 256 "RelaisDesk_Mac${{ matrix.dmg_suffix }}.dmg" | cut -d' ' -f1)
+          B=$(shasum -a 256 "RelaisDesk_Technicien_Mac${{ matrix.dmg_suffix }}.dmg" | cut -d' ' -f1)
+          if [ "$A" = "$B" ]; then echo "FATAL: viewer and technicien DMGs are identical"; exit 1; fi
+          echo "DMGs OK: viewer=$A technicien=$B"
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4

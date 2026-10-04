@@ -223,26 +223,6 @@ func promptPermanentPasswordWithConfirmation() (string, bool) {
 	}
 }
 
-// writeEnrollPasswordFile stores a password in a 0600 temp file for a single
-// handoff to the elevated child, which deletes it right after reading.
-func writeEnrollPasswordFile(password string) (string, error) {
-	f, err := os.CreateTemp("", "relaisdesk-enroll-*")
-	if err != nil {
-		return "", err
-	}
-	name := f.Name()
-	if _, err := f.WriteString(password); err != nil {
-		f.Close()
-		os.Remove(name)
-		return "", err
-	}
-	if err := f.Close(); err != nil {
-		os.Remove(name)
-		return "", err
-	}
-	return name, nil
-}
-
 func promptPasswordAndConfirmDialog() (string, string, bool) {
 	if isDisplayAvailable() {
 		if pwd, confirm, ok := promptPasswordFormsZenity(); ok {

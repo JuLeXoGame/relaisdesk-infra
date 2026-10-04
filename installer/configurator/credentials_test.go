@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -111,5 +112,47 @@ func TestLoginTechnicianEmailVsLicenseDispatch(t *testing.T) {
 	}
 	if receivedBody["license_id"] != "MP-ABCD-1234-5678" || receivedBody["license_key"] != "secret-key" {
 		t.Errorf("Server did not receive expected license payload: %+v", receivedBody)
+	}
+}
+
+func TestValidateLicenseReportsRateLimit(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusTooManyRequests)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Trop de tentatives. Veuillez réessayer plus tard."})
+	}))
+	defer ts.Close()
+
+	origAPI := APIURL
+	APIURL = ts.URL
+	defer func() { APIURL = origAPI }()
+
+	_, err := validateLicense("MP-ABCD-1234-5678")
+	if err == nil {
+		t.Fatal("expected rate-limit error, got nil")
+	}
+	if strings.Contains(err.Error(), "refusee") {
+		t.Fatalf("rate limit framed as refused license: %v", err)
+	}
+	if !strings.Contains(err.Error(), "tentatives") {
+		t.Fatalf("rate limit without retry guidance: %v", err)
+	}
+}
+
+func TestDeviceTokenPersistsOnEveryPlatform(t *testing.T) {
+	t.Setenv("APPDATA", t.TempDir())
+	const token = "synthetic-device-token-2026"
+	if err := SaveCredentials("storage@example.invalid", "", token); err != nil {
+		t.Fatal(err)
+	}
+	credentials, err := LoadCredentials()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if credentials.DeviceToken != token {
+		t.Fatalf("device token lost: %+v", credentials)
+	}
+	if runtime.GOOS != "windows" && credentials.Password != "" {
+		t.Fatal("password retained without system vault")
 	}
 }

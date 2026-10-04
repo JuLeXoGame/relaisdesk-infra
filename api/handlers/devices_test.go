@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"api/config"
 	"api/middleware"
 	"api/networkauth"
 	"api/releasemanifest"
@@ -86,7 +87,7 @@ func TestDeviceEnrollAndHeartbeat(t *testing.T) {
 	hbReq.RemoteAddr = "203.0.113.42:54321"
 	hbRec := httptest.NewRecorder()
 
-	DeviceHeartbeatHandler(db, signer)(hbRec, hbReq)
+	DeviceHeartbeatHandler(db, &config.Config{}, signer)(hbRec, hbReq)
 	if hbRec.Code != http.StatusOK {
 		t.Fatalf("heartbeat status=%d body=%s", hbRec.Code, hbRec.Body.String())
 	}
@@ -125,7 +126,7 @@ func TestFleetRejectsAnonymousHeartbeatAndUntrustedForwarding(t *testing.T) {
 	dev, _ := dbpkg.CreatePermanentEnrollment(db, 0, lic.LicenseID, "PC", "")
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/devices/heartbeat", bytes.NewBufferString(`{"device_id":"`+dev.DeviceID+`"}`))
 	rec := httptest.NewRecorder()
-	DeviceHeartbeatHandler(db)(rec, req)
+	DeviceHeartbeatHandler(db, &config.Config{})(rec, req)
 	if rec.Code != 401 {
 		t.Fatalf("anonymous status=%d", rec.Code)
 	}
@@ -409,7 +410,7 @@ func TestWakeDeviceEndpoints(t *testing.T) {
 	hbReq := httptest.NewRequest(http.MethodPost, "/api/v1/devices/heartbeat", bytes.NewReader(hbReqBody))
 	hbReq.RemoteAddr = "203.0.113.42:54321"
 	hbRec := httptest.NewRecorder()
-	DeviceHeartbeatHandler(db, signer)(hbRec, hbReq)
+	DeviceHeartbeatHandler(db, &config.Config{}, signer)(hbRec, hbReq)
 	if hbRec.Code != http.StatusOK {
 		t.Fatalf("dev2 heartbeat status=%d body=%s", hbRec.Code, hbRec.Body.String())
 	}
@@ -500,7 +501,7 @@ func TestDeviceRemoteUpdateAPI(t *testing.T) {
 	hbReq := httptest.NewRequest(http.MethodPost, "/api/v1/devices/heartbeat", bytes.NewReader(hbReqBody))
 	hbReq.RemoteAddr = "203.0.113.42:54321"
 	hbRec := httptest.NewRecorder()
-	DeviceHeartbeatHandler(db, signer)(hbRec, hbReq)
+	DeviceHeartbeatHandler(db, &config.Config{ReleasePublicKey: "K3k6oko00jMzl7hN3poS6KYjJzZvjNz9Tgdz73E2duo", ReleaseKeyID: "release-1"}, signer)(hbRec, hbReq)
 	if hbRec.Code != http.StatusOK {
 		t.Fatalf("heartbeat status=%d body=%s", hbRec.Code, hbRec.Body.String())
 	}
@@ -534,7 +535,7 @@ func TestDeviceRemoteUpdateAPI(t *testing.T) {
 	hbReq2 := httptest.NewRequest(http.MethodPost, "/api/v1/devices/heartbeat", bytes.NewReader(hbReqBody2))
 	hbReq2.RemoteAddr = "203.0.113.42:54321"
 	hbRec2 := httptest.NewRecorder()
-	DeviceHeartbeatHandler(db, signer)(hbRec2, hbReq2)
+	DeviceHeartbeatHandler(db, &config.Config{ReleasePublicKey: "K3k6oko00jMzl7hN3poS6KYjJzZvjNz9Tgdz73E2duo", ReleaseKeyID: "release-1"}, signer)(hbRec2, hbReq2)
 	if hbRec2.Code != http.StatusOK {
 		t.Fatalf("heartbeat 2 status=%d body=%s", hbRec2.Code, hbRec2.Body.String())
 	}

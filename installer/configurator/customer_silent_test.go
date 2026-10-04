@@ -16,15 +16,21 @@ import (
 
 func resetCustomerSilentState(t *testing.T) {
 	t.Helper()
+	customerSessionMu.RLock()
 	oldToken, oldEmail, oldID := customerSessionToken, customerSessionEmail, customerSessionCustomerID
 	oldCh, oldChEmail, oldChAllowed := customerPendingChallenge, customerPendingEmail, customerPendingEmailAllowed
+	customerSessionMu.RUnlock()
 	oldURL, oldTransport := APIURL, http.DefaultTransport
+	customerSessionMu.Lock()
 	customerSessionToken, customerSessionEmail, customerSessionCustomerID = "", "", ""
 	customerPendingChallenge, customerPendingEmail, customerPendingEmailAllowed = "", "", false
+	customerSessionMu.Unlock()
 	APIURL = "https://customer.invalid"
 	t.Cleanup(func() {
+		customerSessionMu.Lock()
 		customerSessionToken, customerSessionEmail, customerSessionCustomerID = oldToken, oldEmail, oldID
 		customerPendingChallenge, customerPendingEmail, customerPendingEmailAllowed = oldCh, oldChEmail, oldChAllowed
+		customerSessionMu.Unlock()
 		APIURL, http.DefaultTransport = oldURL, oldTransport
 	})
 }
@@ -51,8 +57,8 @@ func TestSilentCustomerLoginStoresSession(t *testing.T) {
 		sawPassword = strings.Contains(string(raw), "motdepasse123")
 	})
 	openCustomerSessionSilent("a@b.c", "motdepasse123", "dev-1")
-	if !customerLoggedIn() || customerSessionToken != "tok-silent" || customerSessionEmail != "a@b.c" {
-		t.Fatalf("session silencieuse attendue: token=%q email=%q", customerSessionToken, customerSessionEmail)
+	if !customerLoggedIn() || getCustomerSessionToken() != "tok-silent" || getCustomerSessionEmail() != "a@b.c" {
+		t.Fatalf("session silencieuse attendue: token=%q email=%q", getCustomerSessionToken(), getCustomerSessionEmail())
 	}
 	if !sawEmail || !sawPassword {
 		t.Fatalf("identifiants technicien non reutilises: email=%v password=%v", sawEmail, sawPassword)
@@ -66,8 +72,9 @@ func TestSilentCustomerLoginStashes2FAChallenge(t *testing.T) {
 	if customerLoggedIn() {
 		t.Fatal("pas de session sans code 2FA")
 	}
-	if customerPendingChallenge != "ch-silent" || customerPendingEmail != "a@b.c" || !customerPendingEmailAllowed {
-		t.Fatalf("challenge en attente attendu: %+v", customerPendingChallenge)
+	if chg, eml, allowed := getCustomerPending(); chg != "ch-silent" || eml != "a@b.c" || !allowed {
+		c, _, _ := getCustomerPending()
+		t.Fatalf("challenge en attente attendu: %+v", c)
 	}
 }
 
@@ -75,7 +82,7 @@ func TestSilentCustomerLoginFailureStaysSilent(t *testing.T) {
 	resetCustomerSilentState(t)
 	mockCustomerAuth(t, `{"error":"Identifiants incorrects"}`, 401, nil)
 	openCustomerSessionSilent("a@b.c", "mauvais", "")
-	if customerLoggedIn() || customerPendingChallenge != "" {
+	if chg, _, _ := getCustomerPending(); customerLoggedIn() || chg != "" {
 		t.Fatal("echec silencieux attendu (saisie manuelle ensuite)")
 	}
 	openCustomerSessionSilent("", "", "")
@@ -93,8 +100,8 @@ func TestSilentCustomerLoginGoogle(t *testing.T) {
 		sawCredential = strings.Contains(string(raw), "cred-abc")
 	})
 	openCustomerSessionSilentGoogle("cred-abc")
-	if !customerLoggedIn() || customerSessionToken != "tok-g" {
-		t.Fatalf("session Google silencieuse attendue: %q", customerSessionToken)
+	if !customerLoggedIn() || getCustomerSessionToken() != "tok-g" {
+		t.Fatalf("session Google silencieuse attendue: %q", getCustomerSessionToken())
 	}
 	if !sawCredential {
 		t.Fatal("jeton Google non reutilise")
@@ -103,18 +110,20 @@ func TestSilentCustomerLoginGoogle(t *testing.T) {
 
 func TestStoreCustomerSessionClearsPending(t *testing.T) {
 	resetCustomerSilentState(t)
+	customerSessionMu.Lock()
 	customerPendingChallenge, customerPendingEmail, customerPendingEmailAllowed = "ch-1", "a@b.c", true
+	customerSessionMu.Unlock()
 	storeCustomerSession(&customerLoginResult{Token: "tok-1", Email: "a@b.c", CustomerID: "CUS-1"})
-	if customerPendingChallenge != "" || customerPendingEmail != "" || customerPendingEmailAllowed {
+	if chg, eml, allowed := getCustomerPending(); chg != "" || eml != "" || allowed {
 		t.Fatal("challenge en attente non efface apres connexion")
 	}
 	stashCustomerChallenge(&customerLoginResult{ChallengeToken: "ch-2", Email: "a@b.c"})
-	if !customerPendingEmailAllowed {
+	if _, _, allowed := getCustomerPending(); !allowed {
 		t.Fatal("code e-mail autorise par defaut quand le serveur ne precise pas")
 	}
 	explicitFalse := false
 	stashCustomerChallenge(&customerLoginResult{ChallengeToken: "ch-3", Email: "a@b.c", EmailCodeAllowed: &explicitFalse})
-	if customerPendingEmailAllowed {
+	if _, _, allowed := getCustomerPending(); allowed {
 		t.Fatal("interdiction serveur du code e-mail ignoree")
 	}
 }
@@ -130,7 +139,9 @@ func TestCustomerGatePanelShows2FADirectly(t *testing.T) {
 		t.Fatalf("formulaire complet attendu (2 champs), obtenu %d", n)
 	}
 	// Challenge en attente : formulaire de code direct (1 champ).
+	customerSessionMu.Lock()
 	customerPendingChallenge, customerPendingEmail = "ch-9", "a@b.c"
+	customerSessionMu.Unlock()
 	if n := countPanelEntries(customerGatePanel(PanelOverview, noop, builder)); n != 1 {
 		t.Fatalf("formulaire de code attendu (1 champ), obtenu %d", n)
 	}

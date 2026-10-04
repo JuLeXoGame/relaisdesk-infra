@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -59,8 +60,10 @@ func videoCodecTomlLines(crlf bool) string {
 
 // setHwCodecInToml rewrites the codec keys of an existing RustDesk2.toml
 // content. enable=true restores the preset, false forces software VP9.
-// Line endings and unrelated content are preserved; missing keys are inserted
-// right after [options], or appended with a new section when absent.
+// Only keys under [options] are read or written: the core ignores the same
+// names anywhere else, so touching them would report success while changing
+// nothing. Line endings and unrelated content are preserved; missing keys are
+// inserted right after [options], or appended with a new section when absent.
 func setHwCodecInToml(content string, enable bool) string {
 	wantCodec := CodecPreferenceAuto
 	wantHW := "Y"
@@ -80,12 +83,17 @@ func setHwCodecInToml(content string, enable bool) string {
 	}
 	seenCodec, seenHW, seenAV1 := false, false, false
 	optIdx := -1
+	inOptions := false
 	for i, line := range lines {
 		t := strings.TrimSpace(line)
 		if strings.HasPrefix(t, "[") {
-			if t == "[options]" {
+			inOptions = optionsHeaderName(t) == "options"
+			if inOptions && optIdx == -1 {
 				optIdx = i
 			}
+			continue
+		}
+		if !inOptions {
 			continue
 		}
 		if strings.HasPrefix(t, "#") || !strings.Contains(t, "=") {
@@ -140,6 +148,44 @@ func setHwCodecInToml(content string, enable bool) string {
 	return out
 }
 
+// optionsHeaderName returns the section name opened by a trimmed line
+// ("[options] # ...", "[ options ]"), or "" when the line opens no section.
+// TOML names stay case-sensitive: only exactly "options" counts.
+func optionsHeaderName(t string) string {
+	if !strings.HasPrefix(t, "[") {
+		return ""
+	}
+	end := strings.Index(t, "]")
+	if end <= 0 {
+		return ""
+	}
+	return strings.TrimSpace(t[1:end])
+}
+
+// writeFileAtomic replaces path without ever exposing a truncated file: a
+// crash between open and close of a direct write would leave a half-written
+// TOML the core then fails to parse.
+func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Chmod(perm); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
+}
+
 // setHwCodecInFiles patches every existing RustDesk2.toml in paths.
 // Missing files are skipped; an error is returned only when nothing was
 // patched or a write fails.
@@ -150,7 +196,7 @@ func setHwCodecInFiles(paths []string, enable bool) (int, error) {
 		if err != nil {
 			continue
 		}
-		if err := os.WriteFile(p, []byte(setHwCodecInToml(string(data), enable)), 0600); err != nil {
+		if err := writeFileAtomic(p, []byte(setHwCodecInToml(string(data), enable)), 0600); err != nil {
 			return patched, fmt.Errorf("écriture %s: %w", p, err)
 		}
 		patched++

@@ -10,15 +10,24 @@ package main
 //     skip on fresh checkouts (CI), but pin *format* is always validated.
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
+	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/klauspost/compress/zstd"
+	"github.com/ulikunitz/xz"
 )
 
 var (
@@ -81,8 +90,115 @@ func sha256OfFile(t *testing.T, path string) string {
 }
 
 // debInnerSHA256 extracts one file from a .deb (ar archive) and hashes it.
-// ok=false means the extraction toolchain is unavailable: caller must Skip.
+// ok=false means extraction failed everywhere: caller must Skip.
 func debInnerSHA256(debPath, innerPath string) (sum string, ok bool) {
+	// Pure Go first: Windows/macOS runners have no dpkg-deb/ar, and the
+	// ELF/SO pins must verify there too instead of silently skipping.
+	if sum, err := debInnerSHA256Go(debPath, innerPath); err == nil {
+		return sum, true
+	}
+	return debInnerSHA256Exec(debPath, innerPath)
+}
+
+// debInnerSHA256Go extracts one member from a .deb without external tools:
+// GNU ar container, data.tar.{gz,xz,zst} by magic bytes, tar walk.
+func debInnerSHA256Go(debPath, innerPath string) (string, error) {
+	raw, err := os.ReadFile(debPath)
+	if err != nil {
+		return "", err
+	}
+	dataTar, err := debDataTar(raw)
+	if err != nil {
+		return "", err
+	}
+	stream, err := debDecompress(dataTar)
+	if err != nil {
+		return "", err
+	}
+	want := map[string]bool{innerPath: true, "./" + innerPath: true, strings.TrimPrefix(innerPath, "./"): true}
+	tr := tar.NewReader(bytes.NewReader(stream))
+	for {
+		hdr, err := tr.Next()
+		if err != nil {
+			return "", errors.New("membre introuvable dans data.tar")
+		}
+		if !want[hdr.Name] || !hdr.FileInfo().Mode().IsRegular() || hdr.Size == 0 {
+			continue
+		}
+		hash := sha256.New()
+		if _, err := io.Copy(hash, tr); err != nil {
+			return "", err
+		}
+		return hex.EncodeToString(hash.Sum(nil)), nil
+	}
+}
+
+// debDataTar returns the data.tar payload of a GNU ar archive.
+func debDataTar(raw []byte) ([]byte, error) {
+	if len(raw) < 8 || string(raw[:8]) != "!<arch>\n" {
+		return nil, errors.New("pas une archive ar")
+	}
+	off := 8
+	for off+60 <= len(raw) {
+		name := strings.TrimSuffix(strings.TrimSpace(string(raw[off:off+16])), "/")
+		size, err := strconv.Atoi(strings.TrimSpace(string(raw[off+48 : off+58])))
+		if err != nil || size < 0 || string(raw[off+58:off+60]) != "`\n" {
+			return nil, errors.New("membre ar invalide")
+		}
+		off += 60
+		if off+size > len(raw) {
+			return nil, errors.New("membre ar tronqué")
+		}
+		data := raw[off : off+size]
+		off += size + size%2
+		if strings.HasPrefix(name, "#1/") {
+			// BSD long name: the name extension prefixes the data.
+			ext, err := strconv.Atoi(strings.TrimSpace(strings.TrimPrefix(name, "#1/")))
+			if err != nil || ext < 0 || ext > len(data) {
+				return nil, errors.New("nom BSD invalide")
+			}
+			name = string(data[:ext])
+			data = data[ext:]
+		}
+		if strings.HasPrefix(name, "data.tar.") {
+			out := make([]byte, len(data))
+			copy(out, data)
+			return out, nil
+		}
+	}
+	return nil, errors.New("data.tar introuvable")
+}
+
+// debDecompress expands a data.tar payload selected by magic bytes.
+func debDecompress(data []byte) ([]byte, error) {
+	if len(data) >= 2 && data[0] == 0x1f && data[1] == 0x8b {
+		r, err := gzip.NewReader(bytes.NewReader(data))
+		if err != nil {
+			return nil, err
+		}
+		defer r.Close()
+		return io.ReadAll(r)
+	}
+	if len(data) >= 6 && bytes.Equal(data[:6], []byte{0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00}) {
+		r, err := xz.NewReader(bytes.NewReader(data))
+		if err != nil {
+			return nil, err
+		}
+		return io.ReadAll(r)
+	}
+	if len(data) >= 4 && bytes.Equal(data[:4], []byte{0x28, 0xb5, 0x2f, 0xfd}) {
+		r, err := zstd.NewReader(bytes.NewReader(data))
+		if err != nil {
+			return nil, err
+		}
+		defer r.Close()
+		return io.ReadAll(r)
+	}
+	// Assume an uncompressed tar.
+	return data, nil
+}
+
+func debInnerSHA256Exec(debPath, innerPath string) (sum string, ok bool) {
 	if _, err := exec.LookPath("tar"); err != nil {
 		return "", false
 	}
@@ -230,4 +346,121 @@ func TestLinuxPinsMatchEmbeddedViewer(t *testing.T) {
 		"rustdeskElfSha", "rustdeskDebSha", "rustdeskSoSha",
 		"usr/share/rustdesk/rustdesk", "usr/share/rustdesk/lib/librustdesk.so",
 	)
+}
+
+func writeTestArMember(buf *bytes.Buffer, name string, data []byte) {
+	header := fmt.Sprintf("%-16s%-12d%-6d%-6d%-8o%-10d`\n", name, 0, 0, 0, 0o644, len(data))
+	buf.WriteString(header)
+	buf.Write(data)
+	if len(data)%2 == 1 {
+		buf.WriteByte('\n')
+	}
+}
+
+func testDeb(t *testing.T, compress string, files map[string][]byte) string {
+	t.Helper()
+	var tarBuf bytes.Buffer
+	tw := tar.NewWriter(&tarBuf)
+	for name, data := range files {
+		if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o644, Size: int64(len(data))}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tw.Write(data); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	var payload []byte
+	member := "data.tar"
+	switch compress {
+	case "gz":
+		var gzBuf bytes.Buffer
+		gz := gzip.NewWriter(&gzBuf)
+		if _, err := gz.Write(tarBuf.Bytes()); err != nil {
+			t.Fatal(err)
+		}
+		if err := gz.Close(); err != nil {
+			t.Fatal(err)
+		}
+		payload, member = gzBuf.Bytes(), "data.tar.gz"
+	case "xz":
+		var xzBuf bytes.Buffer
+		xzw, err := xz.NewWriter(&xzBuf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := xzw.Write(tarBuf.Bytes()); err != nil {
+			t.Fatal(err)
+		}
+		if err := xzw.Close(); err != nil {
+			t.Fatal(err)
+		}
+		payload, member = xzBuf.Bytes(), "data.tar.xz"
+	case "zst":
+		var zstBuf bytes.Buffer
+		zstw, err := zstd.NewWriter(&zstBuf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := zstw.Write(tarBuf.Bytes()); err != nil {
+			t.Fatal(err)
+		}
+		if err := zstw.Close(); err != nil {
+			t.Fatal(err)
+		}
+		payload, member = zstBuf.Bytes(), "data.tar.zst"
+	default:
+		t.Fatalf("compression inconnue %q", compress)
+	}
+	var arBuf bytes.Buffer
+	arBuf.WriteString("!<arch>\n")
+	writeTestArMember(&arBuf, "debian-binary", []byte("2.0\n"))
+	writeTestArMember(&arBuf, member, payload)
+	path := filepath.Join(t.TempDir(), "test.deb")
+	if err := os.WriteFile(path, arBuf.Bytes(), 0600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestDebInnerSHA256Go(t *testing.T) {
+	elf := []byte("ELF-mock-binary-content")
+	so := []byte("SO-mock-library-content")
+	elfSum := sha256.Sum256(elf)
+	soSum := sha256.Sum256(so)
+	files := map[string][]byte{
+		"usr/share/rustdesk/rustdesk":           elf,
+		"usr/share/rustdesk/lib/librustdesk.so": so,
+	}
+	for _, compress := range []string{"gz", "xz", "zst"} {
+		deb := testDeb(t, compress, files)
+		got, err := debInnerSHA256Go(deb, "usr/share/rustdesk/rustdesk")
+		if err != nil {
+			t.Fatalf("%s: %v", compress, err)
+		}
+		if got != hex.EncodeToString(elfSum[:]) {
+			t.Fatalf("%s: ELF=%s, want %x", compress, got, elfSum)
+		}
+		got, err = debInnerSHA256Go(deb, "./usr/share/rustdesk/lib/librustdesk.so")
+		if err != nil {
+			t.Fatalf("%s: %v", compress, err)
+		}
+		if got != hex.EncodeToString(soSum[:]) {
+			t.Fatalf("%s: SO=%s, want %x", compress, got, soSum)
+		}
+	}
+	// Missing member and truncated archives fail instead of hashing garbage.
+	deb := testDeb(t, "gz", files)
+	if _, err := debInnerSHA256Go(deb, "usr/share/rustdesk/absent"); err == nil {
+		t.Fatal("membre absent accepté")
+	}
+	broken := filepath.Join(t.TempDir(), "broken.deb")
+	if err := os.WriteFile(broken, []byte("!<arch>\ndebian-binary"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := debInnerSHA256Go(broken, "x"); err == nil {
+		t.Fatal("archive tronquée acceptée")
+	}
 }

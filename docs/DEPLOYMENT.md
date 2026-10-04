@@ -38,9 +38,15 @@ RELAISDESK_AUTH_PUBLIC_KEYS=relaisdesk-1=<cle-publique-base64url>
 Le fichier privé est référencé par `NETWORK_AUTH_PRIVATE_KEY_FILE` dans
 `/etc/relaisdesk/api.env`. Voir `FORK_AUTHORIZATION.md` pour la rotation.
 
-Configurer aussi `RELEASE_MANIFEST_PATH` et `RELEASE_PUBLIC_KEY` selon
-`RELEASE_SIGNING.md`. La clé privée de version ne doit jamais être copiée sur
-le serveur.
+Configurer aussi `RELEASE_MANIFEST_PATH`, `RELEASE_PUBLIC_KEY` et
+`RELEASE_KEY_ID` selon `RELEASE_SIGNING.md`. La clé privée de version ne doit
+jamais être copiée sur le serveur.
+
+Configurer `MAC_BETA_TOKEN` (24+ caractères aléatoires) pour activer les
+téléchargements macOS réservés aux testeurs : sans cette valeur, l'API refuse
+toutes les demandes de `.dmg` (le gate est fermé par défaut). Communiquer le
+jeton aux testeurs hors du site ; l'ancien mot de passe autrefois embarqué
+dans le JS public est révoqué et ne fonctionne plus.
 
 ## Installation serveur
 

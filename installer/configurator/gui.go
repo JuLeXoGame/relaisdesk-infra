@@ -1768,8 +1768,8 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 				if token != "" {
 					go logoutTechnician(token)
 				}
-				if customerSessionToken != "" {
-					ct := customerSessionToken
+				if getCustomerSessionToken() != "" {
+					ct := getCustomerSessionToken()
 					go func() { _ = customerLogout(ct) }()
 				}
 				clearCustomerSession()

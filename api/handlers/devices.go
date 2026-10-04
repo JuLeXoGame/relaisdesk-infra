@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"api/config"
 	"api/middleware"
 	"api/networkauth"
 	"api/releasemanifest"
@@ -176,7 +177,7 @@ func DeviceEnrollHandler(db *sql.DB, settings ServerSettings, signers ...*networ
 }
 
 // DeviceHeartbeatHandler keeps device online status active.
-func DeviceHeartbeatHandler(db *sql.DB, signers ...*networkauth.Signer) http.HandlerFunc {
+func DeviceHeartbeatHandler(db *sql.DB, cfg *config.Config, signers ...*networkauth.Signer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req deviceHeartbeatRequest
 		if err := decodeSingleJSON(r, &req); err != nil {
@@ -217,7 +218,7 @@ func DeviceHeartbeatHandler(db *sql.DB, signers ...*networkauth.Signer) http.Han
 			targetVer, _ := dbpkg.PopPendingDeviceUpdate(tx, identifier)
 			_ = tx.Commit()
 			if targetVer != "" {
-				updateTarget = resolveDeviceUpdateTarget(dev.OS, targetVer, identifier)
+				updateTarget = resolveDeviceUpdateTarget(cfg, dev.OS, targetVer, identifier)
 			}
 		}
 
@@ -244,19 +245,35 @@ func computeDeviceStagger(deviceID string) int {
 	return int(5 + (h % 55)) // between 5 and 59 seconds
 }
 
-func resolveDeviceUpdateTarget(osName, targetVer string, deviceID ...string) *DeviceUpdateTarget {
+func resolveDeviceUpdateTarget(cfg *config.Config, osName, targetVer string, deviceID ...string) *DeviceUpdateTarget {
 	stagger := 15
 	if len(deviceID) > 0 && deviceID[0] != "" {
 		stagger = computeDeviceStagger(deviceID[0])
 	}
-	manifestPaths := []string{
+	// OTA trust comes from configuration (RELEASE_PUBLIC_KEY/RELEASE_KEY_ID),
+	// never from a hardcoded key: rotation must not require a rebuild.
+	publicKey := ""
+	keyID := "release-1"
+	manifestPaths := []string{}
+	if cfg != nil {
+		publicKey = strings.TrimSpace(cfg.ReleasePublicKey)
+		keyID = releaseSigningKeyID(cfg)
+		if p := strings.TrimSpace(cfg.ReleaseManifestPath); p != "" {
+			manifestPaths = append(manifestPaths, p)
+		}
+	}
+	if publicKey == "" {
+		log.Printf("[Devices] mise à jour OTA indisponible sans clé publique configurée (os=%s)", osName)
+		return nil
+	}
+	manifestPaths = append(manifestPaths,
 		"/opt/relaisdesk/downloads/release-manifest.json",
 		"relaisdesk/downloads/release-manifest.json",
 		"../relaisdesk/downloads/release-manifest.json",
 		"../../relaisdesk/downloads/release-manifest.json",
-	}
+	)
 	for _, p := range manifestPaths {
-		if m, err := releasemanifest.LoadVerified(p, "K3k6oko00jMzl7hN3poS6KYjJzZvjNz9Tgdz73E2duo"); err == nil {
+		if m, err := releasemanifest.LoadVerified(p, publicKey, keyID); err == nil {
 			if target := updateTargetFromManifest(m, osName, targetVer, stagger); target != nil {
 				return target
 			}

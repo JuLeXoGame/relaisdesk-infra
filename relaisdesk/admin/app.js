@@ -3,7 +3,9 @@
 // =============================================================================
 
 // Configuration API
-const API_BASE_URL = "https://api.relaisdesk.fr";
+const API_BASE_URL = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+  ? 'http://localhost:8443'
+  : 'https://api.relaisdesk.fr';
 
 // State
 let currentToken = "";
@@ -776,14 +778,15 @@ function drawRevenueChart() {
 
     ctx.clearRect(0, 0, w, h);
 
-    let history = financialsData?.monthly_history || [];
+    const history = financialsData?.monthly_history || [];
     if (!Array.isArray(history) || history.length === 0 || (history.length === 1 && history[0].revenue === 0)) {
-      const mrr = financialsData?.monthly_recurring_revenue || 50;
-      const months = ["Mars", "Avr", "Mai", "Juin", "Juil", "Août"];
-      history = months.map((m, idx) => ({
-        label: m,
-        revenue: Math.round(mrr * (0.4 + 0.15 * idx) * 100) / 100
-      }));
+      // Honest empty state: never fabricate a plausible-looking history.
+      ctx.fillStyle = "#8a8a8a";
+      ctx.font = "14px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Aucun historique mensuel pour le moment.", w / 2, h / 2);
+      return;
     }
 
     const paddingLeft = 45;

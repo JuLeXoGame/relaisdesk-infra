@@ -28,7 +28,7 @@ func asyncFetchPanel(panelID int, relaunch func(int), fetch func(token string) (
 		)}
 		box.Refresh()
 		go func() {
-			token := customerSessionToken
+			token := getCustomerSessionToken()
 			content, err := fetch(token)
 			fyne.Do(func() {
 				if err != nil {
@@ -154,7 +154,7 @@ func teamPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 			if member.Status != "active" {
 				resendBtn := widget.NewButton(T("team_resend_btn"), func() {
 					go func() {
-						err := resendTeamInvitation(customerSessionToken, member.MemberID)
+						err := resendTeamInvitation(getCustomerSessionToken(), member.MemberID)
 						fyne.Do(func() {
 							if err != nil {
 								if isCustomerSessionExpired(err) {
@@ -180,7 +180,7 @@ func teamPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 						return
 					}
 					go func() {
-						err := revokeTeamMember(customerSessionToken, member.MemberID)
+						err := revokeTeamMember(getCustomerSessionToken(), member.MemberID)
 						fyne.Do(func() {
 							if err != nil {
 								if isCustomerSessionExpired(err) {
@@ -252,7 +252,7 @@ func teamInviteForm(licOptions []string, licByLabel map[string]string, folders [
 		}
 		msg.SetText(T("login_checking"))
 		go func() {
-			text, err := inviteTeamMember(customerSessionToken, licenseID, email, selected)
+			text, err := inviteTeamMember(getCustomerSessionToken(), licenseID, email, selected)
 			fyne.Do(func() {
 				if err != nil {
 					if isCustomerSessionExpired(err) {
@@ -306,7 +306,7 @@ func openTeamFoldersDialog(member customerTeamMember, folders []customerFolder, 
 			selected = append(selected, byID[label])
 		}
 		go func() {
-			err := updateTeamMemberFolders(customerSessionToken, member.MemberID, selected)
+			err := updateTeamMemberFolders(getCustomerSessionToken(), member.MemberID, selected)
 			fyne.Do(func() {
 				if err != nil {
 					if isCustomerSessionExpired(err) {
@@ -397,7 +397,7 @@ func openRenewDialog(licenseID string, panelID int, relaunch func(int)) {
 		}
 		method := byLabel[methodSelect.Selected]
 		go func() {
-			res, err := renewLicense(customerSessionToken, licenseID, method, customerTermsVersion, immediateCheck.Checked)
+			res, err := renewLicense(getCustomerSessionToken(), licenseID, method, customerTermsVersion, immediateCheck.Checked)
 			fyne.Do(func() {
 				if err != nil {
 					if isCustomerSessionExpired(err) {
@@ -462,7 +462,7 @@ func billingPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 			invoice := inv
 			pdfBtn := widget.NewButton(T("invoice_pdf_btn"), func() {
 				go func() {
-					data, err := downloadInvoicePDF(customerSessionToken, invoice.InvoiceNumber)
+					data, err := downloadInvoicePDF(getCustomerSessionToken(), invoice.InvoiceNumber)
 					fyne.Do(func() {
 						if err != nil {
 							dialog.ShowError(err, mainWindow)
@@ -474,7 +474,7 @@ func billingPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 			})
 			ciiBtn := widget.NewButton(T("invoice_cii_btn"), func() {
 				go func() {
-					data, err := downloadInvoiceCII(customerSessionToken, invoice.InvoiceNumber)
+					data, err := downloadInvoiceCII(getCustomerSessionToken(), invoice.InvoiceNumber)
 					fyne.Do(func() {
 						if err != nil {
 							dialog.ShowError(err, mainWindow)
@@ -508,7 +508,7 @@ func billingPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 			s := sub
 			portalBtn := widget.NewButton(T("billing_portal_btn"), func() {
 				go func() {
-					portalURL, err := openBillingPortal(customerSessionToken, s.ID)
+					portalURL, err := openBillingPortal(getCustomerSessionToken(), s.ID)
 					fyne.Do(func() {
 						if err != nil {
 							if isCustomerSessionExpired(err) {
@@ -563,7 +563,7 @@ func historyPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 		}
 		exportBtn := widget.NewButton(T("history_export_btn"), func() {
 			go func() {
-				data, err := exportCustomerInterventionsCSV(customerSessionToken)
+				data, err := exportCustomerInterventionsCSV(getCustomerSessionToken())
 				fyne.Do(func() {
 					if err != nil {
 						if isCustomerSessionExpired(err) {
@@ -640,7 +640,7 @@ func formatInterventionDates(item customerInterventionView) string {
 func historyActionButton(label string, item customerInterventionView, action string, panelID int, relaunch func(int)) *widget.Button {
 	return widget.NewButton(label, func() {
 		go func() {
-			_, err := runCustomerInterventionAction(customerSessionToken, item.InterventionID, action, "", "", "")
+			_, err := runCustomerInterventionAction(getCustomerSessionToken(), item.InterventionID, action, "", "", "")
 			fyne.Do(func() {
 				if err != nil {
 					if isCustomerSessionExpired(err) {
@@ -684,7 +684,7 @@ func openInterventionCreateDialog(licenses []customerLicenseView, panelID int, r
 			return
 		}
 		go func() {
-			_, err := createCustomerIntervention(customerSessionToken, licSelect.Selected, strings.TrimSpace(refEntry.Text), strings.TrimSpace(titleEntry.Text))
+			_, err := createCustomerIntervention(getCustomerSessionToken(), licSelect.Selected, strings.TrimSpace(refEntry.Text), strings.TrimSpace(titleEntry.Text))
 			fyne.Do(func() {
 				if err != nil {
 					if isCustomerSessionExpired(err) {
@@ -713,7 +713,7 @@ func openInterventionCompleteDialog(item customerInterventionView, panelID int, 
 			return
 		}
 		go func() {
-			_, err := runCustomerInterventionAction(customerSessionToken, item.InterventionID, "complete", item.ClientReference, item.Title, strings.TrimSpace(summaryEntry.Text))
+			_, err := runCustomerInterventionAction(getCustomerSessionToken(), item.InterventionID, "complete", item.ClientReference, item.Title, strings.TrimSpace(summaryEntry.Text))
 			fyne.Do(func() {
 				if err != nil {
 					if isCustomerSessionExpired(err) {
@@ -746,7 +746,7 @@ func servicesPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 			merchantRows.Add(widget.NewLabel(T("services_no_account")))
 			onboardBtn := widget.NewButton(T("services_onboard_btn"), func() {
 				go func() {
-					linkURL, err := startCustomerServiceOnboarding(customerSessionToken)
+					linkURL, err := startCustomerServiceOnboarding(getCustomerSessionToken())
 					fyne.Do(func() {
 						if err != nil {
 							if isCustomerSessionExpired(err) {
@@ -771,7 +771,7 @@ func servicesPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 			enabledCheck.Checked = nav.Merchant.Enabled
 			enabledCheck.OnChanged = func(on bool) {
 				go func() {
-					err := setCustomerServiceEnabled(customerSessionToken, on)
+					err := setCustomerServiceEnabled(getCustomerSessionToken(), on)
 					fyne.Do(func() {
 						if err != nil {
 							enabledCheck.SetChecked(!on)
@@ -794,7 +794,7 @@ func servicesPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 			termsRows.Add(widget.NewLabel(TF("services_terms_pending", nav.Terms.Version)))
 			acceptBtn := widget.NewButton(T("services_terms_accept_btn"), func() {
 				go func() {
-					err := acceptCustomerServiceTerms(customerSessionToken, nav.Terms.Version, nav.Terms.SHA256)
+					err := acceptCustomerServiceTerms(getCustomerSessionToken(), nav.Terms.Version, nav.Terms.SHA256)
 					fyne.Do(func() {
 						if err != nil {
 							if isCustomerSessionExpired(err) {
@@ -839,7 +839,7 @@ func servicesPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 						return
 					}
 					go func() {
-						err := deleteCustomerServiceRate(customerSessionToken, rate.ID)
+						err := deleteCustomerServiceRate(getCustomerSessionToken(), rate.ID)
 						fyne.Do(func() {
 							if err != nil {
 								if isCustomerSessionExpired(err) {
@@ -940,7 +940,7 @@ func servicesPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 
 func serviceWorkAction(workID, action string, panelID int, relaunch func(int)) {
 	go func() {
-		_, err := runCustomerServiceWork(customerSessionToken, workID, action)
+		_, err := runCustomerServiceWork(getCustomerSessionToken(), workID, action)
 		fyne.Do(func() {
 			if err != nil {
 				if isCustomerSessionExpired(err) {
@@ -989,7 +989,7 @@ func openServiceRateDialog(panelID int, relaunch func(int)) {
 			return
 		}
 		go func() {
-			_, err := createCustomerServiceRate(customerSessionToken, label, mode, int64(euros*100+0.5))
+			_, err := createCustomerServiceRate(getCustomerSessionToken(), label, mode, int64(euros*100+0.5))
 			fyne.Do(func() {
 				if err != nil {
 					if isCustomerSessionExpired(err) {

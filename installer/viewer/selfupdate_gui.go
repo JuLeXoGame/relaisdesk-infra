@@ -26,7 +26,7 @@ func startSelfUpdateAtStartup(win fyne.Window) {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		info, err := SelfUpdateCheck(ctx, APIURL, ReleaseSigningPublicKey, APP_VERSION)
+		info, err := SelfUpdateCheck(ctx, APIURL, ReleaseSigningPublicKey, ReleaseSigningKeyID, APP_VERSION)
 		if err != nil || info == nil || !info.Available {
 			return // offline, unsupported install or up to date: stay silent
 		}

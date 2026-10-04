@@ -28,7 +28,7 @@ Set-StrictMode -Version Latest
 
 if ($Stamp -notmatch '^[A-Za-z0-9._-]+$') { throw "Stamp invalide." }
 
-$Root = "C:\Users\Administrator\Documents\Projets\projet"
+$Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $DownloadsDir = Join-Path $Root "relaisdesk\downloads"
 if ([string]::IsNullOrWhiteSpace($PpkPath)) {
     $PpkPath = Join-Path $Root ".secrets\oracle private.ppk"

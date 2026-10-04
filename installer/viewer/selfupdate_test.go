@@ -179,10 +179,11 @@ func TestSelfUpdateVerifyManifest(t *testing.T) {
 			},
 		}
 	}
+	ring := map[string]string{"test-1": pub}
 	t.Run("ordre indifférent", func(t *testing.T) {
 		m := base()
 		signTestManifest(t, m, priv)
-		if err := selfUpdateVerifyManifest(m, pub); err != nil {
+		if err := selfUpdateVerifyManifest(m, ring); err != nil {
 			t.Fatalf("manifeste valide refusé: %v", err)
 		}
 	})
@@ -190,7 +191,7 @@ func TestSelfUpdateVerifyManifest(t *testing.T) {
 		m := base()
 		signTestManifest(t, m, priv)
 		m.Artifacts[0].URL = "https://evil.example/b.bin"
-		if err := selfUpdateVerifyManifest(m, pub); err == nil {
+		if err := selfUpdateVerifyManifest(m, ring); err == nil {
 			t.Fatal("manifeste falsifié accepté")
 		}
 	})
@@ -198,7 +199,7 @@ func TestSelfUpdateVerifyManifest(t *testing.T) {
 		m := base()
 		signTestManifest(t, m, priv)
 		other, _ := testKey(t)
-		if err := selfUpdateVerifyManifest(m, other); err == nil {
+		if err := selfUpdateVerifyManifest(m, map[string]string{"test-1": other}); err == nil {
 			t.Fatal("manifeste accepté avec une autre clé")
 		}
 	})
@@ -212,6 +213,8 @@ func TestSelfUpdateVerifyManifest(t *testing.T) {
 		"taille énorme":  func(m *selfUpdateManifest) { m.Artifacts[0].Size = selfUpdateDownloadCap + 1 },
 		"signature vide": func(m *selfUpdateManifest) { m.Signature = "" },
 		"clé vide":       nil,
+		"clé inconnue":   nil,
+		"key_id vide":    nil,
 	}
 	for name, mutate := range invalids {
 		t.Run(name, func(t *testing.T) {
@@ -219,19 +222,49 @@ func TestSelfUpdateVerifyManifest(t *testing.T) {
 			if mutate != nil {
 				mutate(m)
 			}
+			if name == "clé inconnue" {
+				m.KeyID = "release-2"
+			}
+			if name == "key_id vide" {
+				m.KeyID = ""
+			}
 			signTestManifest(t, m, priv)
-			key := pub
+			keys := ring
 			if name == "clé vide" {
-				key = ""
+				keys = map[string]string{"test-1": ""}
 			}
 			if name == "signature vide" {
 				m.Signature = ""
 			}
-			if err := selfUpdateVerifyManifest(m, key); err == nil {
+			if err := selfUpdateVerifyManifest(m, keys); err == nil {
 				t.Fatalf("manifeste %q accepté", name)
 			}
 		})
 	}
+	t.Run("rotation accepte les deux clés", func(t *testing.T) {
+		pub2, priv2 := testKey(t)
+		keys := map[string]string{"test-1": pub, "test-2": pub2}
+		m1 := base()
+		signTestManifest(t, m1, priv)
+		if err := selfUpdateVerifyManifest(m1, keys); err != nil {
+			t.Fatalf("ancienne clé refusée: %v", err)
+		}
+		m2 := base()
+		m2.KeyID = "test-2"
+		signTestManifest(t, m2, priv2)
+		if err := selfUpdateVerifyManifest(m2, keys); err != nil {
+			t.Fatalf("nouvelle clé refusée: %v", err)
+		}
+		// ... mais jamais une clé hors trousseau, même bien signée.
+		pub3, priv3 := testKey(t)
+		_ = pub3
+		m3 := base()
+		m3.KeyID = "test-3"
+		signTestManifest(t, m3, priv3)
+		if err := selfUpdateVerifyManifest(m3, keys); err == nil {
+			t.Fatal("clé hors trousseau acceptée")
+		}
+	})
 }
 
 func TestSelfUpdateCheckEndToEnd(t *testing.T) {
@@ -257,7 +290,7 @@ func TestSelfUpdateCheckEndToEnd(t *testing.T) {
 	server := httptest.NewServer(mux)
 	defer server.Close()
 
-	info, err := SelfUpdateCheck(context.Background(), server.URL, pub, "1.0.0")
+	info, err := SelfUpdateCheck(context.Background(), server.URL, pub, "test-1", "1.0.0")
 	if err != nil {
 		t.Fatalf("check: %v", err)
 	}
@@ -269,15 +302,20 @@ func TestSelfUpdateCheckEndToEnd(t *testing.T) {
 	}
 
 	t.Run("à jour", func(t *testing.T) {
-		info, err := SelfUpdateCheck(context.Background(), server.URL, pub, "9.9.9")
+		info, err := SelfUpdateCheck(context.Background(), server.URL, pub, "test-1", "9.9.9")
 		if err != nil || info.Available {
 			t.Fatalf("attendu à-jour: %+v %v", info, err)
 		}
 	})
 	t.Run("anti-downgrade", func(t *testing.T) {
-		info, err := SelfUpdateCheck(context.Background(), server.URL, pub, "10.0.0")
+		info, err := SelfUpdateCheck(context.Background(), server.URL, pub, "test-1", "10.0.0")
 		if err != nil || info.Available {
 			t.Fatalf("attendu refus silencieux: %+v %v", info, err)
+		}
+	})
+	t.Run("mauvais key_id refusé", func(t *testing.T) {
+		if _, err := SelfUpdateCheck(context.Background(), server.URL, pub, "release-1", "1.0.0"); err == nil {
+			t.Fatal("manifeste accepté avec un key_id inattendu")
 		}
 	})
 }
@@ -320,6 +358,53 @@ func TestSelfUpdateDownload(t *testing.T) {
 			t.Fatal("téléchargement sans info accepté")
 		}
 	})
+}
+
+func TestSelfUpdateDownloadMacBetaToken(t *testing.T) {
+	payload := []byte("dmg-beta-0123456789")
+	sum := sha256.Sum256(payload)
+	var gotBeta string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotBeta = r.URL.Query().Get("beta")
+		_, _ = w.Write(payload)
+	}))
+	defer server.Close()
+	ctx := context.Background()
+	sha := hex.EncodeToString(sum[:])
+
+	// .dmg downloads carry the beta token.
+	info := &SelfUpdateInfo{Available: true, ArtifactName: "RelaisDesk_Mac.dmg", ArtifactURL: server.URL + "/a.dmg", ArtifactSHA256: sha, ArtifactSize: int64(len(payload))}
+	path, err := selfUpdateDownloadWithBetaToken(ctx, info, "tok-bêta")
+	if err != nil {
+		t.Fatalf("download: %v", err)
+	}
+	defer os.Remove(path)
+	if gotBeta != "tok-bêta" {
+		t.Fatalf("beta=%q, want jeton transmis", gotBeta)
+	}
+
+	// Other artifacts never carry it, even when a token is configured.
+	gotBeta = "sentinel"
+	exe := &SelfUpdateInfo{Available: true, ArtifactName: "RelaisDesk_Portable.exe", ArtifactURL: server.URL + "/a.exe", ArtifactSHA256: sha, ArtifactSize: int64(len(payload))}
+	path, err = selfUpdateDownloadWithBetaToken(ctx, exe, "tok-bêta")
+	if err != nil {
+		t.Fatalf("download: %v", err)
+	}
+	defer os.Remove(path)
+	if gotBeta != "" {
+		t.Fatalf("beta=%q joint à un non-dmg", gotBeta)
+	}
+
+	// No token configured: plain URL.
+	gotBeta = "sentinel"
+	path, err = selfUpdateDownloadWithBetaToken(ctx, info, "")
+	if err != nil {
+		t.Fatalf("download: %v", err)
+	}
+	defer os.Remove(path)
+	if gotBeta != "" {
+		t.Fatalf("beta=%q sans jeton configuré", gotBeta)
+	}
 }
 
 func TestSelfUpdateApplyPortable(t *testing.T) {
@@ -489,6 +574,58 @@ func TestSelfUpdateApplyRejectsSwappedFile(t *testing.T) {
 	}
 	if err := SelfUpdateApply(info, staged); err == nil {
 		t.Fatal("fichier substitué accepté à l'installation")
+	} else if !strings.Contains(err.Error(), "SHA-256") {
+		t.Fatalf("erreur inattendue: %v", err)
+	}
+}
+
+func TestCopyFileStreamsContent(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "src.bin")
+	payload := []byte("contenu-copié-en-streaming-0123456789")
+	if err := os.WriteFile(src, payload, 0600); err != nil {
+		t.Fatal(err)
+	}
+	dst := filepath.Join(dir, "dst.bin")
+	if err := copyFile(dst, src, 0600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(dst)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(payload) {
+		t.Fatalf("copie = %q, want %q", got, payload)
+	}
+	if err := copyFile(filepath.Join(dir, "nope.bin"), filepath.Join(dir, "absent.bin"), 0600); err == nil {
+		t.Fatal("source absente acceptée")
+	}
+}
+
+// A .deb swapped after the apply-time check must be refused before pkexec:
+// the hash is re-verified milliseconds before handing the file to root.
+func TestSelfUpdateApplyLinuxDebReverifiesHash(t *testing.T) {
+	dir := t.TempDir()
+	deb := filepath.Join(dir, "pkg.deb")
+	original := []byte("faux-paquets-de-meme-taille-1234")
+	if err := os.WriteFile(deb, original, 0600); err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(original)
+	sha := hex.EncodeToString(sum[:])
+	size := int64(len(original))
+	// Tamper after "download": same size, different bytes.
+	tampered := append([]byte(nil), original...)
+	tampered[0] ^= 0xff
+	if err := os.WriteFile(deb, tampered, 0600); err != nil {
+		t.Fatal(err)
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		t.Skipf("exécutable introuvable: %v", err)
+	}
+	if err := selfUpdateApplyLinuxDeb(exe, deb, sha, size); err == nil {
+		t.Fatal("paquet substitué accepté avant pkexec")
 	} else if !strings.Contains(err.Error(), "SHA-256") {
 		t.Fatalf("erreur inattendue: %v", err)
 	}

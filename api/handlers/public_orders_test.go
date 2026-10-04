@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"api/config"
@@ -160,6 +161,61 @@ func TestDownloadHandlerServesCanonicalProduct(t *testing.T) {
 	if recTechMac.Code != http.StatusOK || recTechMac.Body.String() != string(macTechContent) {
 		t.Fatalf("mac tech status = %d, body = %q", recTechMac.Code, recTechMac.Body.String())
 	}
+
+	intelViewerContent := []byte("mac-intel-viewer-dmg")
+	if err := os.WriteFile(filepath.Join(downloadsDir, "RelaisDesk_Mac_Intel.dmg"), intelViewerContent, 0600); err != nil {
+		t.Fatal(err)
+	}
+	reqIntel := httptest.NewRequest(http.MethodGet, "/api/v1/downloads/RelaisDesk_Mac_Intel.dmg", nil)
+	recIntel := httptest.NewRecorder()
+	handler(recIntel, reqIntel)
+	if recIntel.Code != http.StatusOK || recIntel.Body.String() != string(intelViewerContent) {
+		t.Fatalf("mac intel viewer status = %d, body = %q", recIntel.Code, recIntel.Body.String())
+	}
+
+	intelTechContent := []byte("mac-intel-tech-dmg")
+	if err := os.WriteFile(filepath.Join(downloadsDir, "RelaisDesk_Technicien_Mac_Intel.dmg"), intelTechContent, 0600); err != nil {
+		t.Fatal(err)
+	}
+	reqIntelTech := httptest.NewRequest(http.MethodGet, "/api/v1/downloads/configurator-mac-intel", nil)
+	recIntelTech := httptest.NewRecorder()
+	handler(recIntelTech, reqIntelTech)
+	if recIntelTech.Code != http.StatusOK || recIntelTech.Body.String() != string(intelTechContent) {
+		t.Fatalf("mac intel tech status = %d, body = %q", recIntelTech.Code, recIntelTech.Body.String())
+	}
+}
+
+func TestDownloadHandlerServesEveryManifestArtifact(t *testing.T) {
+	// Every signed binary in the shipped manifest must resolve to a
+	// servable download: a signed-but-404 artefact is a broken release.
+	manifestBytes, err := os.ReadFile("../../relaisdesk/downloads/release-manifest.json")
+	if err != nil {
+		t.Skipf("shipped manifest unavailable: %v", err)
+	}
+	var manifest struct {
+		Artifacts []struct {
+			Name string `json:"name"`
+		} `json:"artifacts"`
+	}
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	downloadsDir := t.TempDir()
+	handler := DownloadHandler(&config.Config{DownloadsDir: downloadsDir, DevHTTP: true})
+	for _, artifact := range manifest.Artifacts {
+		if strings.HasSuffix(artifact.Name, ".txt") || strings.HasSuffix(artifact.Name, ".json") {
+			continue
+		}
+		content := []byte("payload:" + artifact.Name)
+		if err := os.WriteFile(filepath.Join(downloadsDir, artifact.Name), content, 0600); err != nil {
+			t.Fatal(err)
+		}
+		recorder := httptest.NewRecorder()
+		handler(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/downloads/"+artifact.Name, nil))
+		if recorder.Code != http.StatusOK || recorder.Body.String() != string(content) {
+			t.Errorf("manifest artefact %s: status = %d, want %d", artifact.Name, recorder.Code, http.StatusOK)
+		}
+	}
 }
 
 func TestProductionDownloadRequiresUntamperedSignedArtifact(t *testing.T) {
@@ -211,6 +267,93 @@ func TestProductionDownloadRequiresUntamperedSignedArtifact(t *testing.T) {
 	handler(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/downloads/configurator", nil))
 	if recorder.Code != http.StatusServiceUnavailable {
 		t.Fatalf("tampered download status = %d, want %d", recorder.Code, http.StatusServiceUnavailable)
+	}
+}
+
+func TestDownloadHandlerMacBetaGate(t *testing.T) {
+	downloadsDir := t.TempDir()
+	dmgContent := []byte("mac-beta-dmg")
+	if err := os.WriteFile(filepath.Join(downloadsDir, "RelaisDesk_Mac.dmg"), dmgContent, 0600); err != nil {
+		t.Fatal(err)
+	}
+	exeContent := []byte("viewer-exe")
+	if err := os.WriteFile(filepath.Join(downloadsDir, "RelaisDesk_Portable.exe"), exeContent, 0600); err != nil {
+		t.Fatal(err)
+	}
+	newCfg := func(token string) *config.Config {
+		return &config.Config{
+			DownloadsDir: downloadsDir, ClientSourceURL: "https://example.test/client",
+			ServerSourceURL: "https://example.test/server", MacBetaToken: token,
+		}
+	}
+
+	// No token presented: DMG refused, other binaries unaffected.
+	handler := DownloadHandler(newCfg("beta-secret-token"))
+	recorder := httptest.NewRecorder()
+	handler(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/downloads/viewer-mac", nil))
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("DMG without token: status = %d, want %d", recorder.Code, http.StatusForbidden)
+	}
+	recorder = httptest.NewRecorder()
+	handler(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/downloads/viewer", nil))
+	if recorder.Code != http.StatusOK || recorder.Body.String() != string(exeContent) {
+		t.Fatalf("non-DMG status = %d, body = %q", recorder.Code, recorder.Body.String())
+	}
+
+	// Wrong token refused.
+	recorder = httptest.NewRecorder()
+	handler(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/downloads/viewer-mac?beta=nope", nil))
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("DMG with wrong token: status = %d, want %d", recorder.Code, http.StatusForbidden)
+	}
+
+	// Correct token served.
+	recorder = httptest.NewRecorder()
+	handler(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/downloads/viewer-mac?beta=beta-secret-token", nil))
+	if recorder.Code != http.StatusOK || recorder.Body.String() != string(dmgContent) {
+		t.Fatalf("DMG with token: status = %d, body = %q", recorder.Code, recorder.Body.String())
+	}
+
+	// Unconfigured gate denies everything (fail closed).
+	openHandler := DownloadHandler(newCfg(""))
+	recorder = httptest.NewRecorder()
+	openHandler(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/downloads/viewer-mac?beta=anything", nil))
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("unconfigured gate: status = %d, want %d", recorder.Code, http.StatusForbidden)
+	}
+
+	// Developer mode stays open for fixtures.
+	devHandler := DownloadHandler(&config.Config{DownloadsDir: downloadsDir, DevHTTP: true})
+	recorder = httptest.NewRecorder()
+	devHandler(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/downloads/viewer-mac", nil))
+	if recorder.Code != http.StatusOK || recorder.Body.String() != string(dmgContent) {
+		t.Fatalf("dev DMG: status = %d, body = %q", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestMacBetaTokenOK(t *testing.T) {
+	makeReq := func(target string) *http.Request {
+		return httptest.NewRequest(http.MethodGet, target, nil)
+	}
+	if macBetaTokenOK(makeReq("/api/v1/downloads/viewer-mac?beta=s3cret"), "s3cret") {
+		// ok
+	} else {
+		t.Fatal("valid token rejected")
+	}
+	for name, req := range map[string]*http.Request{
+		"missing": makeReq("/api/v1/downloads/viewer-mac"),
+		"empty":   makeReq("/api/v1/downloads/viewer-mac?beta="),
+		"wrong":   makeReq("/api/v1/downloads/viewer-mac?beta=wrong"),
+	} {
+		if macBetaTokenOK(req, "s3cret") {
+			t.Errorf("%s token accepted", name)
+		}
+	}
+	if macBetaTokenOK(makeReq("/api/v1/downloads/viewer-mac?beta=s3cret"), "") {
+		t.Error("token accepted with unconfigured gate")
+	}
+	if macBetaTokenOK(nil, "s3cret") {
+		t.Error("nil request accepted")
 	}
 }
 

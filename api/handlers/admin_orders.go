@@ -184,6 +184,7 @@ func AdminMarkOrderPaidHandler(db *sql.DB, cfg *config.Config, mail *mailer.Mail
 			responseKey = lic.KeyHint
 		}
 
+		auditLog(r, "ORDER MARK-PAID", "commande "+order.OrderID+" validée, licence "+MaskLicenseID(lic.LicenseID))
 		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"status":         status,
 			"order_id":       order.OrderID,
@@ -211,6 +212,7 @@ func AdminDeleteOrderHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		auditLog(r, "ORDER DELETE", "commande "+orderID+" supprimée")
 		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"deleted":  true,
 			"order_id": orderID,

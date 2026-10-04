@@ -130,7 +130,7 @@ func UpdateDeviceAgentVersion(db *sql.DB, deviceID, version string) error {
 		return ErrDeviceAuthorization
 	}
 	deviceID = strings.TrimSpace(deviceID)
-	version = strings.TrimSpace(version)
+	version = sanitizeDeviceText(version, 64)
 	if deviceID == "" || version == "" {
 		return errors.New("identifiant ou version manquant")
 	}

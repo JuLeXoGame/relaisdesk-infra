@@ -22,6 +22,16 @@ if [[ ! -f "${bin_dir}/SHA256SUMS.txt" ]]; then
     exit 1
 fi
 
+# Couverture : sha256sum --check ne contrôle que les fichiers listés par le
+# manifeste. Exiger que chaque binaire installé y figure, sinon un manifeste
+# tronqué ou partiel ferait installer des binaires non authentifiés.
+for name in "${required[@]}"; do
+    if ! tr -d '\r' < "${bin_dir}/SHA256SUMS.txt" | grep -q -E "^[0-9a-fA-F]{64}[[:space:]][ *]?${name}$"; then
+        echo "Binaire non couvert par SHA256SUMS.txt : ${name}" >&2
+        exit 1
+    fi
+done
+
 (
     cd "${bin_dir}"
     sha256sum --check SHA256SUMS.txt

@@ -720,8 +720,15 @@ func setFleetPermanentPassword(password string) error {
 		return errors.New("le mot de passe permanent doit comporter au moins 6 caractères")
 	}
 	_ = os.MkdirAll(linuxRustDeskConfig, 0700)
+	// Never on argv (world-readable via ps): hand the secret to the core
+	// through a one-shot 0600 file and --password-file.
+	pwdFile, err := writeEnrollPasswordFile(password)
+	if err != nil {
+		return fmt.Errorf("fichier de mot de passe temporaire impossible: %w", err)
+	}
+	defer os.Remove(pwdFile)
 	binary := "/usr/bin/rustdesk"
-	cmd := exec.Command(binary, "--password", password)
+	cmd := exec.Command(binary, "--password-file", pwdFile)
 	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "HOME=/root", "XDG_CONFIG_HOME=/root/.config", "LANG=C", "LC_ALL=C"}
 	out, err := cmd.CombinedOutput()
 	if err != nil {

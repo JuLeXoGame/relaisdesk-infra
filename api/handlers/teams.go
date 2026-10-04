@@ -60,6 +60,7 @@ func CustomerTeamInviteHandler(db *sql.DB) http.HandlerFunc {
 			writeJSONError(w, "Invitation créée mais envoi indisponible. Utilisez Renvoyer.", 503)
 			return
 		}
+		auditLog(r, "TEAM INVITE", "invitation équipe pour "+req.Email+" (licence "+MaskLicenseID(req.LicenseID)+")")
 		writeJSON(w, 201, map[string]any{"member": member, "message": "Invitation mise en file d’envoi."})
 	}
 }
@@ -81,6 +82,7 @@ func CustomerTeamMemberHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		var err error
+		auditDetail := ""
 		switch {
 		case r.Method == http.MethodPost && resend:
 			_, _, err = dbpkg.IssueTeamInvitationToken(db, identity.ID, id)
@@ -98,6 +100,9 @@ func CustomerTeamMemberHandler(db *sql.DB) http.HandlerFunc {
 			err = dbpkg.UpdateTeamFolders(db, identity.ID, id, req.FolderIDs)
 		case r.Method == http.MethodDelete && !resend:
 			err = dbpkg.RevokeTeamMember(db, identity.ID, id)
+			if err == nil {
+				auditDetail = "membre/invitation " + id + " révoqué"
+			}
 		default:
 			writeJSONError(w, "Méthode non autorisée", 405)
 			return
@@ -105,6 +110,9 @@ func CustomerTeamMemberHandler(db *sql.DB) http.HandlerFunc {
 		if err != nil {
 			writeJSONError(w, "Opération refusée ou invitation expirée", 403)
 			return
+		}
+		if auditDetail != "" {
+			auditLog(r, "TEAM REVOKE", auditDetail)
 		}
 		writeJSON(w, 200, map[string]bool{"success": true})
 	}

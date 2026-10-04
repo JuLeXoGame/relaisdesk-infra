@@ -759,7 +759,7 @@ func buildCreateLicenseTab() fyne.CanvasObject {
 					"Date d'expiration   : %s\n"+
 					"--------------------------------------------------\n"+
 					"Télécharger le Configurateur Technicien :\n"+
-					"https://relaisdesk.fr/downloads/configurator.exe\n\n"+
+					"https://relaisdesk.fr/#downloads\n\n"+
 					"L'équipe RelaisDesk\n"+
 					"https://relaisdesk.fr",
 				lic.Notes, lic.LicenseID, lic.LicenseKey, lic.MaxConnections, lic.ExpiresAt,

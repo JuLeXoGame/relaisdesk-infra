@@ -89,7 +89,7 @@ func main() {
 	if err := releasemanifest.Sign(&manifest, privateKey); err != nil {
 		log.Fatal(err)
 	}
-	if err := releasemanifest.Verify(manifest, *publicKeyExpected); err != nil {
+	if err := releasemanifest.Verify(manifest, *publicKeyExpected, *keyID); err != nil {
 		log.Fatalf("auto-vérification du manifeste: %v", err)
 	}
 	encoded, err := json.MarshalIndent(manifest, "", "  ")

@@ -103,10 +103,11 @@ func ClearLicense() error {
 }
 
 type credentialEnvelope struct {
-	Version   int    `json:"version"`
-	Protected []byte `json:"protected,omitempty"`
-	Email     string `json:"email,omitempty"`
-	LicenseID string `json:"license_id,omitempty"`
+	Version     int    `json:"version"`
+	Protected   []byte `json:"protected,omitempty"`
+	Email       string `json:"email,omitempty"`
+	LicenseID   string `json:"license_id,omitempty"`
+	DeviceToken string `json:"device_token,omitempty"`
 }
 
 func saveCredentials(credentials SavedCredentials) error {

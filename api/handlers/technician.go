@@ -69,7 +69,9 @@ func TechnicianLoginHandler(db *sql.DB, settings ServerSettings) http.HandlerFun
 		if err != nil {
 			log.Printf("[TechnicianLogin] Échec d'authentification: %v", err)
 			time.Sleep(300 * time.Millisecond)
-			writeJSONError(w, err.Error(), http.StatusUnauthorized)
+			// Generic message: backend errors distinguish unknown account,
+			// unknown email and wrong password (enumeration oracle).
+			writeJSONError(w, "Identifiants incorrects", http.StatusUnauthorized)
 			return
 		}
 

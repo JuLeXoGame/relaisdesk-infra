@@ -47,6 +47,7 @@ func TestValidateServerSettings(t *testing.T) {
 		StripeCancelURL:           "https://relaisdesk.example/commande?result=cancel",
 		ReleaseManifestPath:       "/opt/relaisdesk/downloads/release-manifest.json",
 		ReleasePublicKey:          base64.RawURLEncoding.EncodeToString([]byte(strings.Repeat("k", 32))),
+		ReleaseKeyID:              "release-1",
 	}
 	if err := cfg.ValidateServerSettings(); err != nil {
 		t.Fatalf("valid server settings rejected: %v", err)
@@ -107,6 +108,7 @@ func TestProductionEmailAuthenticationSettings(t *testing.T) {
 		StripeCancelURL:           "https://relaisdesk.example/commande?result=cancel",
 		ReleaseManifestPath:       "/opt/relaisdesk/downloads/release-manifest.json",
 		ReleasePublicKey:          base64.RawURLEncoding.EncodeToString([]byte(strings.Repeat("k", 32))),
+		ReleaseKeyID:              "release-1",
 		SMTPHost:                  "smtp.example.test",
 		SMTPFrom:                  "RelaisDesk <contact@relaisdesk.fr>",
 		EmailDomain:               "relaisdesk.fr",

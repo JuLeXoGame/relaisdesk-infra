@@ -101,6 +101,36 @@ func TestSetHwCodecInToml(t *testing.T) {
 			enable: true,
 			want:   []string{"#codec-preference = 'vp9'\n", "\ncodec-preference = 'auto'\n"},
 		},
+		{
+			name:   "clés hors section options ignorées",
+			in:     "codec-preference = 'vp9'\n[options]\nkey = 'k'\n[autre]\nenable-hwcodec = 'N'\n",
+			enable: true,
+			want: []string{
+				"codec-preference = 'vp9'\n[options]\ncodec-preference = 'auto'\n",
+				"[autre]\nenable-hwcodec = 'N'\n",
+				"enable-hwcodec = 'Y'\n",
+			},
+		},
+		{
+			name:    "en-tête options avec commentaire détecté",
+			in:      "[options] # géré par relaisdesk\ncodec-preference = 'vp9'\n",
+			enable:  true,
+			want:    []string{"[options] # géré par relaisdesk\nav1-test = 'N'\n", "codec-preference = 'auto'\n"},
+			notWant: []string{"\n[options]\n"},
+		},
+		{
+			name:    "en-tête options espacé détecté",
+			in:      "[ options ]\nenable-hwcodec = 'N'\n",
+			enable:  true,
+			want:    []string{"[ options ]\ncodec-preference = 'auto'\n", "enable-hwcodec = 'Y'\n"},
+			notWant: []string{"\n[options]\n"},
+		},
+		{
+			name:   "section options sensible à la casse",
+			in:     "[Options]\ncodec-preference = 'vp9'\n",
+			enable: true,
+			want:   []string{"[Options]\ncodec-preference = 'vp9'\n", "\n[options]\ncodec-preference = 'auto'\n"},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -120,6 +150,25 @@ func TestSetHwCodecInToml(t *testing.T) {
 				t.Errorf("non idempotent:\n%q\nvs\n%q", got, again)
 			}
 		})
+	}
+}
+
+func TestOptionsHeaderName(t *testing.T) {
+	cases := map[string]string{
+		"[options]":               "options",
+		"[options] # commentaire": "options",
+		"[ options ]":             "options",
+		"[Options]":               "Options",
+		"[autre]":                 "autre",
+		"key = 'v'":               "",
+		"[sans-fin":               "",
+		"[]":                      "",
+		"[[tableau]]":             "[tableau",
+	}
+	for in, want := range cases {
+		if got := optionsHeaderName(in); got != want {
+			t.Errorf("optionsHeaderName(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
 
@@ -149,6 +198,23 @@ func TestSetHwCodecInFiles(t *testing.T) {
 		if !strings.Contains(string(data), "codec-preference = 'auto'") {
 			t.Errorf("%s non patché: %q", p, data)
 		}
+	}
+	// Atomic rewrite: no staging files left behind, mode preserved.
+	for _, dir := range []string{dir, filepath.Join(dir, "sous")} {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, e := range entries {
+			if strings.HasPrefix(e.Name(), ".tmp-") {
+				t.Errorf("fichier temporaire restant: %s", e.Name())
+			}
+		}
+	}
+	if info, err := os.Stat(p1); err != nil {
+		t.Fatal(err)
+	} else if info.Mode().Perm() != 0600 {
+		t.Errorf("mode = %v, want 0600", info.Mode())
 	}
 	if _, err := setHwCodecInFiles([]string{filepath.Join(dir, "rien.toml")}, true); err == nil {
 		t.Fatal("erreur attendue quand aucun fichier")

@@ -3,6 +3,10 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -44,5 +48,36 @@ func TestDarwinParseNumericRustDeskID(t *testing.T) {
 	invalid := "error: no connection\n"
 	if id := parseNumericRustDeskID(invalid); id != "" {
 		t.Fatalf("expected empty for invalid output, got %q", id)
+	}
+}
+
+func TestDarwinCandidateUsable(t *testing.T) {
+	dir := t.TempDir()
+	good := filepath.Join(dir, "rustdesk")
+	payload := []byte("fake-macos-binary")
+	if err := os.WriteFile(good, payload, 0600); err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(payload)
+	pin := hex.EncodeToString(sum[:])
+	cases := []struct {
+		name       string
+		path, sha  string
+		exists     bool
+		override   bool
+		want       bool
+	}{
+		{"matching pin wins anywhere", good, pin, true, false, true},
+		{"wrong pin rejects", good, strings.Repeat("0", 64), true, false, false},
+		{"missing file rejects", good, pin, false, false, false},
+		{"/Applications allowed unpinned", "/Applications/RelaisDesk.app/Contents/MacOS/RelaisDesk", "", true, false, true},
+		{"user path rejected unpinned", "/Users/moi/rustdesk", "", true, false, false},
+		{"user path allowed with override", "/Users/moi/rustdesk", "", true, true, true},
+		{"sibling of Applications rejected", "/ApplicationsX/rustdesk", "", true, false, false},
+	}
+	for _, tc := range cases {
+		if got := darwinCandidateUsable(tc.path, tc.sha, tc.exists, tc.override); got != tc.want {
+			t.Errorf("%s: got %v want %v", tc.name, got, tc.want)
+		}
 	}
 }

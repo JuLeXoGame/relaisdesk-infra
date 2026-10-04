@@ -71,15 +71,20 @@ func TestVerifyReleaseManifest(t *testing.T) {
 	manifest.Signature = base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, payload))
 
 	// 1. Verify valid manifest
-	if err := verifyReleaseManifest(&manifest, pubEncoded); err != nil {
+	if err := verifyReleaseManifest(&manifest, pubEncoded, "test-key"); err != nil {
 		t.Fatalf("expected valid manifest, got: %v", err)
 	}
 
 	// 2. Verify with wrong public key
 	wrongPub, _, _ := ed25519.GenerateKey(rand.Reader)
 	wrongPubEncoded := base64.RawURLEncoding.EncodeToString(wrongPub)
-	if err := verifyReleaseManifest(&manifest, wrongPubEncoded); err == nil {
+	if err := verifyReleaseManifest(&manifest, wrongPubEncoded, "test-key"); err == nil {
 		t.Fatal("expected error with wrong public key, got nil")
+	}
+
+	// 2b. Verify with unexpected key ID
+	if err := verifyReleaseManifest(&manifest, pubEncoded, "release-1"); err == nil {
+		t.Fatal("expected error with unexpected key ID, got nil")
 	}
 
 	// 3. Verify with tampered artifact
@@ -87,7 +92,7 @@ func TestVerifyReleaseManifest(t *testing.T) {
 	tampered.Artifacts = []manifestArtifact{
 		{Name: "RelaisDesk_Portable.exe", URL: "https://example.com/malicious.exe", SHA256: "badbad", Size: 100},
 	}
-	if err := verifyReleaseManifest(&tampered, pubEncoded); err == nil {
+	if err := verifyReleaseManifest(&tampered, pubEncoded, "test-key"); err == nil {
 		t.Fatal("expected error with tampered artifacts, got nil")
 	}
 }

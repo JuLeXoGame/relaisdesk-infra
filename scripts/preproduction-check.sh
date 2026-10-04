@@ -52,7 +52,9 @@ if [ -n "$LIVE_API_URL" ]; then
     STATUS=$(curl -fsS -m 10 "$HEALTH_URL" | python3 -c "import json,sys; print(json.load(sys.stdin).get('status',''))")
     if [ "$STATUS" != "healthy" ]; then echo "API live dégradée" >&2; exit 1; fi
 
+    if ! printf '%s' "$RUSTDESK_HOST" | grep -Eq '^[A-Za-z0-9.-]+$'; then echo "Hôte RustDesk invalide." >&2; exit 1; fi
     for port in "$RENDEZVOUS_PORT" "$RELAY_PORT"; do
+        if ! printf '%s' "$port" | grep -Eq '^[0-9]+$'; then echo "Port invalide." >&2; exit 1; fi
         if ! timeout 10 bash -c "cat < /dev/null > /dev/tcp/$RUSTDESK_HOST/$port" 2>/dev/null; then
             echo "Port TCP $RUSTDESK_HOST:$port inaccessible" >&2; exit 1
         fi

@@ -196,7 +196,7 @@ func asyncCustomerPanel(panelID int, relaunch func(int), build func(*customerDas
 	load = func() {
 		showLoading()
 		go func() {
-			token := customerSessionToken
+			token := getCustomerSessionToken()
 			dash, err := getCustomerDashboard(token)
 			fyne.Do(func() {
 				if err != nil {
@@ -319,8 +319,8 @@ func showErrorWithLinks(err error, parent fyne.Window) {
 // un challenge, sinon le formulaire de connexion complet.
 func customerGatePanel(panelID int, relaunch func(int), builder func(int, func(int)) fyne.CanvasObject) fyne.CanvasObject {
 	if !customerLoggedIn() {
-		if customerPendingChallenge != "" {
-			return customer2FAPanel(customerPendingChallenge, customerPendingEmail, customerPendingEmailAllowed, panelID, relaunch)
+		if chg, eml, allowed := getCustomerPending(); chg != "" {
+			return customer2FAPanel(chg, eml, allowed, panelID, relaunch)
 		}
 		return customerLoginPanel(panelID, relaunch, "")
 	}
@@ -339,7 +339,7 @@ func customerLoginPanel(panelID int, relaunch func(int), notice string) fyne.Can
 	}
 	emailEntry := widget.NewEntry()
 	emailEntry.SetPlaceHolder(T("email_placeholder"))
-	emailEntry.Text = customerSessionEmail
+	emailEntry.Text = getCustomerSessionEmail()
 	passEntry := widget.NewPasswordEntry()
 	passEntry.SetPlaceHolder(T("password_placeholder"))
 	errLabel := widget.NewLabel("")
@@ -358,7 +358,7 @@ func customerLoginPanel(panelID int, relaunch func(int), notice string) fyne.Can
 		loginBtn.Disable()
 		errLabel.SetText(T("login_checking"))
 		go func() {
-			res, err := customerLoginPassword(email, password, customerDeviceToken)
+			res, err := customerLoginPassword(email, password, getCustomerDeviceToken())
 			fyne.Do(func() {
 				loginBtn.Enable()
 				if err != nil {
@@ -445,9 +445,9 @@ func customer2FAPanel(challengeToken, email string, emailCodeAllowed bool, panel
 					return
 				}
 				if res.DeviceToken != "" {
-					customerDeviceToken = res.DeviceToken
+					setCustomerDeviceToken(res.DeviceToken)
 				} else if !rememberCheck.Checked {
-					customerDeviceToken = ""
+					setCustomerDeviceToken("")
 				}
 				storeCustomerSession(res)
 				relaunch(panelID)
@@ -583,7 +583,7 @@ func overviewPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 							return
 						}
 						go func() {
-							msg, err := cancelCustomerSubscription(customerSessionToken, s.ID)
+							msg, err := cancelCustomerSubscription(getCustomerSessionToken(), s.ID)
 							fyne.Do(func() {
 								if err != nil {
 									dialog.ShowError(err, mainWindow)
@@ -616,7 +616,7 @@ func open2FAEnableDialog(panelID int, relaunch func(int)) {
 		container.NewCenter(widget.NewLabel(T("login_checking"))), mainWindow)
 	loading.Show()
 	go func() {
-		setup, err := setupCustomer2FA(customerSessionToken)
+		setup, err := setupCustomer2FA(getCustomerSessionToken())
 		fyne.Do(func() {
 			loading.Hide()
 			if err != nil {
@@ -665,7 +665,7 @@ func open2FAEnableDialog(panelID int, relaunch func(int)) {
 						return
 					}
 					go func() {
-						msg, err := enableCustomer2FA(customerSessionToken, password, setup.Secret, code, setup.RecoveryCodes)
+						msg, err := enableCustomer2FA(getCustomerSessionToken(), password, setup.Secret, code, setup.RecoveryCodes)
 						fyne.Do(func() {
 							if err != nil {
 								if isCustomerSessionExpired(err) {
@@ -707,7 +707,7 @@ func open2FADisableDialog(panelID int, relaunch func(int)) {
 			return
 		}
 		go func() {
-			msg, err := disableCustomer2FA(customerSessionToken, password, strings.TrimSpace(codeEntry.Text))
+			msg, err := disableCustomer2FA(getCustomerSessionToken(), password, strings.TrimSpace(codeEntry.Text))
 			fyne.Do(func() {
 				if err != nil {
 					if isCustomerSessionExpired(err) {
@@ -759,7 +759,7 @@ func settingsPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 		remindersCheck.Checked = dash.RenewalRemindersEnabled
 		remindersCheck.OnChanged = func(on bool) {
 			go func() {
-				err := setRenewalReminders(customerSessionToken, on)
+				err := setRenewalReminders(getCustomerSessionToken(), on)
 				fyne.Do(func() {
 					if err != nil {
 						remindersCheck.SetChecked(!on)
@@ -794,7 +794,7 @@ func settingsPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 			}
 			pwdMsg.SetText(T("login_checking"))
 			go func() {
-				err := changeCustomerPassword(customerSessionToken, old, newPass)
+				err := changeCustomerPassword(getCustomerSessionToken(), old, newPass)
 				fyne.Do(func() {
 					if err != nil {
 						pwdMsg.SetText(err.Error())
@@ -815,7 +815,7 @@ func settingsPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 
 		twofaBox := container.NewVBox(widget.NewLabel(T("login_checking")))
 		go func() {
-			status, err := getCustomer2FAStatus(customerSessionToken)
+			status, err := getCustomer2FAStatus(getCustomerSessionToken())
 			fyne.Do(func() {
 				if err != nil {
 					if isCustomerSessionExpired(err) {
@@ -853,7 +853,7 @@ func settingsPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 		), customerCardBorder, customerCardFill)
 
 		logoutCustomerBtn := widget.NewButton(T("logout_customer_btn"), func() {
-			token := customerSessionToken
+			token := getCustomerSessionToken()
 			if token != "" {
 				go func() { _ = customerLogout(token) }()
 			}

@@ -152,17 +152,17 @@ func cleanupCorruptedConfig(dir string) {
 
 func generateRustDesk2Toml(rendezvousWithPort, rendezvousHost, relayServer, publicKey, tokenFile, proofKeyFile string) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("rendezvous_server = '%s'\r\n", rendezvousWithPort))
+	sb.WriteString("rendezvous_server = " + tomlString(rendezvousWithPort) + "\r\n")
 	sb.WriteString("nat_type = 1\r\n")
 	sb.WriteString("serial = 0\r\n\r\n")
 
 	sb.WriteString("[options]\r\n")
-	sb.WriteString(fmt.Sprintf("custom-rendezvous-server = '%s'\r\n", rendezvousHost))
-	sb.WriteString(fmt.Sprintf("relay-server = '%s'\r\n", relayServer))
-	sb.WriteString(fmt.Sprintf("api-server = '%s'\r\n", tomlEscape(APIURL)))
-	sb.WriteString(fmt.Sprintf("key = '%s'\r\n", publicKey))
-	sb.WriteString(fmt.Sprintf("relaisdesk-token-file = '%s'\r\n", tomlEscape(tokenFile)))
-	sb.WriteString(fmt.Sprintf("relaisdesk-proof-key-file = '%s'\r\n", tomlEscape(proofKeyFile)))
+	sb.WriteString("custom-rendezvous-server = " + tomlString(rendezvousHost) + "\r\n")
+	sb.WriteString("relay-server = " + tomlString(relayServer) + "\r\n")
+	sb.WriteString("api-server = " + tomlString(APIURL) + "\r\n")
+	sb.WriteString("key = " + tomlString(publicKey) + "\r\n")
+	sb.WriteString("relaisdesk-token-file = " + tomlString(tokenFile) + "\r\n")
+	sb.WriteString("relaisdesk-proof-key-file = " + tomlString(proofKeyFile) + "\r\n")
 	sb.WriteString(videoCodecTomlLines(true))
 
 	return sb.String()
@@ -389,13 +389,7 @@ func tomlLine(key, value string) string {
 	if key == "nat_type" || key == "serial" {
 		return fmt.Sprintf("%s = %s", key, value)
 	}
-	return fmt.Sprintf("%s = '%s'", key, tomlEscape(value))
-}
-
-func tomlEscape(value string) string {
-	value = strings.ReplaceAll(value, `\`, `\\`)
-	value = strings.ReplaceAll(value, `'`, `\'`)
-	return value
+	return fmt.Sprintf("%s = %s", key, tomlString(value))
 }
 
 func createDesktopShortcut(_ string) error {

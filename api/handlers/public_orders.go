@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"crypto/subtle"
 	dbpkg "database"
 	"database/sql"
 	"encoding/json"
@@ -18,6 +19,7 @@ import (
 
 	"api/config"
 	"api/mailer"
+	"api/middleware"
 	"api/releasemanifest"
 )
 
@@ -293,6 +295,33 @@ func PublicPaymentMethodsHandler(cfg *config.Config) http.HandlerFunc {
 	}
 }
 
+// macBetaGateLimiter caps beta-token guessing on macOS downloads: 30 DMG
+// requests per minute and IP, with a 15-minute ban after repeated 403s.
+// Memory-only (no shared DB handle at this layer): each API process keeps
+// its own counters, which is enough for a beta gate.
+var macBetaGateLimiter = middleware.StrictAuthLimiter(30, time.Minute)
+
+// isMacBetaArtifact reports whether a resolved download filename is a
+// beta-gated macOS build.
+func isMacBetaArtifact(fileName string) bool {
+	return strings.HasSuffix(strings.ToLower(strings.TrimSpace(fileName)), ".dmg")
+}
+
+// macBetaTokenOK compares the ?beta= query token against the configured
+// shared secret in constant time. An unconfigured gate denies everything:
+// the beta password previously shipped inside public site JS, so any
+// fail-open default would silently restore unrestricted access.
+func macBetaTokenOK(r *http.Request, expected string) bool {
+	if r == nil || strings.TrimSpace(expected) == "" {
+		return false
+	}
+	provided := r.URL.Query().Get("beta")
+	if provided == "" {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(provided), []byte(expected)) == 1
+}
+
 // DownloadHandler serves installation binaries directly from the API server.
 func DownloadHandler(cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -319,6 +348,8 @@ func DownloadHandler(cfg *config.Config) http.HandlerFunc {
 		case "configurator-mac", "technicien-mac", "mac-technician", "relaisdesk_technicien_mac.dmg", "relaisdesk_technicien.dmg":
 			fileName = "RelaisDesk_Technicien_Mac.dmg"
 			legacyNames = []string{"RelaisDesk_Technicien.dmg"}
+		case "configurator-mac-intel", "technicien-mac-intel", "mac-intel-technician", "relaisdesk_technicien_mac_intel.dmg":
+			fileName = "RelaisDesk_Technicien_Mac_Intel.dmg"
 		case "setup", "setup.exe", "viewer-setup", "relaisdesk_setup.exe", "relaisdesk_setup_1.0.0.exe":
 			fileName = "RelaisDesk_Setup.exe"
 			legacyNames = []string{"RelaisDesk_Setup_1.0.0.exe"}
@@ -333,6 +364,8 @@ func DownloadHandler(cfg *config.Config) http.HandlerFunc {
 		case "viewer-mac", "viewer-dmg", "mac-viewer", "relaisdesk_mac.dmg", "relaisdesk.dmg":
 			fileName = "RelaisDesk_Mac.dmg"
 			legacyNames = []string{"RelaisDesk.dmg"}
+		case "viewer-mac-intel", "viewer-dmg-intel", "mac-intel-viewer", "relaisdesk_mac_intel.dmg":
+			fileName = "RelaisDesk_Mac_Intel.dmg"
 		case "sha256sums.txt", "sha256sums":
 			fileName = "SHA256SUMS.txt"
 		case "release-manifest.json", "manifest.json", "manifest":
@@ -340,6 +373,23 @@ func DownloadHandler(cfg *config.Config) http.HandlerFunc {
 		default:
 			http.NotFound(w, r)
 			return
+		}
+
+		// Beta gate for macOS builds: DMGs are reserved for testers holding
+		// the shared token (fail closed when MAC_BETA_TOKEN is unset).
+		// Developer mode stays open so fixtures keep downloading.
+		if !cfg.DevHTTP && isMacBetaArtifact(fileName) {
+			authorized := false
+			macBetaGateLimiter(http.HandlerFunc(func(w2 http.ResponseWriter, r2 *http.Request) {
+				if macBetaTokenOK(r2, cfg.MacBetaToken) {
+					authorized = true
+					return
+				}
+				writeJSONError(w2, "Téléchargement macOS réservé aux testeurs bêta", http.StatusForbidden)
+			})).ServeHTTP(w, r)
+			if !authorized {
+				return
+			}
 		}
 
 		names := append([]string{fileName}, legacyNames...)
@@ -376,7 +426,7 @@ func DownloadHandler(cfg *config.Config) http.HandlerFunc {
 		// never into a client update.
 		if !cfg.DevHTTP && strings.TrimSpace(cfg.ReleaseManifestPath) != "" && strings.TrimSpace(cfg.ReleasePublicKey) != "" {
 			if filepath.Base(filePath) != "release-manifest.json" {
-				manifest, err := releasemanifest.LoadVerified(cfg.ReleaseManifestPath, cfg.ReleasePublicKey)
+				manifest, err := releasemanifest.LoadVerified(cfg.ReleaseManifestPath, cfg.ReleasePublicKey, releaseSigningKeyID(cfg))
 				if err != nil {
 					writeJSONError(w, "Téléchargement suspendu: manifeste de version non vérifiable", http.StatusServiceUnavailable)
 					return

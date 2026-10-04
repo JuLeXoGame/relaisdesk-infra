@@ -184,13 +184,9 @@ func CustomerLoginWithPasswordHandler(db *sql.DB) http.HandlerFunc {
 
 		authRes, err := dbpkg.ValidateCustomerPasswordWith2FA(db, request.Email, request.Password, request.DeviceToken)
 		if err != nil {
-			if authRes != nil && !authRes.HasPassword {
-				writeJSON(w, http.StatusBadRequest, map[string]any{
-					"error":               "Aucun mot de passe n'a été défini pour ce compte. Veuillez cliquer sur 'Mot de passe oublié' pour créer votre mot de passe.",
-					"need_password_setup": true,
-				})
-				return
-			}
+			// Generic message in all cases: revealing "no password set"
+			// discloses account existence (enumeration oracle). The login
+			// page already links to password recovery.
 			time.Sleep(300 * time.Millisecond) // Throttling against distributed brute force
 			writeJSONError(w, "Identifiants incorrects", http.StatusUnauthorized)
 			return

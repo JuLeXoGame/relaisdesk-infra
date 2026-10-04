@@ -83,13 +83,21 @@ func activateViewerCode(code string) (*ActivationResponse, error) {
 	}
 	defer resp.Body.Close()
 
-	var result ActivationResponse
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&result); err != nil {
+	// Status first: a 429/401 with an empty or non-JSON body must still
+	// surface its dedicated error instead of "réponse serveur invalide".
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
 		return nil, errors.New("réponse serveur invalide")
 	}
 
 	if resp.StatusCode == http.StatusTooManyRequests {
 		return nil, errors.New("trop de tentatives. Réessayez dans quelques minutes")
+	}
+	var result ActivationResponse
+	// Best-effort off-200: a 401 with an empty body must report the auth
+	// error below, not a decode failure.
+	if err := json.Unmarshal(respBody, &result); err != nil && resp.StatusCode == http.StatusOK {
+		return nil, errors.New("réponse serveur invalide")
 	}
 	if resp.StatusCode == http.StatusUnauthorized || !result.Valid {
 		if result.Error != "" {

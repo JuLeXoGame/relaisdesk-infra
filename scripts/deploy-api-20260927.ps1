@@ -39,13 +39,14 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$Root = "C:\Users\Administrator\Documents\Projets\projet"
+$Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $BinDir = Join-Path $Root "bin"
 if ([string]::IsNullOrWhiteSpace($PpkPath)) {
     $PpkPath = Join-Path $Root ".secrets\oracle private.ppk"
 }
 
 if ($Stamp -notmatch '^[A-Za-z0-9._-]+$') { throw "Stamp invalide." }
+if ($WslProject -notmatch '^[A-Za-z0-9_~./-]+$') { throw "WslProject invalide (interpolé dans bash -lc)." }
 
 $files = @("api", "relaisdesk-backup", "relaisdesk-emailcheck", "relaisdesk-dbcheck", "SHA256SUMS.txt")
 
@@ -53,7 +54,7 @@ if (-not $SkipSync) {
     Write-Host "===> S/4 Synchro WSL -> Windows"
     $wslArgs = @()
     if (-not [string]::IsNullOrWhiteSpace($WslDistro)) { $wslArgs += @("-d", $WslDistro) }
-    $wslArgs += @("--exec", "bash", "-lc", "python3 $WslProject/scripts/sync-wsl-to-windows.py")
+    $wslArgs += @("--exec", "bash", "-lc", "python3 `"$WslProject/scripts/sync-wsl-to-windows.py`"")
     & wsl @wslArgs
     if ($LASTEXITCODE -ne 0) { throw "Synchro WSL echouee (ou -WslProject/-WslDistro a ajuster)" }
     Write-Host "  [OK] Miroir Windows synchronise"

@@ -698,6 +698,7 @@
               <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Setup_1.0.0.exe" class="btn btn-primary btn-sm"><svg class="btn-logo" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path fill="currentColor" d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.2 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg><span data-i18n="dl_win_installer">Installeur Setup (.exe)</span></a>
               <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Portable.exe" class="btn btn-secondary btn-sm"><svg class="btn-logo" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path fill="currentColor" d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.2 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg><span data-i18n="dl_win_portable">Portatif (.exe)</span></a>
               <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Mac.dmg" class="btn btn-secondary btn-sm btn-mac-locked" data-i18n="dl_mac_dmg" title="Bientôt disponible (Accès réservé)">🍏 macOS (.dmg) — Bientôt disponible</a>
+              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Mac_Intel.dmg" class="btn btn-secondary btn-sm btn-mac-locked" data-i18n="dl_mac_intel_dmg" title="Bientôt disponible (Accès réservé)">🍏 macOS Intel (.dmg) — Bientôt disponible</a>
               <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien.deb" class="btn btn-secondary btn-sm" data-i18n="dl_linux_deb">🐧 Linux (.deb)</a>
               <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Linux" class="btn btn-secondary btn-sm" data-i18n="dl_linux_portable" title="Technicien portatif Linux, sans installation">🐧 Technicien portatif Linux</a>
             </div>
@@ -711,6 +712,7 @@
               <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Setup.exe" class="btn btn-primary btn-sm"><svg class="btn-logo" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path fill="currentColor" d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.2 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg><span data-i18n="dl_win_installer">Installeur Setup (.exe)</span></a>
               <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Portable.exe" class="btn btn-secondary btn-sm"><svg class="btn-logo" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path fill="currentColor" d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.2 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg><span data-i18n="dl_win_portable">Portatif (.exe)</span></a>
               <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Mac.dmg" class="btn btn-secondary btn-sm btn-mac-locked" data-i18n="dl_mac_dmg" title="Bientôt disponible (Accès réservé)">🍏 macOS (.dmg) — Bientôt disponible</a>
+              <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Mac_Intel.dmg" class="btn btn-secondary btn-sm btn-mac-locked" data-i18n="dl_mac_intel_dmg" title="Bientôt disponible (Accès réservé)">🍏 macOS Intel (.dmg) — Bientôt disponible</a>
               <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_viewer.deb" class="btn btn-secondary btn-sm" data-i18n="dl_linux_deb">🐧 Linux (.deb)</a>
             </div>
           </div>
@@ -1109,12 +1111,12 @@
       <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🍏</div>
       <h3 style="font-size: 1.35rem; margin-bottom: 0.5rem;" data-i18n="mac_modal_title">Accès Bêta-testeurs macOS</h3>
       <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1.25rem;" data-i18n="mac_modal_desc">
-        La version macOS est actuellement réservée à l'équipe de test. Veuillez saisir le mot de passe pour débloquer le téléchargement :
+        La version macOS est actuellement réservée à l'équipe de test. Veuillez saisir le jeton bêta fourni par l'équipe :
       </p>
       <form id="macPasswordForm">
         <div class="form-group" style="margin-bottom: 1rem;">
-          <input type="password" id="macPasswordInput" class="input-text" style="width: 100%; text-align: center; font-size: 1.05rem; letter-spacing: 2px;" placeholder="Mot de passe..." autocomplete="current-password" required>
-          <div id="macPasswordError" style="display: none; color: var(--danger); font-size: 0.85rem; margin-top: 0.5rem; font-weight: 500;" data-i18n="mac_modal_error">Mot de passe incorrect.</div>
+          <input type="password" id="macPasswordInput" class="input-text" style="width: 100%; text-align: center; font-size: 1.05rem; letter-spacing: 2px;" placeholder="Jeton bêta..." autocomplete="current-password" required>
+          <div id="macPasswordError" style="display: none; color: var(--danger); font-size: 0.85rem; margin-top: 0.5rem; font-weight: 500;" data-i18n="mac_modal_error">Veuillez saisir un jeton.</div>
         </div>
         <button type="submit" class="btn btn-primary btn-block" data-i18n="mac_modal_btn">🔓 Débloquer le téléchargement</button>
       </form>

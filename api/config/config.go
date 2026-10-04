@@ -79,6 +79,8 @@ type Config struct {
 	ServerSourceURL     string
 	ReleaseManifestPath string
 	ReleasePublicKey    string
+	ReleaseKeyID        string
+	MacBetaToken        string
 
 	// Explicit operating decision; an override is not a declaration of compliance.
 	B2CSalesEnabled                 bool
@@ -177,15 +179,15 @@ func LoadConfig() *Config {
 		BankIBAN:                        getEnv("BANK_IBAN", "FR76 0000 0000 0000 0000 0000 000"),
 		BankBIC:                         getEnv("BANK_BIC", "BNPAFRPP"),
 		BankHolder:                      getEnv("BANK_HOLDER", "Informatique A Domicile 03 / RelaisDesk"),
-		CryptoEnabled:          getEnv("CRYPTO_ENABLED", "false") == "true",
-		CryptoQuoteTTLMinutes:  getEnvInt("CRYPTO_QUOTE_TTL_MINUTES", 30),
-		OKXBaseURL:             strings.TrimRight(getEnv("OKX_BASE_URL", "https://www.okx.com"), "/"),
-		OKXAPIKey:              strings.TrimSpace(getEnv("OKX_API_KEY", "")),
-		OKXAPISecret:           strings.TrimSpace(getEnv("OKX_API_SECRET", "")),
-		OKXAPIPassphrase:       strings.TrimSpace(getEnv("OKX_API_PASSPHRASE", "")),
-		OKXBTCDepositAddress:   strings.TrimSpace(getEnv("OKX_BTC_DEPOSIT_ADDRESS", "")),
-		OKXXRPDepositAddress:   strings.TrimSpace(getEnv("OKX_XRP_DEPOSIT_ADDRESS", "")),
-		OKXXRPDepositTag:       strings.TrimSpace(getEnv("OKX_XRP_DEPOSIT_TAG", "")),
+		CryptoEnabled:                   getEnv("CRYPTO_ENABLED", "false") == "true",
+		CryptoQuoteTTLMinutes:           getEnvInt("CRYPTO_QUOTE_TTL_MINUTES", 30),
+		OKXBaseURL:                      strings.TrimRight(getEnv("OKX_BASE_URL", "https://www.okx.com"), "/"),
+		OKXAPIKey:                       strings.TrimSpace(getEnv("OKX_API_KEY", "")),
+		OKXAPISecret:                    strings.TrimSpace(getEnv("OKX_API_SECRET", "")),
+		OKXAPIPassphrase:                strings.TrimSpace(getEnv("OKX_API_PASSPHRASE", "")),
+		OKXBTCDepositAddress:            strings.TrimSpace(getEnv("OKX_BTC_DEPOSIT_ADDRESS", "")),
+		OKXXRPDepositAddress:            strings.TrimSpace(getEnv("OKX_XRP_DEPOSIT_ADDRESS", "")),
+		OKXXRPDepositTag:                strings.TrimSpace(getEnv("OKX_XRP_DEPOSIT_TAG", "")),
 		DownloadsDir:                    getEnv("DOWNLOADS_DIR", "installer/build"),
 		InvoicesDir:                     invoicesDir,
 		PublicWebsiteURL:                getEnv("PUBLIC_WEBSITE_URL", "https://relaisdesk.fr"),
@@ -193,6 +195,8 @@ func LoadConfig() *Config {
 		ServerSourceURL:                 getEnv("SERVER_SOURCE_URL", ""),
 		ReleaseManifestPath:             getEnv("RELEASE_MANIFEST_PATH", "/opt/relaisdesk/downloads/release-manifest.json"),
 		ReleasePublicKey:                getEnv("RELEASE_PUBLIC_KEY", ""),
+		ReleaseKeyID:                    getEnv("RELEASE_KEY_ID", "release-1"),
+		MacBetaToken:                    getEnv("MAC_BETA_TOKEN", ""),
 		B2CSalesEnabled:                 getEnv("B2C_SALES_ENABLED", "false") == "true",
 		B2CMediationPendingAcknowledged: getEnv("B2C_MEDIATION_PENDING_ACKNOWLEDGED", "false") == "true",
 		LegalPhone:                      getEnv("LEGAL_PHONE", ""),
@@ -354,6 +358,9 @@ func (c *Config) ValidateServerSettings() error {
 	}
 	if !c.DevHTTP && (strings.TrimSpace(c.ReleaseManifestPath) == "" || !validEd25519PublicKey(c.ReleasePublicKey)) {
 		return fmt.Errorf("RELEASE_MANIFEST_PATH et RELEASE_PUBLIC_KEY Ed25519 sont obligatoires en production")
+	}
+	if strings.TrimSpace(c.ReleaseKeyID) == "" {
+		return fmt.Errorf("RELEASE_KEY_ID ne doit pas être vide")
 	}
 	if !c.DevHTTP && !validLegalPhone(c.LegalPhone) {
 		return fmt.Errorf("LEGAL_PHONE doit contenir le numéro professionnel publié avant toute mise en production")

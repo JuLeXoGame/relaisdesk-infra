@@ -6,7 +6,9 @@
 // =========================================================================
 // 1. CONFIGURATION GLOBALE DE L'API
 // =========================================================================
-const API_BASE_URL = "https://api.relaisdesk.fr";
+const API_BASE_URL = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+  ? 'http://localhost:8443'
+  : 'https://api.relaisdesk.fr';
 const TERMS_VERSION = "2026-09-27";
 const PRO_MONTHLY_PRICE = 110.0;
 const PRO_ANNUAL_PRICE = PRO_MONTHLY_PRICE * 10;
@@ -707,7 +709,7 @@ function initOrderForm() {
             country: "France",
             siret: siretInput ? siretInput.value.trim() : "",
             customer_type: customerTypeValue,
-            terms_version: "2026-09-24",
+            terms_version: TERMS_VERSION,
             terms_accepted: true,
             recurring_accepted: true,
             trial_terms_version: "2026-09-24-fleet-v3",
@@ -1144,10 +1146,16 @@ function initMobileMenu() {
 }
 
 // =========================================================================
-// GESTION DU TÉLÉCHARGEMENT BÊTA MACOS AVEC MOT DE PASSE
+// GESTION DU TÉLÉCHARGEMENT BÊTA MACOS (jeton vérifié par l'API)
 // =========================================================================
-const MAC_TEST_PASSWORD = "SupermegaCidhom03";
+// Le jeton n'est jamais comparé ici : le navigateur le joint à l'URL et
+// l'API le vérifie (MAC_BETA_TOKEN). Aucun secret dans ce fichier public.
 let pendingMacDownloadUrl = null;
+
+function macDownloadUrlWithToken(url, token) {
+  const joiner = url.indexOf("?") === -1 ? "?" : "&";
+  return url + joiner + "beta=" + encodeURIComponent(token);
+}
 
 function initMacBetaGate() {
   const modal = document.getElementById("macPasswordModal");
@@ -1166,12 +1174,10 @@ function initMacBetaGate() {
         setTimeout(() => input.focus(), 150);
       }
     } else {
-      const pass = window.prompt("Accès réservé aux testeurs macOS. Veuillez entrer votre mot de passe :");
-      if (pass === MAC_TEST_PASSWORD) {
-        sessionStorage.setItem("mac_beta_unlocked", "1");
-        window.location.href = url;
-      } else if (pass !== null) {
-        alert("Mot de passe incorrect.");
+      const pass = window.prompt("Accès réservé aux testeurs macOS. Veuillez entrer votre jeton bêta :");
+      if (pass !== null && pass.trim() !== "") {
+        sessionStorage.setItem("mac_beta_token", pass.trim());
+        window.location.href = macDownloadUrlWithToken(url, pass.trim());
       }
     }
   }
@@ -1183,14 +1189,15 @@ function initMacBetaGate() {
   }
 
   // Intercepter les clics sur les boutons de téléchargement macOS
-  document.querySelectorAll('a[href*="_Mac.dmg"], a[href*="RelaisDesk_Mac.dmg"], .btn-mac-locked').forEach(btn => {
+  document.querySelectorAll('a[href*="_Mac.dmg"], a[href*="RelaisDesk_Mac.dmg"], a[href*="Mac_Intel.dmg"], .btn-mac-locked').forEach(btn => {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       const targetUrl = btn.getAttribute("href");
 
-      // Si déjà débloqué pendant cette session de navigation
-      if (sessionStorage.getItem("mac_beta_unlocked") === "1") {
-        window.location.href = targetUrl;
+      // Jeton déjà saisi pendant cette session de navigation
+      const storedToken = sessionStorage.getItem("mac_beta_token");
+      if (storedToken) {
+        window.location.href = macDownloadUrlWithToken(targetUrl, storedToken);
         return;
       }
 
@@ -1215,11 +1222,11 @@ function initMacBetaGate() {
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const entered = (input ? input.value : "").trim();
-      if (entered === MAC_TEST_PASSWORD) {
-        sessionStorage.setItem("mac_beta_unlocked", "1");
+      if (entered !== "") {
+        sessionStorage.setItem("mac_beta_token", entered);
         closeMacModal();
         if (pendingMacDownloadUrl) {
-          window.location.href = pendingMacDownloadUrl;
+          window.location.href = macDownloadUrlWithToken(pendingMacDownloadUrl, entered);
         }
       } else {
         if (errorMsg) errorMsg.style.display = "block";

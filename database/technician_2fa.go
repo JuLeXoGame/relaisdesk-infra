@@ -33,7 +33,6 @@ func GetTechnician2FAConfig(db *sql.DB, licenseID, email string) (enabled bool, 
 	return getMFAConfigTx(tx, licenseID, email)
 }
 
-
 // CreateTechnician2FAChallenge creates a short-lived challenge token for 2FA validation.
 func CreateTechnician2FAChallenge(db *sql.DB, licenseID, email string) (string, error) {
 	token, err := generateSecureToken()
@@ -286,8 +285,27 @@ func completeTechnicianLogin(db *sql.DB, lic *License, email, optionalCode, pass
 		if err = tx.QueryRow("SELECT password_hash FROM customer_accounts WHERE email=? COLLATE NOCASE", email).Scan(&hash); err != nil || !hash.Valid || hash.String == "" {
 			return nil, nil, errors.New("aucun mot de passe configuré pour ce compte")
 		}
+		// Per-account password throttle (mirrors the customer login path):
+		// the per-IP StrictAuthLimiter alone cannot stop distributed
+		// guessing against one technician/admin e-mail.
+		if locked, err := customerPasswordLocked(tx, email); err != nil {
+			return nil, nil, err
+		} else if locked {
+			return nil, nil, errors.New("compte temporairement verrouillé, réessayez plus tard")
+		}
 		if !checkPassword(hash.String, password) {
+			if err := recordCustomerPasswordFailure(tx, email); err != nil {
+				return nil, nil, err
+			}
+			// Persist the throttle counter: the deferred rollback
+			// below would otherwise silently drop it.
+			if err := tx.Commit(); err != nil {
+				return nil, nil, err
+			}
 			return nil, nil, errors.New("mot de passe incorrect")
+		}
+		if err := resetCustomerPasswordFailures(tx, email); err != nil {
+			return nil, nil, err
 		}
 	}
 	enabled, _, _, _, err := getMFAConfigTx(tx, lic.LicenseID, email)

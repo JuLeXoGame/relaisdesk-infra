@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	dbpkg "database"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -21,12 +22,33 @@ import (
 	"api/networkauth"
 )
 
+// readSecretStdin reads a CLI secret (e.g. set-customer-password) from r,
+// trimming the trailing newline a terminal or echo pipe adds.
+func readSecretStdin(r io.Reader) (string, error) {
+	raw, err := io.ReadAll(io.LimitReader(r, 4096))
+	if err != nil {
+		return "", err
+	}
+	pass := strings.TrimSpace(string(raw))
+	if pass == "" {
+		return "", fmt.Errorf("mot de passe vide")
+	}
+	return pass, nil
+}
+
 func main() {
 	cfg := config.LoadConfig()
 
-	if len(os.Args) >= 4 && (os.Args[1] == "set-customer-password" || os.Args[1] == "set-password") {
+	if len(os.Args) >= 3 && (os.Args[1] == "set-customer-password" || os.Args[1] == "set-password") {
 		email := strings.ToLower(strings.TrimSpace(os.Args[2]))
-		pass := strings.TrimSpace(os.Args[3])
+		// The secret is never taken from argv (visible to all local users
+		// via ps): it is read on stdin (terminal prompt or pipe).
+		fmt.Fprint(os.Stderr, "Mot de passe: ")
+		pass, err := readSecretStdin(os.Stdin)
+		fmt.Fprintln(os.Stderr)
+		if err != nil {
+			log.Fatalf("Lecture du mot de passe impossible: %v", err)
+		}
 		db, err := dbpkg.InitDatabase(cfg.DBPath)
 		if err != nil {
 			log.Fatalf("Initialisation base de données impossible: %v", err)
@@ -272,7 +294,7 @@ func main() {
 
 	// Endpoints pour les postes distants permanents (Console de gestion / Unattended)
 	mux.Handle("/api/v1/devices/enroll", middleware.StrictAuthLimiter(10, time.Minute, db)(http.HandlerFunc(method(http.MethodPost, handlers.DeviceEnrollHandler(db, settings, networkSigner)))))
-	mux.Handle("/api/v1/devices/heartbeat", middleware.RateLimit(600, time.Minute)(http.HandlerFunc(method(http.MethodPost, handlers.DeviceHeartbeatHandler(db, networkSigner)))))
+	mux.Handle("/api/v1/devices/heartbeat", middleware.RateLimit(600, time.Minute)(http.HandlerFunc(method(http.MethodPost, handlers.DeviceHeartbeatHandler(db, cfg, networkSigner)))))
 
 	// Customer commercial portal. Its e-mail session is intentionally separate
 	// from technician licence credentials.

@@ -1,7 +1,9 @@
-﻿package database
+package database
 
 import (
+	"database/sql"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -93,5 +95,51 @@ func TestTechnicianEmailPasswordLogin(t *testing.T) {
 	}
 	if authResWithCode.Requires2FA || authResWithCode.SessionToken == "" {
 		t.Fatalf("Expected immediate session with direct TOTP code, got requires2FA=%v", authResWithCode.Requires2FA)
+	}
+}
+
+func TestTechnicianPasswordLockoutAfterFailures(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "tech_lockout_test.db")
+	db, err := InitDatabase(dbPath)
+	if err != nil {
+		t.Fatalf("InitDatabase failed: %v", err)
+	}
+	defer db.Close()
+
+	testEmail := "locked-tech@example.com"
+	testPassword := "SuperSecr3tPassword!"
+
+	if _, err := EnsureCustomer(db, testEmail, "business", "Test Company"); err != nil {
+		t.Fatalf("EnsureCustomer failed: %v", err)
+	}
+	if err := SetCustomerPassword(db, testEmail, testPassword); err != nil {
+		t.Fatalf("SetCustomerPassword failed: %v", err)
+	}
+	if _, err := CreateLicense(db, testEmail, 30, 2, "Test license"); err != nil {
+		t.Fatalf("CreateLicense failed: %v", err)
+	}
+
+	// 10 wrong passwords reach the per-account threshold.
+	for i := 0; i < 10; i++ {
+		if _, _, err := ValidateTechnicianEmailPassword(db, testEmail, "WrongPassword123!", ""); err == nil {
+			t.Fatalf("attempt %d: expected error with wrong password, got nil", i+1)
+		}
+	}
+
+	// Even the correct password is now rejected while locked.
+	if _, _, err := ValidateTechnicianEmailPassword(db, testEmail, testPassword, ""); err == nil {
+		t.Fatal("expected lockout error with correct password, got nil")
+	} else if !strings.Contains(err.Error(), "verrouill") {
+		t.Fatalf("expected lockout error, got: %v", err)
+	}
+
+	// The counter survived the rolled-back login transactions.
+	var attempts int
+	var lockedUntil sql.NullString
+	if err := db.QueryRow("SELECT failed_password_attempts, password_locked_until FROM customer_accounts WHERE email=?", testEmail).Scan(&attempts, &lockedUntil); err != nil {
+		t.Fatalf("throttle state query failed: %v", err)
+	}
+	if attempts < 10 || !lockedUntil.Valid || lockedUntil.String == "" {
+		t.Fatalf("throttle state not persisted: attempts=%d lockedUntil=%v", attempts, lockedUntil)
 	}
 }

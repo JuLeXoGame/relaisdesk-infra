@@ -190,31 +190,26 @@ func configureRustDesk(activation *ActivationResponse, _ string) error {
 	if activation.RelayPort != 21117 {
 		relayServer = net.JoinHostPort(rendezvousHost, fmt.Sprintf("%d", activation.RelayPort))
 	}
-	configData := fmt.Sprintf("rendezvous_server = '%s'\n"+
+	configData := fmt.Sprintf("rendezvous_server = %s\n"+
 		"nat_type = 1\n"+
 		"serial = 0\n\n"+
 		"[options]\n"+
-		"custom-rendezvous-server = '%s'\n"+
-		"relay-server = '%s'\n"+
-		"api-server = '%s'\n"+
-		"key = '%s'\n"+
-		"relaisdesk-token-file = '%s'\n"+
-		"relaisdesk-proof-key-file = '%s'\n",
-		rendezvousWithPort,
-		rendezvousHost,
-		relayServer,
-		tomlEscapeLinux(APIURL),
-		tomlEscapeLinux(activation.PublicKey),
-		tomlEscapeLinux(activation.NetworkTokenFile),
-		tomlEscapeLinux(activation.NetworkProofKeyFile)) + videoCodecTomlLines(false)
+		"custom-rendezvous-server = %s\n"+
+		"relay-server = %s\n"+
+		"api-server = %s\n"+
+		"key = %s\n"+
+		"relaisdesk-token-file = %s\n"+
+		"relaisdesk-proof-key-file = %s\n",
+		tomlString(rendezvousWithPort),
+		tomlString(rendezvousHost),
+		tomlString(relayServer),
+		tomlString(APIURL),
+		tomlString(activation.PublicKey),
+		tomlString(activation.NetworkTokenFile),
+		tomlString(activation.NetworkProofKeyFile)) + videoCodecTomlLines(false)
 
 	rustdesk2Path := filepath.Join(configDir, RUSTDESK_CONFIG2_FILE)
 	return os.WriteFile(rustdesk2Path, []byte(configData), 0600)
-}
-
-func tomlEscapeLinux(value string) string {
-	value = strings.ReplaceAll(value, `\`, `\\`)
-	return strings.ReplaceAll(value, `'`, `\'`)
 }
 
 func cleanupRustDesk2Toml() {

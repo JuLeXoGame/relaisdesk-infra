@@ -52,11 +52,24 @@ func validateLicense(licenseKey string) (*ActivationResponse, error) {
 	}
 	defer resp.Body.Close()
 
-	var activationResp ActivationResponse
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&activationResp); err != nil {
+	// Status first: a 429 with an empty or non-JSON body must still
+	// surface the rate-limit error instead of a read/activation error.
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
 		return nil, fmt.Errorf("erreur de lecture de la reponse du serveur: %w", err)
 	}
 
+	// A rate limit is transient: never frame it as a refused license, or
+	// users will "fix" a valid key while they should simply wait.
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return nil, errors.New("trop de tentatives. Réessayez dans quelques minutes")
+	}
+	var activationResp ActivationResponse
+	// Best-effort off-200: a rejection with an empty body must report the
+	// refusal below, not a decode failure.
+	if err := json.Unmarshal(respBody, &activationResp); err != nil && resp.StatusCode == http.StatusOK {
+		return nil, fmt.Errorf("erreur de lecture de la reponse du serveur: %w", err)
+	}
 	if resp.StatusCode != http.StatusOK || activationResp.Status != "valid" {
 		if activationResp.Error != "" {
 			return nil, fmt.Errorf("activation refusee: %s", activationResp.Error)

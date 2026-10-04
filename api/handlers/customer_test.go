@@ -140,13 +140,17 @@ func TestCustomerPasswordLoginAndResetFlow(t *testing.T) {
 	resetHandler := CustomerSetPasswordWithTokenHandler(db)
 	changeHandler := middleware.CustomerAuth(db)(CustomerChangePasswordHandler(db))
 
-	// 1. Attempt login before setting password -> should return 400 with need_password_setup
+	// 1. Attempt login before setting password -> generic 401 like any bad
+	// credentials (revealing "no password set" would enumerate accounts).
 	loginBody := bytes.NewBufferString(`{"email":"` + email + `","password":"SomePassword123"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/customer/login", loginBody)
 	rec := httptest.NewRecorder()
 	loginHandler.ServeHTTP(rec, req)
-	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "need_password_setup") {
-		t.Fatalf("expected 400 need_password_setup, got status %d: %s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusUnauthorized || !strings.Contains(rec.Body.String(), "Identifiants incorrects") {
+		t.Fatalf("expected 401 generic, got status %d: %s", rec.Code, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), "need_password_setup") {
+		t.Fatalf("password-setup state leaked: %s", rec.Body.String())
 	}
 
 	// 2. Request reset token and set password
