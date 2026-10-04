@@ -108,6 +108,8 @@ $files = @(
   "installer/configurator/gui_linux.go",
   "installer/configurator/i18n.go",
   "installer/configurator/api_status_test.go",
+  "installer/configurator/fleet_tokens.go",
+  "installer/configurator/fleet_tokens_test.go",
   "rustdesk/src/core_main.rs",
   "rustdesk/src/relaisdesk_meter.rs",
   "rustdesk/src/relaisdesk_fleet_linux.rs",

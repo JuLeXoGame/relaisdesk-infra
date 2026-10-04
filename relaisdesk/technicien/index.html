@@ -108,6 +108,10 @@
             <span class="nav-item-icon">🔑</span>
             <span>Sessions & Codes</span>
           </a>
+          <a class="nav-item" data-tab="park">
+            <span class="nav-item-icon">🎫</span>
+            <span>Tokens de Parc</span>
+          </a>
         </li>
 		<li>
 		  <a class="nav-item" data-tab="interventions">
@@ -317,6 +321,84 @@
                   </tr>
                 </thead>
                 <tbody id="allCodesTbody">
+                  <tr>
+                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                      Chargement des données...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- TAB : TOKENS DE PARC (ENROLEMENT DE MASSE)                     -->
+        <!-- =============================================================== -->
+        <section id="tab-park" class="tab-pane">
+          <div class="generator-card">
+            <div class="generator-header">
+              <h3>🎫 Token de Parc</h3>
+              <p>Un token multi-usage pour enrôler une vague de postes (GPO, Intune, SCCM). Affiché une seule fois : notez-le pour le déploiement. Commande : <code>RelaisDesk_Setup.exe /S /ENROLLCODE=&lt;token&gt; /PASSWORD=&lt;mdp&gt;</code></p>
+            </div>
+
+            <form id="parkTokenForm">
+              <div class="gen-form-inline">
+                <div class="form-group">
+                  <label for="parkLabelInput">Libellé de la vague :</label>
+                  <input type="text" id="parkLabelInput" class="form-input" placeholder="Ex : Vague janvier, Site Lyon">
+                </div>
+                <div class="form-group" style="max-width: 10rem;">
+                  <label for="parkMaxUsesInput">Postes max :</label>
+                  <input type="number" id="parkMaxUsesInput" class="form-input" value="100" min="1" max="100000">
+                </div>
+                <div class="form-group" style="max-width: 10rem;">
+                  <label for="parkTtlInput">Validité (jours) :</label>
+                  <input type="number" id="parkTtlInput" class="form-input" value="30" min="1" max="365">
+                </div>
+                <div style="padding-top: 1.55rem;">
+                  <button type="submit" id="parkCreateBtn" class="btn btn-primary">
+                    🎫 Créer le Token
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            <div id="parkResultBox" class="gen-result-box" style="display: none;">
+              <div class="gen-code-display">
+                <span style="font-weight: 600; font-size: 0.95rem;">Token :</span>
+                <span class="gen-code-text" id="parkTokenDisplay">----</span>
+              </div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button id="copyParkTokenBtn" class="btn btn-primary btn-sm">📋 Copier le Token</button>
+                <button id="copyParkCmdBtn" class="btn btn-secondary btn-sm">💻 Copier la Commande d'Install</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-card">
+            <div class="table-header-bar">
+              <div>
+                <h3 style="font-size: 1.25rem;">Tokens de Parc</h3>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.2rem;">
+                  Seuls les préfixes sont affichés : le token complet n'est visible qu'à sa création.
+                </p>
+              </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Préfixe</th>
+                    <th>Libellé</th>
+                    <th>Utilisations</th>
+                    <th>Expire le</th>
+                    <th>Statut</th>
+                    <th style="text-align: right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="parkTokensTbody">
                   <tr>
                     <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">
                       Chargement des données...

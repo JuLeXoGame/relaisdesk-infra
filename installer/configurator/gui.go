@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image/color"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -954,6 +955,143 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 				widget.NewAccordionItem("➕ "+T("perm_gen_card_title"), permGenForm),
 			)
 
+			parkLabelEntry := widget.NewEntry()
+			parkLabelEntry.SetPlaceHolder(T("park_label_placeholder"))
+			parkMaxEntry := widget.NewEntry()
+			parkMaxEntry.SetPlaceHolder("100")
+			parkMaxEntry.SetText("100")
+			parkTTLEntry := widget.NewEntry()
+			parkTTLEntry.SetPlaceHolder("30")
+			parkTTLEntry.SetText("30")
+
+			var parkCreateBtn *widget.Button
+			var parkResultLabel *widget.Label
+			var parkCopyCmdBtn *widget.Button
+			parkListBox := container.NewVBox()
+			parkResultLabel = widget.NewLabelWithStyle("", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+			parkResultLabel.Importance = widget.SuccessImportance
+			parkResultLabel.Wrapping = fyne.TextWrapWord
+
+			parkCopyCmdBtn = widget.NewButton(T("park_copy_setup_cmd"), func() {
+				code := strings.TrimPrefix(parkResultLabel.Text, "Token : ")
+				if code != "" {
+					mainWindow.Clipboard().SetContent("RelaisDesk_Setup.exe /S /ENROLLCODE=" + code + " /PASSWORD=<mdp>")
+					dialog.ShowInformation(T("park_copy_setup_cmd"), T("park_setup_cmd_copied"), mainWindow)
+				}
+			})
+			parkCopyCmdBtn.Hide()
+
+			var refreshParkList func()
+			refreshParkList = func() {
+				curToken := sessionToken
+				go func() {
+					toks, err := listTechnicianParkTokens(curToken)
+					fyne.Do(func() {
+						parkListBox.Objects = nil
+						if err != nil {
+							parkListBox.Objects = []fyne.CanvasObject{widget.NewLabelWithStyle(err.Error(), fyne.TextAlignLeading, fyne.TextStyle{Italic: true})}
+						} else if len(toks) == 0 {
+							parkListBox.Objects = []fyne.CanvasObject{widget.NewLabel(T("park_empty"))}
+						}
+						for _, tok := range toks {
+							tok := tok
+							state := TF("park_uses", tok.UseCount, tok.MaxUses)
+							if !tok.IsActive {
+								state += " (" + T("park_revoked_state") + ")"
+							}
+							row := container.NewHBox(
+								widget.NewLabelWithStyle(tok.Prefix+"…  "+tok.Label, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+								widget.NewLabel(state),
+								layout.NewSpacer(),
+							)
+							if tok.IsActive {
+								row.Add(widget.NewButton(T("park_revoke_btn"), func() {
+									dialog.ShowConfirm(T("park_revoke_btn"), T("park_revoke_confirm"), func(ok bool) {
+										if !ok {
+											return
+										}
+										go func() {
+											if err := revokeTechnicianParkToken(sessionToken, tok.ID); err != nil {
+												fyne.Do(func() { dialog.ShowError(err, mainWindow) })
+												return
+											}
+											fyne.Do(refreshParkList)
+										}()
+									}, mainWindow)
+								}))
+							}
+							parkListBox.Objects = append(parkListBox.Objects, row)
+						}
+						parkListBox.Refresh()
+					})
+				}()
+			}
+
+			parkCreateBtn = widget.NewButton(T("park_create_btn"), func() {
+				maxUses, err := strconv.Atoi(strings.TrimSpace(parkMaxEntry.Text))
+				if err != nil || maxUses <= 0 {
+					dialog.ShowError(errors.New(T("park_max_uses_label")), mainWindow)
+					return
+				}
+				ttlDays, err := strconv.Atoi(strings.TrimSpace(parkTTLEntry.Text))
+				if err != nil || ttlDays <= 0 {
+					dialog.ShowError(errors.New(T("park_ttl_label")), mainWindow)
+					return
+				}
+				parkCreateBtn.Disable()
+				curToken := sessionToken
+				label := strings.TrimSpace(parkLabelEntry.Text)
+				go func() {
+					res, err := createTechnicianParkToken(curToken, label, "", maxUses, ttlDays)
+					if err != nil {
+						fyne.Do(func() {
+							dialog.ShowError(err, mainWindow)
+							parkCreateBtn.Enable()
+						})
+					} else {
+						fyne.Do(func() {
+							parkResultLabel.SetText("Token : " + res.Token)
+							mainWindow.Clipboard().SetContent(res.Token)
+							parkCopyCmdBtn.Show()
+							dialog.ShowInformation(T("success"), TF("park_created_popup", res.Token), mainWindow)
+							parkCreateBtn.Enable()
+							refreshParkList()
+						})
+					}
+				}()
+			})
+			parkCreateBtn.Importance = widget.HighImportance
+
+			parkGenForm := container.NewVBox(
+				container.NewGridWithColumns(3,
+					container.NewVBox(
+						widget.NewLabelWithStyle(T("park_label_label"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+						parkLabelEntry,
+					),
+					container.NewVBox(
+						widget.NewLabelWithStyle(T("park_max_uses_label"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+						parkMaxEntry,
+					),
+					container.NewVBox(
+						widget.NewLabelWithStyle(T("park_ttl_label"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+						parkTTLEntry,
+					),
+				),
+				container.NewHBox(parkCreateBtn, parkCopyCmdBtn),
+				parkResultLabel,
+				widget.NewSeparator(),
+				container.NewHBox(
+					widget.NewLabelWithStyle(T("park_list_title"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+					layout.NewSpacer(),
+					widget.NewButton(T("park_refresh_btn"), refreshParkList),
+				),
+				parkListBox,
+			)
+			parkGenAccordion := widget.NewAccordion(
+				widget.NewAccordionItem("🎫 "+T("park_gen_card_title"), parkGenForm),
+			)
+			refreshParkList()
+
 			permListBox := container.NewVBox(buildDevicesObjects(devicesResp, foldersResp, email, expiresAt, dashResp.RestrictedToFolders)...)
 			permListContainer := container.NewVScroll(permListBox)
 			permListContainer.SetMinSize(fyne.NewSize(400, 150))
@@ -1437,6 +1575,7 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 			if dashResp.RestrictedToFolders {
 				folderActions.Hide()
 				permGenAccordion.Hide()
+				parkGenAccordion.Hide()
 			}
 
 			breadcrumbsRow := container.NewBorder(
@@ -1478,6 +1617,7 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 				container.NewVBox(
 					permStatsRow,
 					permGenAccordion,
+					parkGenAccordion,
 					folderBarCard,
 				),
 				nil, nil, nil,

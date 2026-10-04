@@ -23,7 +23,8 @@ const state = {
   codes: [],
 	codeToDelete: null,
 	interventions: [],
-	interventionToComplete: null
+	interventionToComplete: null,
+	parkTokens: []
 };
 
 // =============================================================================
@@ -56,6 +57,7 @@ function initEventListeners() {
 	if (action === 'start-intervention') updateIntervention(trigger.dataset.intervention, 'start');
 	if (action === 'complete-intervention') openCompleteIntervention(trigger.dataset.intervention);
 	if (action === 'cancel-intervention') updateIntervention(trigger.dataset.intervention, 'cancel');
+	if (action === 'revoke-park') revokeParkToken(trigger.dataset.park);
   });
 
   // Formulaire de connexion
@@ -102,6 +104,30 @@ function initEventListeners() {
   const genForm = document.getElementById('generateCodeForm');
   if (genForm) {
     genForm.addEventListener('submit', handleGenerateCode);
+  }
+
+  // Formulaire Token de Parc
+  const parkForm = document.getElementById('parkTokenForm');
+  if (parkForm) {
+    parkForm.addEventListener('submit', handleCreateParkToken);
+  }
+  const copyParkTokenBtn = document.getElementById('copyParkTokenBtn');
+  if (copyParkTokenBtn) {
+    copyParkTokenBtn.addEventListener('click', () => {
+      const token = document.getElementById('parkTokenDisplay').textContent;
+      if (token && token !== '----') {
+        copyToClipboard(token, 'Token de parc copié dans le presse-papiers !');
+      }
+    });
+  }
+  const copyParkCmdBtn = document.getElementById('copyParkCmdBtn');
+  if (copyParkCmdBtn) {
+    copyParkCmdBtn.addEventListener('click', () => {
+      const token = document.getElementById('parkTokenDisplay').textContent;
+      if (token && token !== '----') {
+        copyToClipboard(`RelaisDesk_Setup.exe /S /ENROLLCODE=${token} /PASSWORD=<mdp>`, 'Commande d\u2019installation copiée !');
+      }
+    });
   }
 
 	const completeForm = document.getElementById('completeInterventionForm');
@@ -404,6 +430,7 @@ async function fetchDashboard(showSuccessToast = false) {
     renderOverviewCodes();
     filterAndRenderCodes();
 	await fetchInterventions();
+	await fetchParkTokens();
 
     if (showSuccessToast) {
       showToast('Données actualisées avec succès.', 'success');
@@ -773,6 +800,109 @@ window.copyToClipboard = async function(text, successMsg = 'Copié !') {
     showToast('Erreur lors de la copie dans le presse-papiers.', 'error');
   }
 };
+
+// =============================================================================
+// Tokens de Parc (enrôlement de masse)
+// =============================================================================
+async function fetchParkTokens() {
+  const tbody = document.getElementById('parkTokensTbody');
+  try {
+    const resp = await fetch(`${API_BASE_URL}/api/v1/technician/device-park-tokens`, {
+      headers: { 'Authorization': `Bearer ${state.token}`, 'Accept': 'application/json' }
+    });
+    if (resp.status === 401) {
+      handleLogout();
+      throw new Error('Session expirée, veuillez vous reconnecter.');
+    }
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Erreur lors du chargement des tokens.');
+    state.parkTokens = data.park_tokens || [];
+    renderParkTokens();
+  } catch (err) {
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+}
+
+function parkTokenStatus(tok) {
+  const now = Date.now();
+  const expired = tok.expires_at && new Date(tok.expires_at).getTime() < now;
+  const exhausted = tok.use_count >= tok.max_uses;
+  if (!tok.is_active) return '<span class="badge-status revoked">Révoqué</span>';
+  if (expired) return '<span class="badge-status expired">Expiré</span>';
+  if (exhausted) return '<span class="badge-status expired">Épuisé</span>';
+  return '<span class="badge-status active">Actif</span>';
+}
+
+function renderParkTokens() {
+  const tbody = document.getElementById('parkTokensTbody');
+  if (!tbody) return;
+  if (!state.parkTokens.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">Aucun token de parc. Créez-en un pour une vague de déploiement.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = state.parkTokens.map((tok) => {
+    const actions = tok.is_active
+      ? `<button class="btn btn-danger btn-sm" data-action="revoke-park" data-park="${tok.id}">Révoquer</button>`
+      : '';
+    return `<tr><td><span class="code-pill">${escapeHtml(tok.prefix)}…</span></td>` +
+      `<td>${escapeHtml(tok.label || '-')}</td>` +
+      `<td>${tok.use_count}/${tok.max_uses}</td>` +
+      `<td>${escapeHtml(formatDateTime(tok.expires_at))}</td>` +
+      `<td>${parkTokenStatus(tok)}</td>` +
+      `<td style="text-align:right;"><div class="table-actions" style="justify-content:flex-end;">${actions}</div></td></tr>`;
+  }).join('');
+}
+
+async function handleCreateParkToken(e) {
+  e.preventDefault();
+  const btn = document.getElementById('parkCreateBtn');
+  const label = document.getElementById('parkLabelInput').value.trim();
+  const maxUses = parseInt(document.getElementById('parkMaxUsesInput').value, 10) || 100;
+  const ttlDays = parseInt(document.getElementById('parkTtlInput').value, 10) || 30;
+  try {
+    btn.disabled = true;
+    btn.textContent = '🎫 Création...';
+    const resp = await fetch(`${API_BASE_URL}/api/v1/technician/device-park-tokens`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ label, max_uses: maxUses, ttl_days: ttlDays })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Erreur lors de la création du token.');
+    document.getElementById('parkTokenDisplay').textContent = data.token;
+    document.getElementById('parkResultBox').style.display = 'flex';
+    await copyToClipboard(data.token, 'Token de parc créé et copié ! Notez-le, il ne sera plus affiché.');
+    document.getElementById('parkLabelInput').value = '';
+    await fetchParkTokens();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🎫 Créer le Token';
+  }
+}
+
+async function revokeParkToken(id) {
+  if (!window.confirm('Révoquer ce token ? Les postes déjà enrôlés restent connectés.')) return;
+  try {
+    const resp = await fetch(`${API_BASE_URL}/api/v1/technician/device-park-tokens/${id}/revoke`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${state.token}`, 'Accept': 'application/json' }
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.error || 'Erreur lors de la révocation.');
+    showToast('Token révoqué.', 'success');
+    await fetchParkTokens();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
 
 function showToast(message, type = 'info') {
   const container = document.getElementById('toastContainer');

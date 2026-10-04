@@ -399,6 +399,74 @@ var messages = map[string]map[Lang]string{
 		LangFR: "🖥️ %d postes  •  🟢 %d en ligne  •  ⚪ %d hors ligne",
 		LangEN: "🖥️ %d devices  •  🟢 %d online  •  ⚪ %d offline",
 	},
+	"park_gen_card_title": {
+		LangFR: "Token de parc (enrôlement de masse GPO/Intune)",
+		LangEN: "Park token (mass enrollment via GPO/Intune)",
+	},
+	"park_label_label": {
+		LangFR: "Libellé de la vague :",
+		LangEN: "Wave label:",
+	},
+	"park_label_placeholder": {
+		LangFR: "Ex : Vague janvier, Site Lyon...",
+		LangEN: "E.g.: January wave, Lyon site...",
+	},
+	"park_max_uses_label": {
+		LangFR: "Postes max :",
+		LangEN: "Max devices:",
+	},
+	"park_ttl_label": {
+		LangFR: "Validité (jours) :",
+		LangEN: "Validity (days):",
+	},
+	"park_create_btn": {
+		LangFR: "🎫 Créer le token de parc",
+		LangEN: "🎫 Create park token",
+	},
+	"park_created_popup": {
+		LangFR: "Token de parc : %s\n\nCopié dans le presse-papiers. Affiché une seule fois : notez-le pour la vague de déploiement.\nCommande : RelaisDesk_Setup.exe /S /ENROLLCODE=<token> /PASSWORD=<mdp>",
+		LangEN: "Park token: %s\n\nCopied to clipboard. Shown only once: save it for the rollout wave.\nCommand: RelaisDesk_Setup.exe /S /ENROLLCODE=<token> /PASSWORD=<pwd>",
+	},
+	"park_copy_setup_cmd": {
+		LangFR: "Copier la commande d'install",
+		LangEN: "Copy install command",
+	},
+	"park_setup_cmd_copied": {
+		LangFR: "Commande d'installation copiée.",
+		LangEN: "Install command copied.",
+	},
+	"park_list_title": {
+		LangFR: "Tokens de parc :",
+		LangEN: "Park tokens:",
+	},
+	"park_uses": {
+		LangFR: "%d/%d utilisés",
+		LangEN: "%d/%d used",
+	},
+	"park_revoke_btn": {
+		LangFR: "Révoquer",
+		LangEN: "Revoke",
+	},
+	"park_revoke_confirm": {
+		LangFR: "Révoquer ce token ? Les postes déjà enrôlés restent connectés.",
+		LangEN: "Revoke this token? Already enrolled devices stay connected.",
+	},
+	"park_refresh_btn": {
+		LangFR: "🔄 Actualiser",
+		LangEN: "🔄 Refresh",
+	},
+	"park_empty": {
+		LangFR: "Aucun token de parc.",
+		LangEN: "No park tokens.",
+	},
+	"park_expired": {
+		LangFR: "expiré",
+		LangEN: "expired",
+	},
+	"park_revoked_state": {
+		LangFR: "révoqué",
+		LangEN: "revoked",
+	},
 	"no_devices_yet": {
 		LangFR: "Aucun poste permanent n'est enregistré dans votre parc pour le moment.\nGénérez un code ci-dessus pour enrôler vos serveurs et ordinateurs distants.",
 		LangEN: "No permanent devices registered in your fleet yet.\nGenerate a code above to enroll your remote servers and computers.",
