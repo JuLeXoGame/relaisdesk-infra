@@ -168,6 +168,7 @@ func TestMatchOKXDeposit(t *testing.T) {
 	}{
 		{"exact", []MatchQuote{open}, deposit("0.00024900", "bc1qoperator", now), 1},
 		{"overpay", []MatchQuote{open}, deposit("0.00025000", "bc1qoperator", now), 1},
+		{"overpay beyond tolerance", []MatchQuote{open}, deposit("0.00026000", "bc1qoperator", now), 0},
 		{"underpay", []MatchQuote{open}, deposit("0.00024899", "bc1qoperator", now), 0},
 		{"wrong address", []MatchQuote{open}, deposit("0.00024900", "bc1qother", now), 0},
 		{"empty to", []MatchQuote{open}, deposit("0.00024900", "", now), 0},
@@ -176,9 +177,12 @@ func TestMatchOKXDeposit(t *testing.T) {
 		{"past grace", []MatchQuote{quote(3, "RD-3", "0.001", 48*time.Hour, -25*time.Hour)}, deposit("0.001", "bc1qoperator", now), 0},
 		{"garbage amount", []MatchQuote{open}, deposit("abc", "bc1qoperator", now), 0},
 		{"first wins", []MatchQuote{open, quote(4, "RD-4", "0.00010000", 5*time.Minute, 25*time.Minute)}, deposit("0.00024900", "bc1qoperator", now), 1},
+		{"exact beats older cheaper", []MatchQuote{quote(5, "RD-5", "0.00024800", 30*time.Minute, 20*time.Minute), quote(6, "RD-6", "0.00024900", 5*time.Minute, 25*time.Minute)}, deposit("0.00024900", "bc1qoperator", now), 6},
+		{"ambiguous identical quotes", []MatchQuote{quote(7, "RD-7", "0.00024900", 30*time.Minute, 20*time.Minute), quote(8, "RD-8", "0.00024900", 5*time.Minute, 25*time.Minute)}, deposit("0.00024900", "bc1qoperator", now), 0},
+		{"ambiguous near quotes", []MatchQuote{quote(9, "RD-9", "0.00024800", 30*time.Minute, 20*time.Minute), quote(10, "RD-10", "0.00024850", 5*time.Minute, 25*time.Minute)}, deposit("0.00025000", "bc1qoperator", now), 0},
 	}
 	for _, tc := range cases {
-		got := MatchOKXDeposit(tc.quotes, tc.deposit, "bc1qoperator")
+		got, _ := MatchOKXDeposit(tc.quotes, tc.deposit, "bc1qoperator")
 		var gotID int64
 		if got != nil {
 			gotID = got.ID
@@ -186,5 +190,21 @@ func TestMatchOKXDeposit(t *testing.T) {
 		if gotID != tc.wantID {
 			t.Fatalf("%s: match = %d, want %d", tc.name, gotID, tc.wantID)
 		}
+	}
+}
+
+func TestMatchOKXDepositReportsEligibleCount(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	quotes := []MatchQuote{
+		{ID: 1, OrderID: "RD-1", AmountCrypto: "0.00024900", PayAddress: "bc1qoperator", QuotedAt: now.Add(-30 * time.Minute), ExpiresAt: now.Add(20 * time.Minute)},
+		{ID: 2, OrderID: "RD-2", AmountCrypto: "0.00024900", PayAddress: "bc1qoperator", QuotedAt: now.Add(-5 * time.Minute), ExpiresAt: now.Add(25 * time.Minute)},
+	}
+	dep := OKXDeposit{CCY: "BTC", Amt: "0.00024900", From: "bc1qsender", To: "bc1qoperator", TxID: "H", TsMillis: now.UnixMilli(), State: "2", DepID: "1"}
+	got, eligible := MatchOKXDeposit(quotes, dep, "bc1qoperator")
+	if got != nil {
+		t.Fatalf("ambiguous deposit matched quote %d", got.ID)
+	}
+	if eligible != 2 {
+		t.Fatalf("eligible = %d, want 2", eligible)
 	}
 }

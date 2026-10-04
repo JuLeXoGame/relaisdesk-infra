@@ -50,7 +50,7 @@ func TestConsumerWithdrawalBeforePaymentIsDurableAndCancelsImmediately(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	a, err = dbpkg.ActivateTrial(db, a.ID, fakeStripeID("sub_", a.ID), a.TrialEnd)
+	a, _, err = dbpkg.ActivateTrial(db, a.ID, fakeStripeID("sub_", a.ID), a.TrialEnd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestLateWithdrawalIsRecordedForHumanReview(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a, err = dbpkg.ActivateTrial(db, a.ID, fakeStripeID("sub_", a.ID), a.TrialEnd)
+	a, _, err = dbpkg.ActivateTrial(db, a.ID, fakeStripeID("sub_", a.ID), a.TrialEnd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +143,7 @@ func TestAnnualNoticeQueueWindowDedupAndFailSafe(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a, err = dbpkg.ActivateTrial(db, a.ID, fakeStripeID("sub_", a.ID), a.TrialEnd)
+	a, _, err = dbpkg.ActivateTrial(db, a.ID, fakeStripeID("sub_", a.ID), a.TrialEnd)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -16,12 +16,17 @@ jobs:
     runs-on: macos-14
     strategy:
       matrix:
-        arch: [aarch64-apple-darwin]
         include:
           - arch: aarch64-apple-darwin
             target: aarch64-apple-darwin
             rustdesk_target: aarch64-apple-darwin
             goarch: arm64
+            dmg_suffix: ""
+          - arch: x86_64-apple-darwin
+            target: x86_64-apple-darwin
+            rustdesk_target: x86_64-apple-darwin
+            goarch: amd64
+            dmg_suffix: "_Intel"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -95,7 +100,7 @@ jobs:
             --window-size 600 400 \
             --icon-size 100 \
             --app-drop-link 420 185 \
-            "RelaisDesk_Mac.dmg" \
+            "RelaisDesk_Mac${{ matrix.dmg_suffix }}.dmg" \
             "build/RelaisDesk.app" || true
 
       - name: Package RelaisDesk Technicien (.app & .dmg)
@@ -112,19 +117,19 @@ jobs:
             --window-size 600 400 \
             --icon-size 100 \
             --app-drop-link 420 185 \
-            "RelaisDesk_Technicien_Mac.dmg" \
+            "RelaisDesk_Technicien_Mac${{ matrix.dmg_suffix }}.dmg" \
             "build_tech/RelaisDesk_Technicien.app" || true
 
       - name: Compute SHA-256 Checksums
         run: |
-          shasum -a 256 RelaisDesk_Mac.dmg RelaisDesk_Technicien_Mac.dmg > SHA256SUMS-macos.txt
-          cat SHA256SUMS-macos.txt
+          shasum -a 256 RelaisDesk_Mac*.dmg RelaisDesk_Technicien_Mac*.dmg > SHA256SUMS-macos-${{ matrix.goarch }}.txt
+          cat SHA256SUMS-macos-${{ matrix.goarch }}.txt
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: relaisdesk-macos-dmg
+          name: relaisdesk-macos-dmg-${{ matrix.goarch }}
           path: |
-            RelaisDesk_Mac.dmg
-            RelaisDesk_Technicien_Mac.dmg
-            SHA256SUMS-macos.txt
+            RelaisDesk_Mac*.dmg
+            RelaisDesk_Technicien_Mac*.dmg
+            SHA256SUMS-macos-${{ matrix.goarch }}.txt

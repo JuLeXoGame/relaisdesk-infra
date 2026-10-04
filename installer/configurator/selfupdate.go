@@ -575,6 +575,35 @@ func isMachOMagic(head []byte) bool {
 	return false
 }
 
+// selfUpdateVerifyFile re-checks a staged payload against the manifest's
+// exact size and SHA-256 immediately before installation. Downloads are
+// verified on receipt, but the file then sits in a shared temp dir (and may
+// cross a privilege boundary for setup/deb installs), so apply-time
+// re-verification closes the swap window.
+func selfUpdateVerifyFile(filePath, expectedSHA string, expectedSize int64) error {
+	st, err := os.Stat(filePath)
+	if err != nil {
+		return err
+	}
+	if st.Size() != expectedSize {
+		return fmt.Errorf("taille inattendue (%d octets, manifeste: %d)", st.Size(), expectedSize)
+	}
+	f, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	hasher := sha256.New()
+	if _, err := io.Copy(hasher, f); err != nil {
+		return err
+	}
+	calculated := hex.EncodeToString(hasher.Sum(nil))
+	if !strings.EqualFold(calculated, strings.TrimSpace(expectedSHA)) {
+		return errors.New("somme de contrôle SHA-256 non conforme à l'installation")
+	}
+	return nil
+}
+
 // SelfUpdateApply installs a verified download according to the install kind,
 // then restarts the application. It returns only on failure.
 func SelfUpdateApply(info *SelfUpdateInfo, filePath string) error {
@@ -584,23 +613,26 @@ func SelfUpdateApply(info *SelfUpdateInfo, filePath string) error {
 	if err := selfUpdateCheckMagic(info.Kind, runtime.GOOS, filePath); err != nil {
 		return err
 	}
+	if err := selfUpdateVerifyFile(filePath, info.ArtifactSHA256, info.ArtifactSize); err != nil {
+		return err
+	}
 	exe, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("exécutable introuvable: %w", err)
 	}
 	switch info.Kind {
 	case kindPortable:
-		if err := selfUpdateApplyPortable(exe, filePath); err != nil {
+		if err := selfUpdateApplyPortable(exe, filePath, info.ArtifactSHA256); err != nil {
 			return err
 		}
 		SelfUpdateRelaunch(exe)
 		return nil
 	case kindWindowsSetup:
-		return selfUpdateApplyWindowsSetup(exe, filePath)
+		return selfUpdateApplyWindowsSetup(exe, filePath, info.ArtifactSHA256)
 	case kindLinuxDeb:
 		return selfUpdateApplyLinuxDeb(exe, filePath)
 	case kindMacApp:
-		return selfUpdateApplyMacApp(exe, filePath)
+		return selfUpdateApplyMacApp(exe, filePath, info.ArtifactSHA256)
 	default:
 		return errors.New("mise à jour automatique non prise en charge sur cette installation")
 	}
@@ -608,10 +640,16 @@ func SelfUpdateApply(info *SelfUpdateInfo, filePath string) error {
 
 // selfUpdateApplyPortable swaps the running binary with the verified
 // download. Renaming (not overwriting) also works on a running Windows exe.
-func selfUpdateApplyPortable(exePath, newFile string) error {
+// The bytes are hashed after reading so a swap between the apply-time check
+// and the read cannot slip through.
+func selfUpdateApplyPortable(exePath, newFile, expectedSHA string) error {
 	data, err := os.ReadFile(newFile)
 	if err != nil {
 		return err
+	}
+	sum := sha256.Sum256(data)
+	if !strings.EqualFold(hex.EncodeToString(sum[:]), strings.TrimSpace(expectedSHA)) {
+		return errors.New("somme de contrôle SHA-256 non conforme à l'installation")
 	}
 	current, err := os.Stat(exePath)
 	if err != nil {
@@ -638,28 +676,52 @@ func selfUpdateApplyPortable(exePath, newFile string) error {
 }
 
 // selfUpdateWindowsSetupWaiter builds the helper script that waits for this
-// process to exit, runs the new installer silently, then restarts the app.
-func selfUpdateWindowsSetupWaiter(setupPath, exePath string, pid int) string {
+// process to exit, re-verifies the staged installer hash (the script runs
+// after our exit, so this closes the swap window), runs it silently, then
+// restarts the app. Any verification failure aborts without installing.
+func selfUpdateWindowsSetupWaiter(setupPath, exePath string, pid int, expectedSHA string) string {
 	quoted := func(p string) string {
+		p = strings.ReplaceAll(p, "%", "%%")
+		p = strings.ReplaceAll(p, "\r", "")
+		p = strings.ReplaceAll(p, "\n", "")
 		return `"` + strings.ReplaceAll(p, `"`, `""`) + `"`
+	}
+	psQuoted := func(p string) string {
+		return "'" + strings.ReplaceAll(p, "'", "''") + "'"
 	}
 	return "@echo off\r\n" +
 		"powershell -NoProfile -Command \"Wait-Process -Id " + strconv.Itoa(pid) + " -ErrorAction SilentlyContinue\"\r\n" +
+		"if errorlevel 1 exit /b 1\r\n" +
+		"powershell -NoProfile -Command \"$h=(Get-FileHash -Algorithm SHA256 -LiteralPath " + psQuoted(setupPath) + ").Hash; if ($h -ne " + psQuoted(strings.TrimSpace(expectedSHA)) + ") { exit 7 }\"\r\n" +
+		"if errorlevel 1 exit /b 1\r\n" +
 		quoted(setupPath) + " /S\r\n" +
 		"start \"\" " + quoted(exePath) + "\r\n" +
 		"del " + quoted(setupPath) + " >nul 2>&1\r\n" +
 		"del \"%~f0\" >nul 2>&1\r\n"
 }
 
-func selfUpdateApplyWindowsSetup(exePath, setupFile string) error {
-	dest := filepath.Join(os.TempDir(), "relaisdesk-setup-"+strconv.Itoa(os.Getpid())+".exe")
-	if err := copyFile(dest, setupFile, 0600); err != nil {
+func selfUpdateApplyWindowsSetup(exePath, setupFile, expectedSHA string) error {
+	destTmp, err := os.CreateTemp("", "relaisdesk-setup-*.exe")
+	if err != nil {
 		return err
 	}
-	waiter := selfUpdateWindowsSetupWaiter(dest, exePath, os.Getpid())
-	batPath := filepath.Join(os.TempDir(), "relaisdesk-update-"+strconv.Itoa(os.Getpid())+".cmd")
+	dest := destTmp.Name()
+	_ = destTmp.Close()
+	if err := copyFile(dest, setupFile, 0600); err != nil {
+		_ = os.Remove(dest)
+		return err
+	}
+	waiter := selfUpdateWindowsSetupWaiter(dest, exePath, os.Getpid(), expectedSHA)
+	batTmp, err := os.CreateTemp("", "relaisdesk-update-*.cmd")
+	if err != nil {
+		_ = os.Remove(dest)
+		return err
+	}
+	batPath := batTmp.Name()
+	_ = batTmp.Close()
 	if err := os.WriteFile(batPath, []byte(waiter), 0600); err != nil {
 		_ = os.Remove(dest)
+		_ = os.Remove(batPath)
 		return err
 	}
 	if err := selfUpdateSpawnDetached("cmd.exe", []string{"/c", batPath}); err != nil {
@@ -703,14 +765,18 @@ func selfUpdateApplyLinuxDeb(exePath, debPath string) error {
 	return nil
 }
 
-// selfUpdateMacScript builds the helper script that mounts the verified .dmg,
-// copies the application to /Applications and relaunches it.
-func selfUpdateMacScript(dmgPath string) string {
+// selfUpdateMacScript builds the helper script that re-verifies the staged
+// .dmg hash, mounts it, copies the application to /Applications and
+// relaunches it. Any verification failure aborts without installing.
+func selfUpdateMacScript(dmgPath, expectedSHA string) string {
 	quoted := func(p string) string {
 		return "'" + strings.ReplaceAll(p, "'", `'\''`) + "'"
 	}
 	return "#!/bin/sh\nset -u\n" +
 		"DMG=" + quoted(dmgPath) + "\n" +
+		"EXPECT=" + quoted(strings.ToLower(strings.TrimSpace(expectedSHA))) + "\n" +
+		"GOT=$(shasum -a 256 \"$DMG\" 2>/dev/null | awk '{print $1}')\n" +
+		"[ \"$GOT\" != \"$EXPECT\" ] && exit 9\n" +
 		"MNT=$(hdiutil attach -nobrowse -mountrandom /tmp \"$DMG\" 2>/dev/null | awk '{print $NF}')\n" +
 		"[ -z \"$MNT\" ] && exit 10\n" +
 		"APP=$(ls -d \"$MNT\"/*.app 2>/dev/null | head -1)\n" +
@@ -720,11 +786,17 @@ func selfUpdateMacScript(dmgPath string) string {
 		"open -a \"/Applications/$(basename \"$APP\")\"\n"
 }
 
-func selfUpdateApplyMacApp(exePath, dmgPath string) error {
+func selfUpdateApplyMacApp(exePath, dmgPath, expectedSHA string) error {
 	_ = exePath
-	script := selfUpdateMacScript(dmgPath)
-	shPath := filepath.Join(os.TempDir(), "relaisdesk-update-"+strconv.Itoa(os.Getpid())+".sh")
+	script := selfUpdateMacScript(dmgPath, expectedSHA)
+	shTmp, err := os.CreateTemp("", "relaisdesk-update-*.sh")
+	if err != nil {
+		return err
+	}
+	shPath := shTmp.Name()
+	_ = shTmp.Close()
 	if err := os.WriteFile(shPath, []byte(script), 0700); err != nil {
+		_ = os.Remove(shPath)
 		return err
 	}
 	cmd := exec.Command("/bin/sh", shPath)

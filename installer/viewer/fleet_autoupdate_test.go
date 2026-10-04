@@ -16,6 +16,9 @@ import (
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/klauspost/compress/zstd"
+	"github.com/ulikunitz/xz"
 )
 
 func TestFleetUpdateRejectsSignedDowngrades(t *testing.T) {
@@ -126,49 +129,73 @@ func TestDownloadAndVerifyArtifact(t *testing.T) {
 func TestExtractBinaryFromDeb(t *testing.T) {
 	elfContent := []byte("\x7fELF\x02\x01\x01\x00custom-elf-binary")
 
-	// Create data.tar.gz containing ./usr/bin/relaisdesk-viewer
-	var tarGzBuf bytes.Buffer
-	gw := gzip.NewWriter(&tarGzBuf)
-	tw := tar.NewWriter(gw)
-	_ = tw.WriteHeader(&tar.Header{
-		Name: "./usr/bin/relaisdesk-viewer",
-		Mode: 0755,
-		Size: int64(len(elfContent)),
-	})
-	_, _ = tw.Write(elfContent)
-	_ = tw.Close()
-	_ = gw.Close()
-
-	dataTarGz := tarGzBuf.Bytes()
-
-	// Assemble mock AR file
-	var arBuf bytes.Buffer
-	arBuf.WriteString("!<arch>\n")
-
-	// control.tar.gz mock
-	controlData := []byte("mock-control")
-	fmt.Fprintf(&arBuf, "%-16s%-12s%-6s%-6s%-8s%-10d`\n", "control.tar.gz", "0", "0", "0", "100644", len(controlData))
-	arBuf.Write(controlData)
-	if len(controlData)%2 != 0 {
-		arBuf.WriteByte('\n')
+	buildTar := func(t *testing.T) []byte {
+		t.Helper()
+		var raw bytes.Buffer
+		tw := tar.NewWriter(&raw)
+		_ = tw.WriteHeader(&tar.Header{
+			Name: "./usr/bin/relaisdesk-viewer",
+			Mode: 0755,
+			Size: int64(len(elfContent)),
+		})
+		_, _ = tw.Write(elfContent)
+		_ = tw.Close()
+		return raw.Bytes()
+	}
+	compress := func(t *testing.T, member string, raw []byte) []byte {
+		t.Helper()
+		var buf bytes.Buffer
+		switch member {
+		case "data.tar":
+			return raw
+		case "data.tar.gz":
+			gw := gzip.NewWriter(&buf)
+			_, _ = gw.Write(raw)
+			_ = gw.Close()
+		case "data.tar.xz":
+			xw, err := xz.NewWriter(&buf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, _ = xw.Write(raw)
+			_ = xw.Close()
+		case "data.tar.zst":
+			zw, err := zstd.NewWriter(&buf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, _ = zw.Write(raw)
+			_ = zw.Close()
+		default:
+			t.Fatalf("membre inconnu: %s", member)
+		}
+		return buf.Bytes()
+	}
+	buildDeb := func(t *testing.T, member string) []byte {
+		t.Helper()
+		var arBuf bytes.Buffer
+		arBuf.WriteString("!<arch>\n")
+		addMember := func(name string, data []byte) {
+			fmt.Fprintf(&arBuf, "%-16s%-12s%-6s%-6s%-8s%-10d`\n", name, "0", "0", "0", "100644", len(data))
+			arBuf.Write(data)
+			if len(data)%2 != 0 {
+				arBuf.WriteByte('\n')
+			}
+		}
+		addMember("control.tar.gz", []byte("mock-control"))
+		addMember(member, compress(t, member, buildTar(t)))
+		return arBuf.Bytes()
 	}
 
-	// data.tar.gz mock
-	fmt.Fprintf(&arBuf, "%-16s%-12s%-6s%-6s%-8s%-10d`\n", "data.tar.gz", "0", "0", "0", "100644", len(dataTarGz))
-	arBuf.Write(dataTarGz)
-	if len(dataTarGz)%2 != 0 {
-		arBuf.WriteByte('\n')
-	}
-
-	debBytes := arBuf.Bytes()
-
-	// 1. Extract from valid .deb
-	extracted, err := extractBinaryFromDeb(debBytes, "relaisdesk-viewer")
-	if err != nil {
-		t.Fatalf("extract failed: %v", err)
-	}
-	if !bytes.Equal(extracted, elfContent) {
-		t.Fatalf("extracted content mismatch: got %q, want %q", extracted, elfContent)
+	// 1. Extract from valid .deb in every supported data.tar compression
+	for _, member := range []string{"data.tar.gz", "data.tar.xz", "data.tar.zst", "data.tar"} {
+		extracted, err := extractBinaryFromDeb(buildDeb(t, member), "relaisdesk-viewer")
+		if err != nil {
+			t.Fatalf("extract failed (%s): %v", member, err)
+		}
+		if !bytes.Equal(extracted, elfContent) {
+			t.Fatalf("extracted content mismatch (%s): got %q, want %q", member, extracted, elfContent)
+		}
 	}
 
 	// 2. Direct ELF binary should pass through
@@ -184,5 +211,15 @@ func TestExtractBinaryFromDeb(t *testing.T) {
 	_, err = extractBinaryFromDeb([]byte("random-bytes"), "relaisdesk-viewer")
 	if err == nil {
 		t.Fatal("expected error for invalid archive, got nil")
+	}
+
+	// 4. .deb without any data.tar member should fail
+	var arBuf bytes.Buffer
+	arBuf.WriteString("!<arch>\n")
+	controlData := []byte("mock-control")
+	fmt.Fprintf(&arBuf, "%-16s%-12s%-6s%-6s%-8s%-10d`\n", "control.tar.gz", "0", "0", "0", "100644", len(controlData))
+	arBuf.Write(controlData)
+	if _, err := extractBinaryFromDeb(arBuf.Bytes(), "relaisdesk-viewer"); err == nil {
+		t.Fatal("expected error for .deb without data.tar, got nil")
 	}
 }

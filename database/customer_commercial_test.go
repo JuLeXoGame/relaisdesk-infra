@@ -85,8 +85,13 @@ func TestRenewalExtendsExistingLicenseWithoutChangingCredentials(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if renewed.LicenseID != lic.LicenseID || renewed.LicenseKey != originalKey {
+	// Reads carry the hash while creation returned the plaintext: the same
+	// credential must hash-match, and the hint must be preserved.
+	if renewed.LicenseID != lic.LicenseID || renewed.LicenseKey != HashLicenseKey(originalKey) {
 		t.Fatal("renewal replaced existing licence credentials")
+	}
+	if renewed.KeyHint == "" || renewed.KeyHint != lic.KeyHint {
+		t.Fatalf("renewal lost the key hint: %q vs %q", renewed.KeyHint, lic.KeyHint)
 	}
 	if renewed.Notes != "initial" {
 		t.Fatalf("renewal replaced internal licence notes: %q", renewed.Notes)

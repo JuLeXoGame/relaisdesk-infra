@@ -287,17 +287,28 @@ func isNumericRustDeskID(id string) bool {
 	return true
 }
 
+// verifiedInnerRustDeskPath returns the AppData\Local inner binary path only
+// if it matches the pinned hash. Never execute a user-writable binary on
+// mere existence: the viewer may run elevated.
+func verifiedInnerRustDeskPath(localAppData string) string {
+	if localAppData == "" {
+		return ""
+	}
+	innerPath := filepath.Join(localAppData, "rustdesk", "rustdesk.exe")
+	if !fileMatchesRustDeskSHA256(innerPath) {
+		return ""
+	}
+	return innerPath
+}
+
 func getRustDeskID(rustdeskPath string) string {
-	// 1. Essayer le binaire RustDesk extrait dans AppData\Local s'il existe
-	if localAppData := os.Getenv("LOCALAPPDATA"); localAppData != "" {
-		innerPath := filepath.Join(localAppData, "rustdesk", "rustdesk.exe")
-		if _, err := os.Stat(innerPath); err == nil {
-			cmd := exec.Command(innerPath, "--get-id")
-			cmd.SysProcAttr = hideWindowSysProcAttr()
-			if out, err := cmd.Output(); err == nil {
-				if id := parseNumericRustDeskID(string(out)); id != "" {
-					return id
-				}
+	// 1. Essayer le binaire RustDesk extrait dans AppData\Local, hash vérifié
+	if innerPath := verifiedInnerRustDeskPath(os.Getenv("LOCALAPPDATA")); innerPath != "" {
+		cmd := exec.Command(innerPath, "--get-id")
+		cmd.SysProcAttr = hideWindowSysProcAttr()
+		if out, err := cmd.Output(); err == nil {
+			if id := parseNumericRustDeskID(string(out)); id != "" {
+				return id
 			}
 		}
 	}

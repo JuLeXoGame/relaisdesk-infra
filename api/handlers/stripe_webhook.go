@@ -175,6 +175,7 @@ func processStripeEvent(db *sql.DB, cfg *config.Config, body []byte) error {
 		return nil
 	}
 
+	pendingKey := ""
 	if order.Status == "pending" {
 		bName := session.CustomerDetails.Name
 		bAddr := session.CustomerDetails.Address.Line1
@@ -198,10 +199,15 @@ func processStripeEvent(db *sql.DB, cfg *config.Config, body []byte) error {
 			order.BillingPostalCode, order.BillingCity = session.CustomerDetails.Address.PostalCode, session.CustomerDetails.Address.City
 			order.BillingCountry, order.BillingSIRET = bCountry, bSiret
 		}
+		deliveryKey := ""
 		if order.OrderKind == "renewal" {
 			_, err = dbpkg.FulfillPendingRenewalOrder(db, order.OrderID, "Stripe "+event.ID)
 		} else {
-			_, err = dbpkg.FulfillPendingOrder(db, order.OrderID, "Stripe "+event.ID)
+			var lic *dbpkg.License
+			lic, err = dbpkg.FulfillPendingOrder(db, order.OrderID, "Stripe "+event.ID)
+			if err == nil && lic != nil {
+				deliveryKey = lic.LicenseKey // one-time plaintext
+			}
 		}
 		if err != nil {
 			return err
@@ -210,13 +216,24 @@ func processStripeEvent(db *sql.DB, cfg *config.Config, body []byte) error {
 		if err != nil {
 			return err
 		}
+		pendingKey = deliveryKey
 	} else if order.Status != "paid" || order.LicenseID == "" {
 		return fmt.Errorf("état de commande Stripe incompatible: %s", order.Status)
 	}
 	if _, _, err := ensureOrderInvoice(db, cfg, order, "Carte Bancaire (Stripe)", "Paiement Stripe "+session.ID); err != nil {
 		return err
 	}
-	return EnqueueOrderDeliveryEmail(db, order.OrderID)
+	return EnqueueOrderDeliveryEmail(db, order.OrderID, deliveryKeyFor(order, pendingKey))
+}
+
+func deliveryKeyFor(order *dbpkg.Order, freshKey string) string {
+	// Only first deliveries of initial orders carry the plaintext key;
+	// renewals reuse the existing key (already delivered) and recovery
+	// re-deliveries show the hint instead.
+	if order != nil && order.OrderKind != "renewal" && strings.HasPrefix(freshKey, "mpsk_") {
+		return freshKey
+	}
+	return ""
 }
 
 func verifyStripeSignature(payload []byte, sigHeader, secret string) bool {

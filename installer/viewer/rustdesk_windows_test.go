@@ -84,6 +84,37 @@ is windows7: false
 	}
 }
 
+func TestVerifiedInnerRustDeskPathRejectsUnpinnedBinary(t *testing.T) {
+	previous := RUSTDESK_EXPECTED_SHA256
+	defer func() { RUSTDESK_EXPECTED_SHA256 = previous }()
+	sum := sha256.Sum256(embeddedRustDesk)
+	RUSTDESK_EXPECTED_SHA256 = fmt.Sprintf("%x", sum)
+
+	fakeAppData := t.TempDir()
+	innerDir := fakeAppData + `\rustdesk`
+	if err := os.MkdirAll(innerDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	planted := innerDir + `\rustdesk.exe`
+	// Planted same-user binary: must never be selected for execution.
+	if err := os.WriteFile(planted, []byte("malicious-binary"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got := verifiedInnerRustDeskPath(fakeAppData); got != "" {
+		t.Fatalf("unpinned binary accepted: %q", got)
+	}
+	// Exact pinned bytes: accepted.
+	if err := os.WriteFile(planted, embeddedRustDesk, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got := verifiedInnerRustDeskPath(fakeAppData); got == "" {
+		t.Fatal("pinned binary rejected")
+	}
+	if got := verifiedInnerRustDeskPath(""); got != "" {
+		t.Fatalf("empty LOCALAPPDATA accepted: %q", got)
+	}
+}
+
 func TestFileMatchesFleetServiceRejectsPathOutsideProgramFiles(t *testing.T) {
 	if fileMatchesFleetService(`C:\Windows\System32\cmd.exe`) {
 		t.Fatal("file outside Program Files must be rejected")

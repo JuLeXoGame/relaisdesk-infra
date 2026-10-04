@@ -26,6 +26,8 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+if ($Stamp -notmatch '^[A-Za-z0-9._-]+$') { throw "Stamp invalide." }
+
 $Root = "C:\Users\Administrator\Documents\Projets\projet"
 $DownloadsDir = Join-Path $Root "relaisdesk\downloads"
 if ([string]::IsNullOrWhiteSpace($PpkPath)) {

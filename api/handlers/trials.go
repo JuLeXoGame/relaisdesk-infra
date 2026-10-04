@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/mail"
 	"strings"
@@ -21,6 +22,10 @@ const jobTrialCancel = "trial_cancel"
 type trialNotice struct {
 	ID   string `json:"id"`
 	Kind string `json:"kind"`
+	// LicenseKey carries the plaintext trial key for one-time delivery on
+	// "activated" notices. The worker scrubs it from the stored payload
+	// after a successful send; other kinds leave it empty.
+	LicenseKey string `json:"license_key,omitempty"`
 }
 type trialRequest struct {
 	PublicOrderRequest
@@ -236,7 +241,13 @@ func processTrialEmail(db *sql.DB, cfg *config.Config, m *mailer.Mailer, job *db
 		if err != nil {
 			return err
 		}
-		body = "Votre essai gratuit de 30 jours est activé.\n" + body + fmt.Sprintf("\nLicence : %s\nClé technicien : %s\n\nPour accéder à l'espace client, utilisez « Mot de passe oublié » afin de créer votre mot de passe. Annulez avant l'échéance pour ne pas être prélevé.\n", lic.LicenseID, lic.LicenseKey)
+		technicianKey := payload.LicenseKey
+		if technicianKey == "" {
+			// Key already delivered by the first activation (replay):
+			// never print the stored hash, point to support instead.
+			technicianKey = lic.KeyHint + " (clé envoyée lors de l'activation ; contactez-nous en cas de perte)"
+		}
+		body = "Votre essai gratuit de 30 jours est activé.\n" + body + fmt.Sprintf("\nLicence : %s\nClé technicien : %s\n\nPour accéder à l'espace client, utilisez « Mot de passe oublié » afin de créer votre mot de passe. Annulez avant l'échéance pour ne pas être prélevé.\n", lic.LicenseID, technicianKey)
 		body += "\nRéférence du contrat : " + t.ID + "\nRétractation du contrat (distincte de l'annulation des prochains renouvellements) : " + strings.TrimRight(cfg.PublicWebsiteURL, "/") + "/formulaire-retractation.html#trial=" + t.ID + "\nConsommateurs : délai légal de 14 jours à compter de la conclusion du contrat, sans renonciation par l'activation immédiate ; RelaisDesk accepte en outre la rétractation sans frais pendant l'intégralité de l'essai gratuit.\n"
 	case "reminder":
 		if t.CancelRequestedAt != 0 || t.CancelAtPeriodEnd || t.StripeStatus != "trialing" || time.Now().Unix() >= t.TrialEnd {
@@ -287,7 +298,19 @@ func processTrialEmail(db *sql.DB, cfg *config.Config, m *mailer.Mailer, job *db
 	default:
 		return errors.New("notification d'essai inconnue")
 	}
-	return m.SendTrialMessage(t.Email, subject, body, payload.Kind == "activated", t.Billing.TermsVersion)
+	if err := m.SendTrialMessage(t.Email, subject, body, payload.Kind == "activated", t.Billing.TermsVersion); err != nil {
+		return err
+	}
+	if payload.Kind == "activated" && payload.LicenseKey != "" {
+		// The key was delivered: scrub it from the retained job row so a
+		// database read never yields it. A scrub failure must not retry
+		// (the email is sent); it is logged for operator follow-up.
+		redacted, _ := json.Marshal(trialNotice{ID: payload.ID, Kind: payload.Kind})
+		if err := dbpkg.ScrubJobPayload(db, job.ID, string(redacted)); err != nil {
+			log.Printf("[Jobs] purge de la clé du travail #%d impossible: %v", job.ID, err)
+		}
+	}
+	return nil
 }
 
 // Reuses the hourly maintenance pass; no additional monitoring service.

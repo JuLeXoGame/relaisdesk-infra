@@ -29,7 +29,7 @@ func TestTechnician2FAFlow(t *testing.T) {
 	_, err = db.Exec(`
 		INSERT INTO licences (customer_id, license_id, email, license_key, status, created_at, expires_at, max_connections, current_connections)
 		VALUES (?, ?, ?, ?, 'active', ?, ?, 3, 0)
-	`, ident.ID, licID, email, licKey, now.Format(time.RFC3339), now.Add(30*24*time.Hour).Format(time.RFC3339))
+	`, ident.ID, licID, email, HashLicenseKey(licKey), now.Format(time.RFC3339), now.Add(30*24*time.Hour).Format(time.RFC3339))
 	if err != nil {
 		t.Fatalf("failed to insert license: %v", err)
 	}

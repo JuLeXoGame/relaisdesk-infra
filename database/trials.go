@@ -244,46 +244,53 @@ func ReserveTrial(db *sql.DB, id string, secret []byte, fingerprint string, now 
 	return GetTrial(db, id)
 }
 
-func ActivateTrial(db *sql.DB, id, subscriptionID string, trialEnd int64) (*Trial, error) {
+// ActivateTrial provisions the trial license and returns the trial plus the
+// plaintext license key for one-time delivery ("" when the trial was already
+// active: the key was delivered by the first activation).
+func ActivateTrial(db *sql.DB, id, subscriptionID string, trialEnd int64) (*Trial, string, error) {
 	if subscriptionID == "" {
-		return nil, ErrTrialUnavailable
+		return nil, "", ErrTrialUnavailable
 	}
 	tx, err := db.Begin()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	defer tx.Rollback()
 	t, err := scanTrial(tx.QueryRow(`SELECT `+trialColumns+` FROM trial_applications WHERE id=?`, id))
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if t.State == "active" && t.SubscriptionID == subscriptionID {
-		return t, nil
+		return t, "", nil
 	}
 	if t.State != "provisioning" || t.TrialEnd != trialEnd {
-		return nil, ErrTrialUnavailable
+		return nil, "", ErrTrialUnavailable
 	}
 	licenseID, err := generateLicenseID()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	key, err := generateLicenseKey()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	_, err = tx.Exec(`INSERT INTO licences(customer_id,license_id,email,license_key,expires_at,max_connections,notes) VALUES(?,?,?,?,?,?,?)`,
-		t.CustomerID, licenseID, t.Email, key, time.Unix(trialEnd, 0).UTC().Format(time.RFC3339), t.Technicians, "Essai 30 jours ; abonnement Stripe "+subscriptionID)
+	_, err = tx.Exec(`INSERT INTO licences(customer_id,license_id,email,license_key,key_hint,expires_at,max_connections,notes) VALUES(?,?,?,?,?,?,?,?)`,
+		t.CustomerID, licenseID, t.Email, HashLicenseKey(key), LicenseKeyHint(key), time.Unix(trialEnd, 0).UTC().Format(time.RFC3339), t.Technicians, "Essai 30 jours ; abonnement Stripe "+subscriptionID)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	_, err = tx.Exec(`UPDATE trial_applications SET state='active',subscription_id=?,license_id=?,stripe_status='trialing' WHERE id=?`, subscriptionID, licenseID, id)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if err = tx.Commit(); err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return GetTrial(db, id)
+	trial, err := GetTrial(db, id)
+	if err != nil {
+		return nil, "", err
+	}
+	return trial, key, nil
 }
 
 // RecordSubscriptionPayment uses the actual paid period, never now+30: replay,

@@ -676,12 +676,20 @@ async function executeDeleteCode() {
   const status = getComputedStatus(state.codeToDelete);
 
   try {
-    // Si actif, révoquer d'abord
+    // Si actif, révoquer d'abord (coupure d'accès immédiate : un échec bloque tout)
     if (status === 'active') {
-      await fetch(`${API_BASE_URL}/api/v1/technician/viewer-codes/${encodeURIComponent(code)}/revoke`, {
+      const revokeResp = await fetch(`${API_BASE_URL}/api/v1/technician/viewer-codes/${encodeURIComponent(code)}/revoke`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${state.token}` }
       });
+      if (!revokeResp.ok) {
+        let msg = 'Erreur lors de la révocation du code.';
+        try {
+          const revokeData = await revokeResp.json();
+          if (revokeData && revokeData.error) msg = revokeData.error;
+        } catch (_) { /* corps vide ou non-JSON : message générique */ }
+        throw new Error(msg);
+      }
     }
 
     // Supprimer définitivement

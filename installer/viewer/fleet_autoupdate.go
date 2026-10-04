@@ -22,6 +22,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/klauspost/compress/zstd"
+	"github.com/ulikunitz/xz"
 )
 
 const (
@@ -161,7 +164,8 @@ func extractBinaryFromDeb(debData []byte, binName string) ([]byte, error) {
 	}
 
 	offset := 8
-	var dataTarGz []byte
+	var dataTar []byte
+	var dataTarName string
 	for offset+60 <= len(debData) {
 		hdr := debData[offset : offset+60]
 		name := strings.TrimRight(string(hdr[0:16]), " /")
@@ -175,8 +179,9 @@ func extractBinaryFromDeb(debData []byte, binName string) ([]byte, error) {
 			break
 		}
 		memberData := debData[offset : offset+int(size)]
-		if name == "data.tar.gz" {
-			dataTarGz = memberData
+		if name == "data.tar" || name == "data.tar.gz" || name == "data.tar.xz" || name == "data.tar.zst" {
+			dataTar = memberData
+			dataTarName = name
 			break
 		}
 		offset += int(size)
@@ -185,17 +190,19 @@ func extractBinaryFromDeb(debData []byte, binName string) ([]byte, error) {
 		}
 	}
 
-	if len(dataTarGz) == 0 {
-		return nil, errors.New("data.tar.gz introuvable dans le paquet .deb")
+	if len(dataTar) == 0 {
+		return nil, errors.New("membre data.tar introuvable dans le paquet .deb")
 	}
 
-	gzr, err := gzip.NewReader(bytes.NewReader(dataTarGz))
+	tarStream, err := openDataTar(dataTarName, dataTar)
 	if err != nil {
-		return nil, fmt.Errorf("lecture gzip data.tar: %w", err)
+		return nil, err
 	}
-	defer gzr.Close()
+	if closer, ok := tarStream.(io.Closer); ok {
+		defer closer.Close()
+	}
 
-	tr := tar.NewReader(gzr)
+	tr := tar.NewReader(tarStream)
 	for {
 		header, err := tr.Next()
 		if err == io.EOF {
@@ -218,7 +225,38 @@ func extractBinaryFromDeb(debData []byte, binName string) ([]byte, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("binaire %s introuvable dans data.tar.gz", binName)
+	return nil, fmt.Errorf("binaire %s introuvable dans %s", binName, dataTarName)
+}
+
+// openDataTar wraps a .deb data member in the matching decompressor.
+// dpkg's default compression changed over releases (gz, then xz, now zst),
+// so the OTA extractor must accept every member the toolchain can emit.
+func openDataTar(memberName string, memberData []byte) (io.Reader, error) {
+	raw := bytes.NewReader(memberData)
+	switch memberName {
+	case "data.tar":
+		return raw, nil
+	case "data.tar.gz":
+		gzr, err := gzip.NewReader(raw)
+		if err != nil {
+			return nil, fmt.Errorf("lecture gzip data.tar: %w", err)
+		}
+		return gzr, nil
+	case "data.tar.xz":
+		xzr, err := xz.NewReader(raw)
+		if err != nil {
+			return nil, fmt.Errorf("lecture xz data.tar: %w", err)
+		}
+		return xzr, nil
+	case "data.tar.zst":
+		zr, err := zstd.NewReader(raw)
+		if err != nil {
+			return nil, fmt.Errorf("lecture zstd data.tar: %w", err)
+		}
+		return zr.IOReadCloser(), nil
+	default:
+		return nil, fmt.Errorf("membre %s non pris en charge", memberName)
+	}
 }
 
 func checkAndApplyFleetUpdate(dir string, target *DeviceUpdateTarget) {

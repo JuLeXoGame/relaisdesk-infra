@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS licences (
     license_id TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL,
     license_key TEXT NOT NULL UNIQUE,
+    key_hint TEXT,
     status TEXT NOT NULL DEFAULT 'active',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expires_at DATETIME NOT NULL,

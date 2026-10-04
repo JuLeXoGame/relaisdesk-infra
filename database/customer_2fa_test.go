@@ -30,8 +30,8 @@ func TestCustomer2FAFlow(t *testing.T) {
 	now := time.Now().UTC()
 	_, err = db.Exec(`
 		INSERT INTO licences (customer_id, license_id, email, license_key, status, created_at, expires_at, max_connections)
-		VALUES (?, 'LIC-CUST-2FA', ?, 'KEY-CUST-2FA', 'active', ?, ?, 1)
-	`, ident.ID, email, now.Format(time.RFC3339), now.Add(30*24*time.Hour).Format(time.RFC3339))
+		VALUES (?, 'LIC-CUST-2FA', ?, ?, 'active', ?, ?, 1)
+	`, ident.ID, email, HashLicenseKey("KEY-CUST-2FA"), now.Format(time.RFC3339), now.Add(30*24*time.Hour).Format(time.RFC3339))
 	if err != nil {
 		t.Fatalf("failed to insert licence: %v", err)
 	}
@@ -178,8 +178,8 @@ func TestCustomer2FAEmailCodeAndTrustedDevice(t *testing.T) {
 	now := time.Now().UTC()
 	_, err = db.Exec(`
 		INSERT INTO licences (customer_id, license_id, email, license_key, status, created_at, expires_at, max_connections)
-		VALUES (?, 'LIC-DEVICE-2FA', ?, 'KEY-DEVICE-2FA', 'active', ?, ?, 1)
-	`, ident.ID, email, now.Format(time.RFC3339), now.Add(30*24*time.Hour).Format(time.RFC3339))
+		VALUES (?, 'LIC-DEVICE-2FA', ?, ?, 'active', ?, ?, 1)
+	`, ident.ID, email, HashLicenseKey("KEY-DEVICE-2FA"), now.Format(time.RFC3339), now.Add(30*24*time.Hour).Format(time.RFC3339))
 	if err != nil {
 		t.Fatalf("failed to insert licence: %v", err)
 	}
@@ -257,8 +257,8 @@ func TestCustomerPasswordLockout(t *testing.T) {
 	now := time.Now().UTC()
 	if _, err = db.Exec(`
 		INSERT INTO licences (customer_id, license_id, email, license_key, status, created_at, expires_at, max_connections)
-		VALUES (?, 'LIC-LOCKOUT', ?, 'KEY-LOCKOUT', 'active', ?, ?, 1)
-	`, ident.ID, email, now.Format(time.RFC3339), now.Add(30*24*time.Hour).Format(time.RFC3339)); err != nil {
+		VALUES (?, 'LIC-LOCKOUT', ?, ?, 'active', ?, ?, 1)
+	`, ident.ID, email, HashLicenseKey("KEY-LOCKOUT"), now.Format(time.RFC3339), now.Add(30*24*time.Hour).Format(time.RFC3339)); err != nil {
 		t.Fatalf("failed to insert licence: %v", err)
 	}
 	if err := SetCustomerPassword(db, email, password); err != nil {

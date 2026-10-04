@@ -5,6 +5,8 @@ go 1.26.6
 require (
 	fyne.io/fyne/v2 v2.8.0
 	github.com/BurntSushi/toml v1.6.0
+	github.com/klauspost/compress v1.20.1
+	github.com/ulikunitz/xz v0.5.17
 	golang.org/x/sys v0.47.0
 )
 

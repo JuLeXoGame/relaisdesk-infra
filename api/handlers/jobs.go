@@ -90,8 +90,18 @@ func EnqueueCryptoInstructionsEmail(db *sql.DB, orderID string) error {
 	return err
 }
 
-func EnqueueOrderDeliveryEmail(db *sql.DB, orderID string) error {
-	_, err := enqueueJSONJob(db, jobOrderDelivery, stringPayload{Value: orderID}, "order-delivery:"+orderID, 20)
+// orderDeliveryPayload carries the order plus, for first deliveries, the
+// plaintext license key for one-time inclusion in the delivery email. The
+// worker scrubs the key from the stored payload after a successful send.
+// Renewal and recovery re-deliveries pass an empty key: the email then shows
+// the support-safe hint instead of re-sending the secret.
+type orderDeliveryPayload struct {
+	OrderID    string `json:"order_id"`
+	LicenseKey string `json:"license_key,omitempty"`
+}
+
+func EnqueueOrderDeliveryEmail(db *sql.DB, orderID, licenseKey string) error {
+	_, err := enqueueJSONJob(db, jobOrderDelivery, orderDeliveryPayload{OrderID: orderID, LicenseKey: licenseKey}, "order-delivery:"+orderID, 20)
 	return err
 }
 
@@ -254,11 +264,19 @@ func processJob(db *sql.DB, cfg *config.Config, mail *mailer.Mailer, job *dbpkg.
 			quote.Asset, quote.AmountCrypto, quote.RateEUR, quote.PayAddress, quote.DestTag,
 			quote.ExpiresAt, order.TermsVersion)
 	case jobOrderDelivery:
-		var payload stringPayload
+		var payload orderDeliveryPayload
 		if err := json.Unmarshal([]byte(job.Payload), &payload); err != nil {
 			return err
 		}
-		return processOrderDeliveryEmail(db, cfg, mail, payload.Value)
+		if payload.OrderID == "" {
+			// Jobs queued before the key-carrying payload shape.
+			var legacy stringPayload
+			if err := json.Unmarshal([]byte(job.Payload), &legacy); err != nil {
+				return err
+			}
+			payload.OrderID = legacy.Value
+		}
+		return processOrderDeliveryEmail(db, cfg, mail, job.ID, payload.OrderID, payload.LicenseKey)
 	case jobWithdrawalEmails:
 		var payload stringPayload
 		if err := json.Unmarshal([]byte(job.Payload), &payload); err != nil {
@@ -313,7 +331,7 @@ func processJob(db *sql.DB, cfg *config.Config, mail *mailer.Mailer, job *dbpkg.
 	}
 }
 
-func processOrderDeliveryEmail(db *sql.DB, cfg *config.Config, mail *mailer.Mailer, orderID string) error {
+func processOrderDeliveryEmail(db *sql.DB, cfg *config.Config, mail *mailer.Mailer, jobID int64, orderID, licenseKey string) error {
 	order, err := dbpkg.GetOrderByID(db, orderID)
 	if err != nil || order.Status != "paid" || order.LicenseID == "" {
 		return errors.New("commande payée introuvable ou incomplète")
@@ -326,7 +344,18 @@ func processOrderDeliveryEmail(db *sql.DB, cfg *config.Config, mail *mailer.Mail
 	if err != nil {
 		return err
 	}
-	return deliverPendingOrderEmails(db, mail, order, lic, inv, pdfBytes)
+	if err := deliverPendingOrderEmails(db, mail, order, lic, inv, pdfBytes, licenseKey); err != nil {
+		return err
+	}
+	if licenseKey != "" {
+		// The key was delivered: scrub it from the retained job row.
+		// A scrub failure must not retry (emails are sent); it is logged.
+		redacted, _ := json.Marshal(orderDeliveryPayload{OrderID: orderID})
+		if err := dbpkg.ScrubJobPayload(db, jobID, string(redacted)); err != nil {
+			log.Printf("[Jobs] purge de la clé du travail #%d impossible: %v", jobID, err)
+		}
+	}
+	return nil
 }
 
 func paymentLabel(order *dbpkg.Order) string {

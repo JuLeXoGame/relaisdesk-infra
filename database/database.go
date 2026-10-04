@@ -20,11 +20,15 @@ var schemaFS embed.FS
 
 // License represents a license in the SQLite database.
 type License struct {
-	ID                 int
-	CustomerID         int64
-	LicenseID          string
-	Email              string
+	ID         int
+	CustomerID int64
+	LicenseID  string
+	Email      string
+	// LicenseKey holds the SHA-256 hash on every read; it carries the
+	// plaintext only on the struct returned at creation time (one-time
+	// display). KeyHint identifies the key for support in all cases.
 	LicenseKey         string
+	KeyHint            string
 	Status             string
 	CreatedAt          time.Time
 	ExpiresAt          time.Time
@@ -172,6 +176,7 @@ func applyMigrations(db *sql.DB) error {
 		{"devices", "mac_address", "TEXT NOT NULL DEFAULT ''"},
 		{"devices", "subnet_broadcast", "TEXT NOT NULL DEFAULT ''"},
 		{"devices", "agent_version", "TEXT NOT NULL DEFAULT ''"},
+		{"licences", "key_hint", "TEXT"},
 	}
 
 	for _, migration := range migrations {
@@ -436,6 +441,10 @@ func applyMigrations(db *sql.DB) error {
 		return fmt.Errorf("failed to backfill stable customers: %w", err)
 	}
 
+	if err := MigrateLicenseKeysToHash(db); err != nil {
+		return fmt.Errorf("failed to migrate license keys to hashes: %w", err)
+	}
+
 	return nil
 }
 
@@ -597,9 +606,10 @@ func ValidateLicense(db *sql.DB, licenseID string, licenseKey string) (*License,
 }
 
 // ValidateLicenseCredentials validates identity and license state without
-// consuming or requiring a free concurrent application slot.
+// consuming or requiring a free concurrent application slot. The key is
+// provided in plaintext and hashed for comparison, as only hashes rest.
 func ValidateLicenseCredentials(db *sql.DB, licenseID string, licenseKey string) (*License, error) {
-	lic, err := getLicenseByWhere(db, "license_id = ? AND license_key = ?", licenseID, licenseKey)
+	lic, err := getLicenseByWhere(db, "license_id = ? AND license_key = ?", licenseID, HashLicenseKey(licenseKey))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.New("invalid license ID or key")
@@ -619,9 +629,10 @@ func ValidateLicenseCredentials(db *sql.DB, licenseID string, licenseKey string)
 	return lic, nil
 }
 
-// GetLicenseByKey retrieves a license by its key.
+// GetLicenseByKey retrieves a license by its plaintext key (hashed for the
+// lookup, as only hashes rest).
 func GetLicenseByKey(db *sql.DB, licenseKey string) (*License, error) {
-	lic, err := getLicenseByWhere(db, "license_key = ?", licenseKey)
+	lic, err := getLicenseByWhere(db, "license_key = ?", HashLicenseKey(licenseKey))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.New("invalid license key")
@@ -751,11 +762,16 @@ func CreateLicense(db *sql.DB, email string, days int, maxConn int, notes string
 
 		expiresAt := time.Now().UTC().Add(time.Duration(days) * 24 * time.Hour)
 		_, err = db.Exec(`
-			INSERT INTO licences (customer_id, license_id, email, license_key, expires_at, max_connections, notes)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
-		`, customer.ID, licenseID, email, licenseKey, expiresAt.Format("2006-01-02 15:04:05"), maxConn, notes)
+			INSERT INTO licences (customer_id, license_id, email, license_key, key_hint, expires_at, max_connections, notes)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		`, customer.ID, licenseID, email, HashLicenseKey(licenseKey), LicenseKeyHint(licenseKey), expiresAt.Format("2006-01-02 15:04:05"), maxConn, notes)
 		if err == nil {
-			return GetLicenseByKey(db, licenseKey)
+			lic, err := GetLicenseByKey(db, licenseKey)
+			if err != nil {
+				return nil, err
+			}
+			lic.LicenseKey = licenseKey // one-time plaintext display
+			return lic, nil
 		}
 		lastErr = err
 	}
@@ -840,7 +856,8 @@ func ListLicenses(db *sql.DB, status, email, search string, limit, offset int) (
 	query := `
 		SELECT id, license_id, email, license_key, status, created_at, expires_at,
 		       max_connections, current_connections, last_connection_at, notes,
-		       revoked_at, revoke_reason
+		       revoked_at, revoke_reason,
+		       key_hint
 		FROM licences
 		` + where + `
 		ORDER BY created_at DESC, id DESC
@@ -910,7 +927,8 @@ func getLicenseByWhere(db *sql.DB, where string, args ...any) (*License, error) 
 	row := db.QueryRow(`
 		SELECT id, license_id, email, license_key, status, created_at, expires_at,
 		       max_connections, current_connections, last_connection_at, notes,
-		       revoked_at, revoke_reason
+		       revoked_at, revoke_reason,
+		       key_hint
 		FROM licences
 		WHERE `+where, args...)
 	return scanLicense(row)
@@ -1001,6 +1019,7 @@ func scanLicense(scanner licenseScanner) (*License, error) {
 		notesRaw            sql.NullString
 		revokedAtRaw        any
 		revokeReasonRaw     sql.NullString
+		keyHintRaw          sql.NullString
 	)
 
 	err := scanner.Scan(
@@ -1017,6 +1036,7 @@ func scanLicense(scanner licenseScanner) (*License, error) {
 		&notesRaw,
 		&revokedAtRaw,
 		&revokeReasonRaw,
+		&keyHintRaw,
 	)
 	if err != nil {
 		return nil, err
@@ -1049,6 +1069,9 @@ func scanLicense(scanner licenseScanner) (*License, error) {
 	}
 	if revokeReasonRaw.Valid {
 		lic.RevokeReason = revokeReasonRaw.String
+	}
+	if keyHintRaw.Valid {
+		lic.KeyHint = keyHintRaw.String
 	}
 
 	return &lic, nil

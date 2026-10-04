@@ -43,8 +43,12 @@ $files = @(
   "installer/configurator/customer_gui_panels.go",
   "installer/configurator/customer_services.go",
   "installer/configurator/pin_consistency_test.go",
+  "installer/viewer/go.mod",
+  "installer/viewer/go.sum",
   "installer/viewer/codec_perf.go",
   "installer/viewer/codec_perf_test.go",
+  "installer/viewer/fleet_autoupdate.go",
+  "installer/viewer/fleet_autoupdate_test.go",
   "installer/viewer/main.go",
   "installer/viewer/rustdesk_darwin.go",
   "installer/viewer/rustdesk_linux.go",
@@ -110,7 +114,9 @@ $checks = @(
   @("scripts\rustdesk-sciter-vcpkg\vcpkg.json", "mfx-dispatch", $false),
   @("rustdesk\src\server\video_qos.rs", "INIT_FPS: u32 = 30", $false),
   @("rustdesk\Cargo.lock", 'name = "ringbuf"\r?\nversion = "0.5.2"', $true),
-  @("installer\viewer\config_windows.go", "068898d94547f86a3322835f2580b9516e272ae3040f9b862310f49099665525", $false)
+  @("installer\viewer\config_windows.go", "068898d94547f86a3322835f2580b9516e272ae3040f9b862310f49099665525", $false),
+  @("installer\viewer\go.mod", "klauspost/compress", $false),
+  @("installer\viewer\fleet_autoupdate.go", "openDataTar", $false)
 )
 foreach ($c in $checks) {
   $p = Join-Path $Win $c[0]

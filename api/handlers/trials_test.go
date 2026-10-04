@@ -261,7 +261,7 @@ func TestTrialCancellationIsScopedAndPreservesTrialExpiry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a, err = dbpkg.ActivateTrial(db, a.ID, fakeStripeID("sub_", a.ID), a.TrialEnd)
+	a, _, err = dbpkg.ActivateTrial(db, a.ID, fakeStripeID("sub_", a.ID), a.TrialEnd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -315,7 +315,7 @@ func TestSubscriptionInvoiceRecheckRejectsZeroAndWrongAmounts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a, err = dbpkg.ActivateTrial(db, a.ID, fakeStripeID("sub_", a.ID), a.TrialEnd)
+	a, _, err = dbpkg.ActivateTrial(db, a.ID, fakeStripeID("sub_", a.ID), a.TrialEnd)
 	if err != nil {
 		t.Fatal(err)
 	}

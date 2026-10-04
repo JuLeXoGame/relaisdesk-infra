@@ -69,7 +69,7 @@ func completeCryptoPayment(db *sql.DB, cfg *config.Config, orderID string, quote
 			if _, _, err := ensureOrderInvoice(db, cfg, order, label, notes); err != nil {
 				return err
 			}
-			return EnqueueOrderDeliveryEmail(db, order.OrderID)
+			return EnqueueOrderDeliveryEmail(db, order.OrderID, "")
 		}
 		return nil
 	}
@@ -85,11 +85,16 @@ func completeCryptoPayment(db *sql.DB, cfg *config.Config, orderID string, quote
 	if err := dbpkg.ExpireCryptoQuotesForOrder(db, order.OrderID); err != nil {
 		log.Printf("[Crypto] expiration des devis résiduels impossible pour %s: %v", order.OrderID, err)
 	}
+	pendingKey := ""
 	if order.Status == "pending" {
 		if order.OrderKind == "renewal" {
 			_, err = dbpkg.FulfillPendingRenewalOrder(db, order.OrderID, fmt.Sprintf("Crypto %s %s", asset, txid))
 		} else {
-			_, err = dbpkg.FulfillPendingOrder(db, order.OrderID, fmt.Sprintf("Crypto %s %s", asset, txid))
+			var lic *dbpkg.License
+			lic, err = dbpkg.FulfillPendingOrder(db, order.OrderID, fmt.Sprintf("Crypto %s %s", asset, txid))
+			if err == nil && lic != nil {
+				pendingKey = lic.LicenseKey // one-time plaintext
+			}
 		}
 		if err != nil {
 			return err
@@ -112,7 +117,7 @@ func completeCryptoPayment(db *sql.DB, cfg *config.Config, orderID string, quote
 	}); err != nil {
 		log.Printf("[Crypto] registre incomplet pour %s: %v", order.OrderID, err)
 	}
-	return EnqueueOrderDeliveryEmail(db, order.OrderID)
+	return EnqueueOrderDeliveryEmail(db, order.OrderID, deliveryKeyFor(order, pendingKey))
 }
 
 // OKXWatcherInterval is the deposit polling cadence.
@@ -209,11 +214,15 @@ func pollOKXAssetDeposits(ctx context.Context, db *sql.DB, cfg *config.Config, s
 		if deposit.CCY != asset || deposit.TxID == "" || deposit.DepID == "" {
 			continue
 		}
-		match := cryptopay.MatchOKXDeposit(candidates, deposit, payAddress)
+		match, eligible := cryptopay.MatchOKXDeposit(candidates, deposit, payAddress)
 		if match == nil {
 			if !state.unmatchedLogged["okx:"+deposit.DepID] {
 				state.unmatchedLogged["okx:"+deposit.DepID] = true
-				log.Printf("[Crypto] dépôt %s %s sans devis (%s, traitement manuel si commande en attente)", asset, deposit.Amt, deposit.TxID)
+				if eligible > 1 {
+					log.Printf("[Crypto] dépôt %s %s ambigu (%d devis éligibles, %s, traitement manuel requis)", asset, deposit.Amt, eligible, deposit.TxID)
+				} else {
+					log.Printf("[Crypto] dépôt %s %s sans devis (%s, traitement manuel si commande en attente)", asset, deposit.Amt, deposit.TxID)
+				}
 			}
 			continue
 		}

@@ -18,7 +18,8 @@ func ListLicensesByCustomerID(db *sql.DB, customerID int64) ([]License, error) {
 	rows, err := db.Query(`
 		SELECT id, license_id, email, license_key, status, created_at, expires_at,
 		       max_connections, current_connections, last_connection_at, notes,
-		       revoked_at, revoke_reason
+		       revoked_at, revoke_reason,
+		       key_hint
 		FROM licences WHERE customer_id = ? ORDER BY created_at DESC
 	`, customerID)
 	if err != nil {

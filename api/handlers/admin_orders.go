@@ -167,7 +167,7 @@ func AdminMarkOrderPaidHandler(db *sql.DB, cfg *config.Config, mail *mailer.Mail
 			writeJSONError(w, "Commande payée, mais la facture n'a pas pu être générée; réessayez", http.StatusInternalServerError)
 			return
 		}
-		if err := EnqueueOrderDeliveryEmail(db, order.OrderID); err != nil {
+		if err := EnqueueOrderDeliveryEmail(db, order.OrderID, deliveryKeyFor(order, lic.LicenseKey)); err != nil {
 			log.Printf("[Admin Orders] Notifications non mises en file pour commande %s: %v", order.OrderID, err)
 			writeJSONError(w, "Commande payée, mais les notifications n'ont pas pu être mises en file", http.StatusInternalServerError)
 			return
@@ -177,12 +177,18 @@ func AdminMarkOrderPaidHandler(db *sql.DB, cfg *config.Config, mail *mailer.Mail
 		if alreadyPaid {
 			status = "already_paid"
 		}
+		responseKey := lic.LicenseKey
+		if alreadyPaid || order.OrderKind == "renewal" {
+			// Re-read license: LicenseKey carries the stored hash, which
+			// must never be displayed; show the hint instead.
+			responseKey = lic.KeyHint
+		}
 
 		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"status":         status,
 			"order_id":       order.OrderID,
 			"license_id":     lic.LicenseID,
-			"license_key":    lic.LicenseKey,
+			"license_key":    responseKey,
 			"invoice_number": createdInv.InvoiceNumber,
 			"email":          lic.Email,
 			"expires_at":     lic.ExpiresAt.Format(time.RFC3339),

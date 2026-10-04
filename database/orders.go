@@ -643,16 +643,17 @@ func FulfillPendingOrder(db *sql.DB, orderID, notes string) (*License, error) {
 			return nil, genErr
 		}
 		result, insertErr := tx.Exec(`
-			INSERT INTO licences (customer_id, license_id, email, license_key, expires_at, max_connections, notes)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
-		`, customerID, licenseID, email, licenseKey, expiresAt.Format("2006-01-02 15:04:05"), technicians, notes)
+			INSERT INTO licences (customer_id, license_id, email, license_key, key_hint, expires_at, max_connections, notes)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		`, customerID, licenseID, email, HashLicenseKey(licenseKey), LicenseKeyHint(licenseKey), expiresAt.Format("2006-01-02 15:04:05"), technicians, notes)
 		if insertErr != nil {
 			continue
 		}
 		rowID, _ := result.LastInsertId()
 		lic = &License{
 			ID: int(rowID), CustomerID: customerID, LicenseID: licenseID, Email: email, LicenseKey: licenseKey,
-			Status: "active", CreatedAt: now, ExpiresAt: expiresAt, MaxConnections: technicians,
+			KeyHint: LicenseKeyHint(licenseKey),
+			Status:  "active", CreatedAt: now, ExpiresAt: expiresAt, MaxConnections: technicians,
 		}
 		break
 	}
@@ -699,11 +700,12 @@ func FulfillPendingRenewalOrder(db *sql.DB, orderID, _ string) (*License, error)
 		return nil, err
 	}
 	var status, licenseEmail, key, createdRaw, expiresRaw, existingNotes string
+	var hint sql.NullString
 	var id int
 	if err := tx.QueryRow(`
-		SELECT id, status, email, license_key, created_at, expires_at, COALESCE(notes, '')
+		SELECT id, status, email, license_key, created_at, expires_at, COALESCE(notes, ''), key_hint
 		FROM licences WHERE license_id = ?
-	`, licenseID).Scan(&id, &status, &licenseEmail, &key, &createdRaw, &expiresRaw, &existingNotes); err != nil {
+	`, licenseID).Scan(&id, &status, &licenseEmail, &key, &createdRaw, &expiresRaw, &existingNotes, &hint); err != nil {
 		return nil, errors.New("licence à renouveler introuvable")
 	}
 	if status == "revoked" || !strings.EqualFold(orderEmail, licenseEmail) {
@@ -741,10 +743,16 @@ func FulfillPendingRenewalOrder(db *sql.DB, orderID, _ string) (*License, error)
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-	return &License{
+	// The renewed license keeps its key: LicenseKey carries the stored hash,
+	// KeyHint the support-safe identifier (plaintext is never re-readable).
+	renewed := &License{
 		ID: id, LicenseID: licenseID, Email: licenseEmail, LicenseKey: key, Status: "active",
 		CreatedAt: createdAt, ExpiresAt: newExpiry, MaxConnections: technicians, Notes: existingNotes,
-	}, nil
+	}
+	if hint.Valid {
+		renewed.KeyHint = hint.String
+	}
+	return renewed, nil
 }
 
 func ListOrdersByCustomer(db *sql.DB, email string) ([]Order, error) {

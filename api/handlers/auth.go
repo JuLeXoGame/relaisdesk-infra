@@ -120,7 +120,7 @@ func HeartbeatHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		if _, err := db.Exec("UPDATE licences SET last_connection_at = CURRENT_TIMESTAMP WHERE license_id = ? AND license_key = ?", req.LicenseID, req.LicenseKey); err != nil {
+		if _, err := db.Exec("UPDATE licences SET last_connection_at = CURRENT_TIMESTAMP WHERE license_id = ? AND license_key = ?", req.LicenseID, dbpkg.HashLicenseKey(req.LicenseKey)); err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"status": "error"})
 			return
 		}

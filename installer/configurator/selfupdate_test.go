@@ -332,7 +332,12 @@ func TestSelfUpdateApplyPortable(t *testing.T) {
 	if err := os.WriteFile(nouveau, []byte("neuf"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := selfUpdateApplyPortable(exe, nouveau); err != nil {
+	sum := sha256.Sum256([]byte("neuf"))
+	// Swapped bytes (same path, wrong hash) must be rejected.
+	if err := selfUpdateApplyPortable(exe, nouveau, strings.Repeat("0", 64)); err == nil {
+		t.Fatal("payload au hash non conforme accepté")
+	}
+	if err := selfUpdateApplyPortable(exe, nouveau, hex.EncodeToString(sum[:])); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
 	got, _ := os.ReadFile(exe)
@@ -401,11 +406,17 @@ func TestSelfUpdateCheckMagic(t *testing.T) {
 }
 
 func TestSelfUpdateWindowsSetupWaiter(t *testing.T) {
-	script := selfUpdateWindowsSetupWaiter(`C:\Temp\setup file.exe`, `C:\Program Files\App\app.exe`, 4242)
-	for _, want := range []string{"Wait-Process -Id 4242", `"C:\Temp\setup file.exe" /S`, `start "" "C:\Program Files\App\app.exe"`, `del "%~f0"`} {
+	sha := strings.Repeat("ab", 32)
+	script := selfUpdateWindowsSetupWaiter(`C:\Temp\setup file.exe`, `C:\Program Files\App\app.exe`, 4242, sha)
+	for _, want := range []string{"Wait-Process -Id 4242", `"C:\Temp\setup file.exe" /S`, `start "" "C:\Program Files\App\app.exe"`, `del "%~f0"`,
+		"Get-FileHash -Algorithm SHA256", sha, "if errorlevel 1 exit /b 1"} {
 		if !strings.Contains(script, want) {
 			t.Errorf("script dépourvu de %q:\n%s", want, script)
 		}
+	}
+	pct := selfUpdateWindowsSetupWaiter(`C:\Temp\100%ok\setup.exe`, `C:\App\app.exe`, 1, sha)
+	if !strings.Contains(pct, `"C:\Temp\100%%ok\setup.exe"`) {
+		t.Errorf("pourcent non échappé pour cmd:\n%s", pct)
 	}
 }
 
@@ -421,14 +432,64 @@ func TestSelfUpdateDebPlan(t *testing.T) {
 }
 
 func TestSelfUpdateMacScript(t *testing.T) {
-	script := selfUpdateMacScript("/tmp/RelaisDesk_Mac.dmg")
-	for _, want := range []string{"hdiutil attach", "ditto", "/Applications/", "hdiutil detach", "open -a"} {
+	sha := strings.Repeat("cd", 32)
+	script := selfUpdateMacScript("/tmp/RelaisDesk_Mac.dmg", sha)
+	for _, want := range []string{"hdiutil attach", "ditto", "/Applications/", "hdiutil detach", "open -a",
+		"shasum -a 256", sha, "exit 9"} {
 		if !strings.Contains(script, want) {
 			t.Errorf("script dépourvu de %q:\n%s", want, script)
 		}
 	}
-	quoted := selfUpdateMacScript("/tmp/a'b.dmg")
+	quoted := selfUpdateMacScript("/tmp/a'b.dmg", sha)
 	if !strings.Contains(quoted, `'/tmp/a'\''b.dmg'`) {
 		t.Errorf("quote shell incorrecte:\n%s", quoted)
+	}
+}
+
+func TestSelfUpdateVerifyFile(t *testing.T) {
+	payload := []byte("\x7fELF-faux-binaire")
+	sum := sha256.Sum256(payload)
+	sha := hex.EncodeToString(sum[:])
+	p := filepath.Join(t.TempDir(), "f.bin")
+	if err := os.WriteFile(p, payload, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := selfUpdateVerifyFile(p, sha, int64(len(payload))); err != nil {
+		t.Errorf("payload conforme rejeté: %v", err)
+	}
+	if err := selfUpdateVerifyFile(p, strings.Repeat("0", 64), int64(len(payload))); err == nil {
+		t.Error("hash non conforme accepté")
+	}
+	if err := selfUpdateVerifyFile(p, sha, int64(len(payload)+1)); err == nil {
+		t.Error("taille non conforme acceptée")
+	}
+	if err := selfUpdateVerifyFile(p+"-absent", sha, int64(len(payload))); err == nil {
+		t.Error("fichier absent accepté")
+	}
+}
+
+func TestSelfUpdateApplyRejectsSwappedFile(t *testing.T) {
+	dir := t.TempDir()
+	staged := filepath.Join(dir, "staged")
+	original := []byte("\x7fELF-version-originale")
+	sum := sha256.Sum256(original)
+	info := &SelfUpdateInfo{
+		Available:      true,
+		Kind:           kindPortable,
+		ArtifactSHA256: hex.EncodeToString(sum[:]),
+		ArtifactSize:   int64(len(original)),
+	}
+	// Swap between download and apply: same size, valid magic, wrong bytes.
+	swapped := []byte("\x7fELF-version-substitue")
+	if len(swapped) != len(original) {
+		t.Fatalf("préparation du test incohérente: %d vs %d", len(swapped), len(original))
+	}
+	if err := os.WriteFile(staged, swapped, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := SelfUpdateApply(info, staged); err == nil {
+		t.Fatal("fichier substitué accepté à l'installation")
+	} else if !strings.Contains(err.Error(), "SHA-256") {
+		t.Fatalf("erreur inattendue: %v", err)
 	}
 }

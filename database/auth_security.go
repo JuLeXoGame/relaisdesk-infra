@@ -234,7 +234,7 @@ func createCustomerSessionTx(tx *sql.Tx, email string, customerID int64, now tim
 }
 
 func activeLicenseTx(tx *sql.Tx, licenseID string) (*License, error) {
-	lic, err := scanLicense(tx.QueryRow(`SELECT id,license_id,email,license_key,status,created_at,expires_at,max_connections,current_connections,last_connection_at,notes,revoked_at,revoke_reason FROM licences WHERE license_id=?`, licenseID))
+	lic, err := scanLicense(tx.QueryRow(`SELECT id,license_id,email,license_key,status,created_at,expires_at,max_connections,current_connections,last_connection_at,notes,revoked_at,revoke_reason,key_hint FROM licences WHERE license_id=?`, licenseID))
 	if err != nil {
 		return nil, err
 	}

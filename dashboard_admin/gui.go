@@ -26,7 +26,6 @@ var (
 	mainWindow        fyne.Window
 	sessionToken      string
 	sessionAdminEmail string
-	unmaskKeys        bool = false
 )
 
 func RunAdminGUI() error {
@@ -475,12 +474,8 @@ func buildLicensesTab() fyne.CanvasObject {
 	searchEntry := widget.NewEntry()
 	searchEntry.SetPlaceHolder("🔍 Filtrer par email ou ID de licence...")
 
-	unmaskCheck := widget.NewCheck("Afficher clés en clair", func(checked bool) {
-		unmaskKeys = checked
-		reloadLicenses(listContainer, searchEntry.Text, statusFilter.Selected)
-	})
-	unmaskCheck.SetChecked(unmaskKeys)
-
+	// Keys are hashed server-side and shown once at creation; listings
+	// display the support-safe hint, so there is nothing to unmask.
 	statusFilter.OnChanged = func(s string) {
 		reloadLicenses(listContainer, searchEntry.Text, s)
 	}
@@ -494,7 +489,6 @@ func buildLicensesTab() fyne.CanvasObject {
 		widget.NewLabel("Filtre:"),
 		statusFilter,
 		searchEntry,
-		unmaskCheck,
 	)
 
 	return container.NewBorder(
@@ -507,7 +501,6 @@ func buildLicensesTab() fyne.CanvasObject {
 func reloadLicenses(targetBox *fyne.Container, search, statusChoice string) {
 	targetBox.Objects = []fyne.CanvasObject{widget.NewLabel("Chargement des licences...")}
 	targetBox.Refresh()
-	showUnmaskedKeys := unmaskKeys
 	token := sessionToken
 
 	go func() {
@@ -520,7 +513,7 @@ func reloadLicenses(targetBox *fyne.Container, search, statusChoice string) {
 			statusParam = "revoked"
 		}
 
-		lics, err := ListLicenses(token, showUnmaskedKeys, statusParam, "")
+		lics, err := ListLicenses(token, false, statusParam, "")
 		if err != nil {
 			fyne.Do(func() {
 				targetBox.Objects = []fyne.CanvasObject{widget.NewLabel("Erreur : " + err.Error())}

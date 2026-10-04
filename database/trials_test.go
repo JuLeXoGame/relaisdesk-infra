@@ -62,11 +62,11 @@ func TestTrialAllCapacitiesOneOfferAndNoRenewalReset(t *testing.T) {
 			if a.TrialEnd-a.TrialStart != 30*86400 || a.PriceCents != tc.price || a.Technicians != tc.techs {
 				t.Fatalf("unexpected trial %+v", a)
 			}
-			a, err = ActivateTrial(db, a.ID, "sub_test", a.TrialEnd)
+			a, _, err = ActivateTrial(db, a.ID, "sub_test", a.TrialEnd)
 			if err != nil {
 				t.Fatal(err)
 			}
-			again, err := ActivateTrial(db, a.ID, "sub_test", a.TrialEnd)
+			again, _, err := ActivateTrial(db, a.ID, "sub_test", a.TrialEnd)
 			if err != nil || again.LicenseID != a.LicenseID {
 				t.Fatal("activation not idempotent", err)
 			}
@@ -142,7 +142,7 @@ func TestTrialPaymentsUsePaidPeriodsAndAreIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a, err = ActivateTrial(db, a.ID, "sub_paid", a.TrialEnd)
+	a, _, err = ActivateTrial(db, a.ID, "sub_paid", a.TrialEnd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +194,7 @@ func TestTrialRetentionAndUnverifiedAccess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a, err = ActivateTrial(db, a.ID, "sub_old", a.TrialEnd)
+	a, _, err = ActivateTrial(db, a.ID, "sub_old", a.TrialEnd)
 	if err != nil {
 		t.Fatal(err)
 	}

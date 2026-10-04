@@ -25,7 +25,7 @@ func TestAdminAuthWithEmailAndPassword(t *testing.T) {
 	_, err = db.Exec(`
 		INSERT INTO licences (license_id, email, license_key, status, created_at, expires_at, max_connections, notes)
 		VALUES (?, ?, ?, 'active', CURRENT_TIMESTAMP, ?, 50, 'ADMIN')
-	`, adminLicenseID, adminEmail, adminLicenseKey, expiresFuture)
+	`, adminLicenseID, adminEmail, HashLicenseKey(adminLicenseKey), expiresFuture)
 	if err != nil {
 		t.Fatalf("Failed to insert admin license: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestAdminAuthWithEmailAndPassword(t *testing.T) {
 	_, err = db.Exec(`
 		INSERT INTO licences (license_id, email, license_key, status, created_at, expires_at, max_connections, notes)
 		VALUES (?, ?, ?, 'active', CURRENT_TIMESTAMP, ?, 2, 'starter')
-	`, userLicID, userEmail, userLicKey, expiresFuture)
+	`, userLicID, userEmail, HashLicenseKey(userLicKey), expiresFuture)
 	if err != nil {
 		t.Fatalf("Failed to insert user license: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestAdminAuthWith2FA(t *testing.T) {
 	_, err = db.Exec(`
 		INSERT INTO licences (license_id, email, license_key, status, created_at, expires_at, max_connections, notes)
 		VALUES (?, ?, ?, 'active', CURRENT_TIMESTAMP, ?, 10, 'ADMIN')
-	`, adminLicenseID, adminEmail, adminLicenseKey, expiresFuture)
+	`, adminLicenseID, adminEmail, HashLicenseKey(adminLicenseKey), expiresFuture)
 	if err != nil {
 		t.Fatalf("Failed to insert admin license: %v", err)
 	}

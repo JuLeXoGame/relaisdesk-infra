@@ -592,15 +592,26 @@ func paginationParams(r *http.Request, defaultLimit int) (page, limit int) {
 	return page, limit
 }
 
+// licensePayload renders a license for admin APIs. Plaintext keys exist only
+// on structs returned at creation time (recognized by the "mpsk_" prefix);
+// every database read carries the hash, which must never be displayed, so
+// listings always show the support-safe hint instead.
 func licensePayload(lic dbpkg.License, maskKey bool) map[string]any {
-	key := lic.LicenseKey
-	if maskKey {
-		key = MaskLicenseKey(key)
+	key := lic.KeyHint
+	recoverable := false
+	if !maskKey && strings.HasPrefix(lic.LicenseKey, "mpsk_") {
+		key = lic.LicenseKey // one-time creation display
+		recoverable = true
+	}
+	if key == "" {
+		key = MaskLicenseKey(lic.LicenseKey)
 	}
 	return map[string]any{
 		"license_id":                 lic.LicenseID,
 		"email":                      lic.Email,
 		"license_key":                key,
+		"key_hint":                   lic.KeyHint,
+		"key_recoverable":            recoverable,
 		"status":                     lic.Status,
 		"created_at":                 lic.CreatedAt.Format("2006-01-02 15:04:05"),
 		"expires_at":                 lic.ExpiresAt.Format("2006-01-02 15:04:05"),

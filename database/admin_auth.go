@@ -30,7 +30,8 @@ func FindActiveAdminLicense(db *sql.DB, email string) (*License, error) {
 	query := `
 		SELECT id, license_id, email, license_key, status, created_at, expires_at,
 		       max_connections, current_connections, last_connection_at, notes,
-		       revoked_at, revoke_reason
+		       revoked_at, revoke_reason,
+		       key_hint
 		FROM licences
 		WHERE (LOWER(email) = ? OR customer_id IN (
 			SELECT id FROM customers WHERE LOWER(billing_email) = ?
@@ -128,7 +129,7 @@ func SetAdminPasswordWithLicense(db *sql.DB, licenseID, licenseKey, newPassword 
 	defer tx.Rollback()
 	fresh, err := activeLicenseTx(tx, licenseID)
 	if err != nil || !strings.EqualFold(strings.TrimSpace(fresh.Notes), "ADMIN") ||
-		!strings.EqualFold(fresh.Email, email) || subtle.ConstantTimeCompare([]byte(fresh.LicenseKey), []byte(licenseKey)) != 1 {
+		!strings.EqualFold(fresh.Email, email) || subtle.ConstantTimeCompare([]byte(fresh.LicenseKey), []byte(HashLicenseKey(licenseKey))) != 1 {
 		return "", errors.New("identifiants administrateur invalides")
 	}
 	enabled, _, _, _, err := getMFAConfigTx(tx, licenseID, email)

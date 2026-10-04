@@ -246,14 +246,14 @@ func provisionTrial(cfg *config.Config, db *sql.DB, t *dbpkg.Trial, pm string) (
 	if !subscriptionMatchesTrial(sub, t) {
 		return nil, errors.New("abonnement Stripe hors contrat")
 	}
-	active, err := dbpkg.ActivateTrial(db, t.ID, sub.ID, sub.TrialEnd)
+	active, trialKey, err := dbpkg.ActivateTrial(db, t.ID, sub.ID, sub.TrialEnd)
 	if err != nil {
 		return nil, err
 	}
 	if err = syncTrialSubscription(db, cfg, active, sub); err != nil {
 		return nil, err
 	}
-	if _, err = enqueueJSONJob(db, jobTrialNotice, trialNotice{ID: t.ID, Kind: "activated"}, "trial-activated:"+t.ID, 20); err != nil {
+	if _, err = enqueueJSONJob(db, jobTrialNotice, trialNotice{ID: t.ID, Kind: "activated", LicenseKey: trialKey}, "trial-activated:"+t.ID, 20); err != nil {
 		return nil, err
 	}
 	return active, nil
@@ -414,7 +414,7 @@ func processSubscriptionInvoice(db *sql.DB, cfg *config.Config, invoiceID string
 		_, err = enqueueJSONJob(db, jobTrialNotice, trialNotice{ID: t.ID, Kind: "withdrawal_payment"}, "withdrawal-payment:"+inv.ID, 30)
 		return err
 	}
-	return EnqueueOrderDeliveryEmail(db, order.OrderID)
+	return EnqueueOrderDeliveryEmail(db, order.OrderID, "")
 }
 
 func processSubscriptionFailure(db *sql.DB, cfg *config.Config, invoiceID string) error {

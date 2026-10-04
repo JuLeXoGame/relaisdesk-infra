@@ -59,7 +59,11 @@ func ensureOrderInvoice(db *sql.DB, cfg *config.Config, order *dbpkg.Order, paym
 	return created, pdfBytes, nil
 }
 
-func deliverPendingOrderEmails(db *sql.DB, mail *mailer.Mailer, order *dbpkg.Order, lic *dbpkg.License, inv *dbpkg.Invoice, pdfBytes []byte) error {
+// deliverPendingOrderEmails sends the license and invoice emails once each.
+// licenseKey carries the plaintext key for first deliveries; it is empty on
+// recovery re-deliveries, in which case the email shows the support-safe hint
+// and points to support instead of re-sending a secret (or printing a hash).
+func deliverPendingOrderEmails(db *sql.DB, mail *mailer.Mailer, order *dbpkg.Order, lic *dbpkg.License, inv *dbpkg.Invoice, pdfBytes []byte, licenseKey string) error {
 	if mail == nil {
 		return nil
 	}
@@ -72,7 +76,11 @@ func deliverPendingOrderEmails(db *sql.DB, mail *mailer.Mailer, order *dbpkg.Ord
 		if order.OrderKind == "renewal" {
 			sendErr = mail.SendRenewalConfirmation(order.Email, order.Plan, lic.LicenseID, lic.ExpiresAt.Format("2006-01-02"), order.Technicians, order.TermsVersion)
 		} else {
-			sendErr = mail.SendLicenseEmail(order.Email, order.Plan, lic.LicenseID, lic.LicenseKey, lic.ExpiresAt.Format("2006-01-02"), order.Technicians, order.TermsVersion)
+			displayKey := licenseKey
+			if displayKey == "" {
+				displayKey = lic.KeyHint + " (clé envoyée lors du premier envoi ; contactez-nous en cas de perte)"
+			}
+			sendErr = mail.SendLicenseEmail(order.Email, order.Plan, lic.LicenseID, displayKey, lic.ExpiresAt.Format("2006-01-02"), order.Technicians, order.TermsVersion)
 		}
 		if sendErr != nil {
 			return fmt.Errorf("envoi de la confirmation de licence: %w", sendErr)

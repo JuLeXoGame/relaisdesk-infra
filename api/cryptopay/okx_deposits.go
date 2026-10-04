@@ -223,28 +223,36 @@ type MatchQuote struct {
 	ExpiresAt    time.Time
 }
 
-// MatchOKXDeposit returns the first quote a credited OKX deposit pays:
-// same credited address, amount greater than or equal (exact rational
-// comparison, so overpayments pay and underpayments never do), deposit
-// recorded after the quote (minus clock skew) and within a grace window
-// past expiry (a BTC credit can land after the quote expired). Callers pass
-// pending quotes first, oldest first.
-func MatchOKXDeposit(quotes []MatchQuote, deposit OKXDeposit, payAddress string) *MatchQuote {
+// MatchOKXDeposit returns the unique quote a credited OKX deposit pays and
+// the number of eligible quotes. Eligibility: same credited address, amount
+// greater than or equal (exact rational comparison, so underpayments never
+// pay) but within the overpay tolerance (small overpayments from rounding or
+// fee buffers pay; anything beyond needs manual review), deposit recorded
+// after the quote (minus clock skew) and within a grace window past expiry
+// (a BTC credit can land after the quote expired).
+//
+// All deposit addresses are shared between orders, so "first match wins"
+// would let one customer's deposit pay another customer's older quote.
+// Instead, several eligible quotes resolve to the single exact-amount match
+// when there is exactly one, and to no match (manual review) when ambiguous.
+// Callers pass pending quotes first, oldest first.
+func MatchOKXDeposit(quotes []MatchQuote, deposit OKXDeposit, payAddress string) (*MatchQuote, int) {
 	depAmount, ok := new(big.Rat).SetString(strings.TrimSpace(deposit.Amt))
 	if !ok || depAmount.Sign() <= 0 {
-		return nil
+		return nil, 0
 	}
 	if strings.TrimSpace(deposit.To) == "" || strings.TrimSpace(deposit.To) != strings.TrimSpace(payAddress) {
-		return nil
+		return nil, 0
 	}
 	if deposit.TsMillis <= 0 {
-		return nil
+		return nil, 0
 	}
 	depTime := time.UnixMilli(deposit.TsMillis)
 	const (
 		clockSkew = 5 * time.Minute
 		grace     = 24 * time.Hour
 	)
+	var eligible []*MatchQuote
 	for i := range quotes {
 		quote := &quotes[i]
 		if strings.TrimSpace(quote.PayAddress) != "" && strings.TrimSpace(quote.PayAddress) != strings.TrimSpace(payAddress) {
@@ -254,13 +262,45 @@ func MatchOKXDeposit(quotes []MatchQuote, deposit OKXDeposit, payAddress string)
 		if !ok || expected.Sign() <= 0 || depAmount.Cmp(expected) < 0 {
 			continue
 		}
+		if !withinOverpayTolerance(depAmount, expected) {
+			continue
+		}
 		if depTime.Before(quote.QuotedAt.Add(-clockSkew)) {
 			continue
 		}
 		if depTime.After(quote.ExpiresAt.Add(grace)) {
 			continue
 		}
-		return quote
+		eligible = append(eligible, quote)
 	}
-	return nil
+	if len(eligible) == 0 {
+		return nil, 0
+	}
+	if len(eligible) == 1 {
+		return eligible[0], 1
+	}
+	var exact []*MatchQuote
+	for _, quote := range eligible {
+		expected, ok := new(big.Rat).SetString(strings.TrimSpace(quote.AmountCrypto))
+		if !ok {
+			continue
+		}
+		if depAmount.Cmp(expected) == 0 {
+			exact = append(exact, quote)
+		}
+	}
+	if len(exact) == 1 {
+		return exact[0], len(eligible)
+	}
+	return nil, len(eligible) // ambiguous: manual review, never auto-pay
+}
+
+// withinOverpayTolerance reports whether dep pays expected with at most a 2%
+// overpayment (dep <= expected * 51/50, exact rational arithmetic). Beyond
+// that, the deposit needs manual review instead of auto-paying the oldest
+// eligible quote.
+func withinOverpayTolerance(dep, expected *big.Rat) bool {
+	fiftyOne := big.NewRat(51, 50)
+	limit := new(big.Rat).Mul(expected, fiftyOne)
+	return dep.Cmp(limit) <= 0
 }

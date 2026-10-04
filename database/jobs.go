@@ -98,6 +98,14 @@ func ClaimNextJob(db *sql.DB, now time.Time) (*Job, error) {
 	return &job, nil
 }
 
+// ScrubJobPayload replaces a job's stored payload, used to purge one-time
+// secrets (license keys) after successful delivery while keeping the row
+// for audit. Only the claimed worker calls it.
+func ScrubJobPayload(db *sql.DB, id int64, redacted string) error {
+	_, err := db.Exec(`UPDATE jobs SET payload = ? WHERE id = ?`, redacted, id)
+	return err
+}
+
 func CompleteJob(db *sql.DB, id int64) error {
 	result, err := db.Exec(`
 		UPDATE jobs SET status = 'done', completed_at = CURRENT_TIMESTAMP,
