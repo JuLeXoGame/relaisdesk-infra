@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -892,5 +893,94 @@ func TestUpdateTargetFromManifest(t *testing.T) {
 	lin := updateTargetFromManifest(full, "linux", "", 15)
 	if lin == nil || lin.SHA256 != "def456" || lin.Version != "1.0.0" {
 		t.Fatalf("linux target = %+v", lin)
+	}
+}
+
+func TestTechnicianParkTokenAPI(t *testing.T) {
+	db, err := dbpkg.InitDatabase(filepath.Join(t.TempDir(), "tech-park.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	lic, err := dbpkg.CreateLicense(db, "park-tech@example.com", 30, 2, "Park")
+	if err != nil {
+		t.Fatal(err)
+	}
+	session, err := dbpkg.CreateTechnicianSession(db, lic.LicenseID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authWrap := func(h http.Handler) http.Handler {
+		return middleware.TechnicianAuth(db)(h)
+	}
+	do := func(h http.HandlerFunc, method, path string, body any) *httptest.ResponseRecorder {
+		var raw []byte
+		if body != nil {
+			raw, _ = json.Marshal(body)
+		}
+		req := httptest.NewRequest(method, path, bytes.NewReader(raw))
+		req.Header.Set("Authorization", "Bearer "+session)
+		rec := httptest.NewRecorder()
+		authWrap(h).ServeHTTP(rec, req)
+		return rec
+	}
+
+	// Create.
+	rec := do(TechnicianCreateParkTokenHandler(db), http.MethodPost, "/api/v1/technician/device-park-tokens", map[string]any{
+		"label": "Vague 1", "max_uses": 50, "ttl_days": 7,
+	})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create = %d (%s)", rec.Code, rec.Body.String())
+	}
+	var created struct {
+		Token     string `json:"token"`
+		ParkToken struct {
+			ID      int64  `json:"id"`
+			MaxUses int    `json:"max_uses"`
+			Label   string `json:"label"`
+		} `json:"park_token"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
+		t.Fatal(err)
+	}
+	if len(created.Token) < 20 || created.ParkToken.MaxUses != 50 {
+		t.Fatalf("created = %+v", created)
+	}
+
+	// List (metadata only, no plaintext).
+	rec = do(TechnicianListParkTokensHandler(db), http.MethodGet, "/api/v1/technician/device-park-tokens", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("list = %d", rec.Code)
+	}
+	var listed struct {
+		ParkTokens []map[string]any `json:"park_tokens"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &listed); err != nil {
+		t.Fatal(err)
+	}
+	if len(listed.ParkTokens) != 1 {
+		t.Fatalf("tokens = %d, want 1", len(listed.ParkTokens))
+	}
+	if _, hasToken := listed.ParkTokens[0]["token"]; hasToken {
+		t.Fatal("le clair fuite dans le list")
+	}
+
+	// Revoke.
+	revokePath := "/api/v1/technician/device-park-tokens/" + strconv.FormatInt(created.ParkToken.ID, 10) + "/revoke"
+	rec = do(TechnicianRevokeParkTokenHandler(db), http.MethodPut, revokePath, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("revoke = %d (%s)", rec.Code, rec.Body.String())
+	}
+	rec = do(TechnicianListParkTokensHandler(db), http.MethodGet, "/api/v1/technician/device-park-tokens", nil)
+	var listed2 struct {
+		ParkTokens []struct {
+			IsActive bool `json:"is_active"`
+		} `json:"park_tokens"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &listed2); err != nil {
+		t.Fatal(err)
+	}
+	if len(listed2.ParkTokens) != 1 || listed2.ParkTokens[0].IsActive {
+		t.Fatalf("après revoke: %+v", listed2.ParkTokens)
 	}
 }

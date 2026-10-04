@@ -1,9 +1,12 @@
 package middleware
 
 import (
+	"bytes"
 	dbpkg "database"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -187,6 +190,64 @@ func RateLimit(limit int, window time.Duration) func(http.Handler) http.Handler 
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// DeviceRateLimit limits fleet traffic on two keys: a generous per-IP flood
+// guard plus a strict per-device bucket. Corporate parks sit behind one NAT
+// egress IP, so IP-only limits would cap a whole park at a few hundred
+// devices; keying on the authenticated device_id instead lets parks scale
+// while keeping per-device abuse (runaway loops, replay floods) contained.
+// The device_id is only read here for budgeting — authentication still
+// happens in the handler via the signed proof.
+func DeviceRateLimit(ipLimit, deviceLimit int, window time.Duration) func(http.Handler) http.Handler {
+	ipLimiter := newIPRateLimiter(ipLimit, window)
+	deviceLimiter := newIPRateLimiter(deviceLimit, window)
+
+	allow := func(limiter *ipRateLimiter, key string) bool {
+		limiter.mu.Lock()
+		defer limiter.mu.Unlock()
+		now := time.Now()
+		entry := limiter.getOrCreate(key, now)
+		if now.Sub(entry.windowStart) > limiter.window {
+			entry.count = 0
+			entry.windowStart = now
+		}
+		entry.count++
+		return entry.count <= limiter.limit
+	}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			deviceID := ""
+			if r.Body != nil {
+				body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+				if err == nil {
+					r.Body = io.NopCloser(bytes.NewReader(body))
+					var peek struct {
+						DeviceID string `json:"device_id"`
+					}
+					if json.Unmarshal(body, &peek) == nil {
+						deviceID = strings.TrimSpace(peek.DeviceID)
+					}
+				}
+			}
+			if deviceID != "" && !allow(deviceLimiter, "device:"+deviceID) {
+				writeRateLimitExceeded(w)
+				return
+			}
+			if !allow(ipLimiter, GetClientIP(r)) {
+				writeRateLimitExceeded(w)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func writeRateLimitExceeded(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusTooManyRequests)
+	fmt.Fprintf(w, `{"error": "Too many requests. Try again later."}`)
 }
 
 // LimitRequestBody returns a middleware that limits the maximum size of the request body.

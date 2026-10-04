@@ -123,6 +123,7 @@ $files = @(
   "installer/configurator/rustdesk_windows_test.go",
   "installer/viewer/toml.go",
   "installer/viewer/rustdesk_windows_test.go",
+  "installer/nsis/installer.nsi",
   "scripts/deploy-interventions-20260920.ps1"
 )
 foreach ($f in $files) {
@@ -147,7 +148,8 @@ $checks = @(
   @("installer\viewer\fleet_autoupdate.go", "openDataTar", $false),
   @("rustdesk\src\core_main.rs", "--password-file", $false),
   @("installer\viewer\fleet_windows.go", "--password-file", $false),
-  @("installer\configurator\updates.go", "RELEASE_KEY_ID", $false)
+  @("installer\configurator\updates.go", "RELEASE_KEY_ID", $false),
+  @("installer\nsis\installer.nsi", "ENROLLCODE", $false)
 )
 foreach ($c in $checks) {
   $p = Join-Path $Win $c[0]

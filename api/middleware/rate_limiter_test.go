@@ -2,9 +2,11 @@ package middleware
 
 import (
 	dbpkg "database"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -106,5 +108,41 @@ func TestRateLimiterEvictionDoesNotDoS(t *testing.T) {
 	}
 	if _, exists := limiter.limiters["4.4.4.4"]; !exists {
 		t.Fatalf("expected 4.4.4.4 to exist in limiter")
+	}
+}
+
+func TestDeviceRateLimitKeysByDevice(t *testing.T) {
+	var seenBodies []string
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		seenBodies = append(seenBodies, string(body))
+		w.WriteHeader(http.StatusOK)
+	})
+	limited := DeviceRateLimit(100, 2, time.Minute)(handler)
+
+	// Same device 3 times from the same IP: third is rejected…
+	for i := 0; i < 3; i++ {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/devices/heartbeat", strings.NewReader(`{"device_id":"DEV-AAA"}`))
+		req.RemoteAddr = "198.51.100.9:1111"
+		limited.ServeHTTP(rec, req)
+		if i < 2 && rec.Code != http.StatusOK {
+			t.Fatalf("requête %d = %d, want 200", i+1, rec.Code)
+		}
+		if i == 2 && rec.Code != http.StatusTooManyRequests {
+			t.Fatalf("requête 3 = %d, want 429", rec.Code)
+		}
+	}
+	// …while another device behind the same NAT IP still passes.
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/devices/heartbeat", strings.NewReader(`{"device_id":"DEV-BBB"}`))
+	req.RemoteAddr = "198.51.100.9:2222"
+	limited.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("autre device = %d, want 200", rec.Code)
+	}
+	// The body must reach the handler intact (middleware peeks, then restores).
+	if len(seenBodies) != 3 || seenBodies[0] != `{"device_id":"DEV-AAA"}` {
+		t.Fatalf("corps restaurés = %q", seenBodies)
 	}
 }

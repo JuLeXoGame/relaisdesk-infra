@@ -288,7 +288,11 @@ func EnrollDeviceWithFullInfo(db *sql.DB, code, rustdeskID, hostname, osName, pu
 	}
 	defer tx.Rollback()
 	d, err := scanDevice(tx.QueryRow("SELECT "+deviceColumns+" FROM devices WHERE permanent_code=? AND is_active=1", deviceCodeHash(code)))
-	if err != nil || d.EnrollmentVersion == 0 || !d.CreatedAt.Add(DeviceEnrollmentTTL).After(time.Now()) {
+	if err != nil {
+		// No per-device invitation: fall back to park (multi-use) tokens.
+		return enrollDeviceWithParkTokenTx(tx, db, code, rustdeskID, hostname, osName, publicKey, ip, macAddress, subnetBroadcast, agentVersion, p)
+	}
+	if d.EnrollmentVersion == 0 || !d.CreatedAt.Add(DeviceEnrollmentTTL).After(time.Now()) {
 		return nil, ErrDeviceAuthorization
 	}
 	// Lost responses can only be retried by the same cryptographic identity.

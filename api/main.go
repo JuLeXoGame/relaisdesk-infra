@@ -293,8 +293,13 @@ func main() {
 	mux.Handle("/api/v1/viewer/announce", middleware.StrictAuthLimiter(10, time.Minute, db)(http.HandlerFunc(method(http.MethodPost, handlers.ViewerAnnounceHandler(db)))))
 
 	// Endpoints pour les postes distants permanents (Console de gestion / Unattended)
-	mux.Handle("/api/v1/devices/enroll", middleware.StrictAuthLimiter(10, time.Minute, db)(http.HandlerFunc(method(http.MethodPost, handlers.DeviceEnrollHandler(db, settings, networkSigner)))))
-	mux.Handle("/api/v1/devices/heartbeat", middleware.RateLimit(600, time.Minute)(http.HandlerFunc(method(http.MethodPost, handlers.DeviceHeartbeatHandler(db, cfg, networkSigner)))))
+	// Enrollment codes carry 118+ bits of entropy with a 15-minute TTL
+	// (park tokens 157 bits), so guessing is infeasible and the per-IP
+	// budget can allow mass waves behind one NAT egress (120/min).
+	mux.Handle("/api/v1/devices/enroll", middleware.StrictAuthLimiter(120, time.Minute, db)(http.HandlerFunc(method(http.MethodPost, handlers.DeviceEnrollHandler(db, settings, networkSigner)))))
+	// Heartbeats behind a corporate NAT share one egress IP: budget per
+	// device (5/min is ~4x the 45s cadence) with a high per-IP flood guard.
+	mux.Handle("/api/v1/devices/heartbeat", middleware.DeviceRateLimit(6000, 5, time.Minute)(http.HandlerFunc(method(http.MethodPost, handlers.DeviceHeartbeatHandler(db, cfg, networkSigner)))))
 
 	// Customer commercial portal. Its e-mail session is intentionally separate
 	// from technician licence credentials.
@@ -351,6 +356,24 @@ func main() {
 	mux.Handle("/api/v1/customer/devices", customerAuth(http.HandlerFunc(method(http.MethodGet, handlers.CustomerListDevicesHandler(db)))))
 	mux.Handle("/api/v1/customer/devices/enrollment-code", customerAuth(http.HandlerFunc(method(http.MethodPost, handlers.CustomerCreateDeviceEnrollmentHandler(db)))))
 	mux.Handle("/api/v1/customer/devices/", customerAuth(http.HandlerFunc(handlers.CustomerDeviceActionHandler(db))))
+	mux.Handle("/api/v1/customer/device-park-tokens", customerAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			handlers.CustomerListParkTokensHandler(db)(w, r)
+			return
+		}
+		if r.Method == http.MethodPost {
+			handlers.CustomerCreateParkTokenHandler(db)(w, r)
+			return
+		}
+		methodNotAllowed(w)
+	})))
+	mux.Handle("/api/v1/customer/device-park-tokens/", customerAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPut && strings.HasSuffix(r.URL.Path, "/revoke") {
+			handlers.CustomerRevokeParkTokenHandler(db)(w, r)
+			return
+		}
+		methodNotAllowed(w)
+	})))
 	mux.Handle("/api/v1/customer/device-folders", customerAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handlers.CustomerListFoldersHandler(db)(w, r)
@@ -385,6 +408,24 @@ func main() {
 	mux.Handle("/api/v1/technician/devices", techAuth(http.HandlerFunc(method(http.MethodGet, handlers.TechnicianListDevicesHandler(db)))))
 	mux.Handle("/api/v1/technician/devices/enrollment-code", techAuth(http.HandlerFunc(method(http.MethodPost, handlers.TechnicianCreateDeviceEnrollmentHandler(db)))))
 	mux.Handle("/api/v1/technician/devices/", techAuth(http.HandlerFunc(handlers.TechnicianDeviceActionHandler(db))))
+	mux.Handle("/api/v1/technician/device-park-tokens", techAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			handlers.TechnicianListParkTokensHandler(db)(w, r)
+			return
+		}
+		if r.Method == http.MethodPost {
+			handlers.TechnicianCreateParkTokenHandler(db)(w, r)
+			return
+		}
+		methodNotAllowed(w)
+	})))
+	mux.Handle("/api/v1/technician/device-park-tokens/", techAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPut && strings.HasSuffix(r.URL.Path, "/revoke") {
+			handlers.TechnicianRevokeParkTokenHandler(db)(w, r)
+			return
+		}
+		methodNotAllowed(w)
+	})))
 	mux.Handle("/api/v1/technician/device-folders", techAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handlers.TechnicianListFoldersHandler(db)(w, r)

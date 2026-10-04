@@ -413,6 +413,25 @@ CREATE TABLE IF NOT EXISTS device_auth_nonces (
 );
 CREATE INDEX IF NOT EXISTS idx_device_auth_nonce_expiry ON device_auth_nonces(expires_at);
 
+CREATE TABLE IF NOT EXISTS device_enrollment_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token_hash TEXT NOT NULL UNIQUE,
+    token_prefix TEXT NOT NULL,
+    customer_id INTEGER,
+    license_id TEXT NOT NULL,
+    folder_id TEXT NOT NULL DEFAULT '',
+    label TEXT NOT NULL DEFAULT '',
+    max_uses INTEGER NOT NULL DEFAULT 100,
+    use_count INTEGER NOT NULL DEFAULT 0,
+    expires_at DATETIME NOT NULL,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    revoked_at DATETIME,
+    FOREIGN KEY (customer_id) REFERENCES customers(id),
+    FOREIGN KEY (license_id) REFERENCES licences(license_id)
+);
+CREATE INDEX IF NOT EXISTS idx_device_enrollment_tokens_license ON device_enrollment_tokens(license_id, is_active);
+
 CREATE TABLE IF NOT EXISTS device_wake_requests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     target_device_id TEXT NOT NULL,

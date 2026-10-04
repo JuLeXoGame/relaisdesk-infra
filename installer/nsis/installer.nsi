@@ -125,6 +125,33 @@ Section "Programme principal" SEC01
     ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
     IntFmt $0 "0x%08X" $0
     WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "EstimatedSize" "$0"
+
+    ; Enrôlement de parc optionnel (déploiement de masse) :
+    ;   RelaisDesk_Setup.exe /S /ENROLLCODE=PARK-XXXX /PASSWORD=secret
+    ; Le mot de passe transite par variable d'environnement (jamais en argv
+    ; du viewer) et la variable est nettoyée juste après usage. En cas
+    ; d'échec, l'installation est marquée en erreur pour que l'outil de
+    ; déploiement (GPO/Intune/SCCM) la rejoue.
+    StrCpy $R0 ""
+    ${GetOptions} $CMDLINE "/ENROLLCODE=" $R0
+    ${If} $R0 != ""
+        DetailPrint "Enrôlement du poste..."
+        StrCpy $R1 ""
+        ${GetOptions} $CMDLINE "/PASSWORD=" $R1
+        ${If} $R1 != ""
+            System::Call 'kernel32::SetEnvironmentVariable(t "RELAISDESK_ENROLL_PASSWORD", t "$R1")'
+        ${EndIf}
+        ExecWait '"$INSTDIR\viewer.exe" --enroll $R0' $R2
+        System::Call 'kernel32::SetEnvironmentVariable(t "RELAISDESK_ENROLL_PASSWORD", t "")'
+        ${If} $R2 != 0
+            DetailPrint "Échec de l'enrôlement (code $R2)."
+            IfSilent +2 0
+            MessageBox MB_ICONEXCLAMATION "Installation terminée mais l'enrôlement a échoué (code $R2). Relancez avec un code valide."
+            SetErrorLevel 1
+            Abort "Échec de l'enrôlement du poste."
+        ${EndIf}
+        DetailPrint "Poste enrôlé."
+    ${EndIf}
 SectionEnd
 
 ; ---------------------------------------------------------------------------

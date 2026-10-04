@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"bytes"
 	dbpkg "database"
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -985,5 +988,164 @@ func TechnicianFolderActionHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		writeJSONError(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
+	}
+}
+
+type createParkTokenRequest struct {
+	LicenseID string `json:"license_id"`
+	Label     string `json:"label"`
+	FolderID  string `json:"folder_id"`
+	MaxUses   int    `json:"max_uses"`
+	TTLDays   int    `json:"ttl_days"`
+}
+
+// createParkTokenForOwner mints a park token after an ownership check done by
+// the caller. The plaintext token is returned once, at creation.
+func createParkTokenForOwner(w http.ResponseWriter, r *http.Request, db *sql.DB, customerID int64, licenseID string) {
+	var req createParkTokenRequest
+	if err := decodeSingleJSON(r, &req); err != nil {
+		writeJSONError(w, "Requête invalide", http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(req.LicenseID) != "" {
+		licenseID = req.LicenseID
+	}
+	tok, plaintext, err := dbpkg.CreateParkEnrollmentToken(db, customerID, licenseID, req.Label, req.FolderID, req.MaxUses, req.TTLDays)
+	if err != nil {
+		log.Printf("[CreateParkToken] Erreur: %v", err)
+		writeJSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	auditLog(r, "PARK TOKEN CREATE", "token "+tok.Prefix+"… créé pour licence "+MaskLicenseID(licenseID))
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"token":      plaintext,
+		"park_token": tok,
+		"warning":    "Copiez ce token maintenant : il ne sera plus jamais affiché.",
+	})
+}
+
+func listParkTokensForOwner(w http.ResponseWriter, r *http.Request, db *sql.DB, customerID int64, licenseID string) {
+	if id := strings.TrimSpace(r.URL.Query().Get("license_id")); id != "" {
+		licenseID = id
+	}
+	toks, err := dbpkg.ListParkEnrollmentTokens(db, customerID, licenseID)
+	if err != nil {
+		writeJSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if toks == nil {
+		toks = []dbpkg.ParkEnrollmentToken{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"park_tokens": toks})
+}
+
+func revokeParkTokenFromPath(w http.ResponseWriter, r *http.Request, db *sql.DB, customerID int64, licenseID, prefix string) {
+	trimmed := strings.TrimPrefix(r.URL.Path, prefix)
+	trimmed = strings.TrimSuffix(trimmed, "/revoke")
+	id, err := strconv.ParseInt(strings.Trim(trimmed, "/"), 10, 64)
+	if err != nil || id <= 0 {
+		writeJSONError(w, "Identifiant de token invalide", http.StatusBadRequest)
+		return
+	}
+	if err := dbpkg.RevokeParkEnrollmentToken(db, customerID, licenseID, id); err != nil {
+		writeJSONError(w, "Token introuvable ou non autorisé", http.StatusNotFound)
+		return
+	}
+	auditLog(r, "PARK TOKEN REVOKE", "token de parc révoqué pour licence "+MaskLicenseID(licenseID))
+	writeJSON(w, http.StatusOK, map[string]bool{"success": true})
+}
+
+func TechnicianCreateParkTokenHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		licenseID, ok := r.Context().Value(middleware.TechnicianLicenseContextKey).(string)
+		if !ok || licenseID == "" {
+			writeJSONError(w, "Erreur d'authentification interne", http.StatusInternalServerError)
+			return
+		}
+		createParkTokenForOwner(w, r, db, 0, licenseID)
+	}
+}
+
+func TechnicianListParkTokensHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		licenseID, ok := r.Context().Value(middleware.TechnicianLicenseContextKey).(string)
+		if !ok || licenseID == "" {
+			writeJSONError(w, "Erreur d'authentification interne", http.StatusInternalServerError)
+			return
+		}
+		listParkTokensForOwner(w, r, db, 0, licenseID)
+	}
+}
+
+func TechnicianRevokeParkTokenHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		licenseID, ok := r.Context().Value(middleware.TechnicianLicenseContextKey).(string)
+		if !ok || licenseID == "" {
+			writeJSONError(w, "Erreur d'authentification interne", http.StatusInternalServerError)
+			return
+		}
+		revokeParkTokenFromPath(w, r, db, 0, licenseID, "/api/v1/technician/device-park-tokens/")
+	}
+}
+
+func CustomerCreateParkTokenHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		identity, ok := customerIdentity(r)
+		if !ok {
+			writeJSONError(w, "Session client invalide", http.StatusUnauthorized)
+			return
+		}
+		var peek struct {
+			LicenseID string `json:"license_id"`
+		}
+		// Ownership is enforced on the requested licence before minting.
+		body, _ := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+		_ = json.Unmarshal(body, &peek)
+		r.Body = io.NopCloser(bytes.NewReader(body))
+		if peek.LicenseID == "" || !dbpkg.CustomerOwnsLicenseID(db, identity.ID, peek.LicenseID) {
+			writeJSONError(w, "Licence introuvable ou non autorisée", http.StatusForbidden)
+			return
+		}
+		createParkTokenForOwner(w, r, db, identity.ID, peek.LicenseID)
+	}
+}
+
+func CustomerListParkTokensHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		identity, ok := customerIdentity(r)
+		if !ok {
+			writeJSONError(w, "Session client invalide", http.StatusUnauthorized)
+			return
+		}
+		licenseID := strings.TrimSpace(r.URL.Query().Get("license_id"))
+		if licenseID == "" || !dbpkg.CustomerOwnsLicenseID(db, identity.ID, licenseID) {
+			writeJSONError(w, "Licence introuvable ou non autorisée", http.StatusForbidden)
+			return
+		}
+		listParkTokensForOwner(w, r, db, identity.ID, licenseID)
+	}
+}
+
+func CustomerRevokeParkTokenHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		identity, ok := customerIdentity(r)
+		if !ok {
+			writeJSONError(w, "Session client invalide", http.StatusUnauthorized)
+			return
+		}
+		// Resolve the licence from the token row itself, then verify ownership.
+		trimmed := strings.TrimPrefix(r.URL.Path, "/api/v1/customer/device-park-tokens/")
+		trimmed = strings.TrimSuffix(trimmed, "/revoke")
+		id, err := strconv.ParseInt(strings.Trim(trimmed, "/"), 10, 64)
+		if err != nil || id <= 0 {
+			writeJSONError(w, "Identifiant de token invalide", http.StatusBadRequest)
+			return
+		}
+		licenseID := dbpkg.ParkTokenLicense(db, id)
+		if licenseID == "" || !dbpkg.CustomerOwnsLicenseID(db, identity.ID, licenseID) {
+			writeJSONError(w, "Token introuvable ou non autorisé", http.StatusNotFound)
+			return
+		}
+		revokeParkTokenFromPath(w, r, db, identity.ID, licenseID, "/api/v1/customer/device-park-tokens/")
 	}
 }
