@@ -79,6 +79,14 @@ jobs:
           cd installer/viewer
           export GOOS=darwin
           export GOARCH=${{ matrix.goarch }}
+          # The fyne GUI needs cgo. Cross-compiling amd64 on the arm64
+          # runner disables cgo by default, which excludes go-gl: force it
+          # on with an arch-pinned clang (Xcode CLT is universal).
+          export CGO_ENABLED=1
+          if [ "${{ matrix.goarch }}" = "amd64" ]; then
+            export CC="clang -arch x86_64"
+            export CXX="clang++ -arch x86_64"
+          fi
           go build -trimpath -ldflags "-s -w -X main.APIURL=https://api.relaisdesk.fr" -o RelaisDesk_Viewer_mac .
 
       - name: Build RelaisDesk Technicien macOS Launcher
@@ -86,6 +94,11 @@ jobs:
           cd installer/configurator
           export GOOS=darwin
           export GOARCH=${{ matrix.goarch }}
+          export CGO_ENABLED=1
+          if [ "${{ matrix.goarch }}" = "amd64" ]; then
+            export CC="clang -arch x86_64"
+            export CXX="clang++ -arch x86_64"
+          fi
           go build -trimpath -ldflags "-s -w -X main.APIURL=https://api.relaisdesk.fr" -o RelaisDesk_Technicien_mac .
 
       - name: Package RelaisDesk Viewer (.app & .dmg)
