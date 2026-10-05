@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentation RelaisDesk : logiciels, parc, équipes, sécurité</title>
+  <meta name="description" content="Documentation complète RelaisDesk : logiciels technicien et client (Windows, macOS, Linux), enrôlement des postes, gestion du parc, équipes et droits, prestations, mises à jour automatiques, sécurité et dépannage.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://relaisdesk.fr/documentation.html">
+  <link rel="alternate" hreflang="fr" href="https://relaisdesk.fr/documentation.html">
+  <link rel="alternate" hreflang="x-default" href="https://relaisdesk.fr/documentation.html">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://relaisdesk.fr/documentation.html">
+  <meta property="og:title" content="Documentation RelaisDesk">
+  <meta property="og:description" content="Installer, enrôler, gérer un parc, travailler en équipe, comprendre la sécurité : tout sur RelaisDesk.">
+  <meta property="og:image" content="https://relaisdesk.fr/logo.avif">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:site_name" content="RelaisDesk">
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="icon" type="image/avif" href="/logo.avif">
+  <link rel="stylesheet" href="styles.css?v=20260912-nav-center">
+  <style>
+    .doc-toc {
+      list-style: none;
+      margin: 0 0 2rem 0 !important;
+      padding: 1.25rem 1.5rem !important;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      columns: 2;
+      column-gap: 2.5rem;
+    }
+    .doc-toc li { break-inside: avoid; }
+    .doc-toc a { text-decoration: none; }
+    .doc-toc a:hover { text-decoration: underline; }
+    @media (max-width: 640px) { .doc-toc { columns: 1; } }
+    .legal-body code {
+      font-size: 0.88em;
+      background: rgba(127, 127, 127, 0.14);
+      padding: 0.1em 0.35em;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .legal-body pre {
+      background: rgba(127, 127, 127, 0.12);
+      padding: 1rem 1.25rem;
+      border-radius: var(--radius-md);
+      overflow-x: auto;
+      margin-bottom: 1.25rem;
+      line-height: 1.6;
+    }
+    .legal-body pre code { background: none; padding: 0; white-space: pre; }
+  </style>
+</head>
+<body>
+
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="container nav-container">
+      <a href="/" class="logo-group" aria-label="Accueil RelaisDesk">
+        <img src="logo.avif" alt="" class="logo-img" width="42" height="42">
+        <span>Relais<span class="gradient-text">Desk</span></span>
+      </a>
+
+      <ul class="nav-menu" id="main-navigation">
+        <li><a href="/#features" class="nav-link">Fonctionnalités</a></li>
+        <li><a href="/#pricing" class="nav-link">Tarifs</a></li>
+        <li><a href="/#downloads" class="nav-link">Téléchargements</a></li>
+        <li><a href="/#faq" class="nav-link">FAQ</a></li>
+        <li><a href="documentation.html" class="nav-link">Documentation</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <a href="client/" class="btn btn-secondary btn-sm">Espace Client</a>
+        <a href="/#pricing" class="btn btn-primary btn-sm">Commander</a>
+        <button class="mobile-toggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="main-navigation">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="legal-wrapper">
+    <div class="container" style="max-width: 920px;">
+      <a href="/" class="back-home-btn">← Retour à l'accueil</a>
+
+      <article class="legal-card">
+        <header class="legal-header">
+          <div class="badge">Documentation</div>
+          <h1>Tout sur RelaisDesk</h1>
+          <p class="legal-date">Dernière mise à jour : 5 octobre 2026 — Logiciels version 1.0.</p>
+        </header>
+
+        <div class="legal-body">
+          <ul class="doc-toc">
+            <li><a href="#vue-ensemble">1. Vue d'ensemble</a></li>
+            <li><a href="#logiciels">2. Les logiciels</a></li>
+            <li><a href="#enrolement">3. Enrôlement des postes</a></li>
+            <li><a href="#deploiement-masse">4. Déploiement de masse (GPO, Intune)</a></li>
+            <li><a href="#parc">5. Gestion du parc et dossiers</a></li>
+            <li><a href="#equipes">6. Équipes et droits</a></li>
+            <li><a href="#prestations">7. Prestations et catalogue</a></li>
+            <li><a href="#compte">8. Compte client, licence et 2FA</a></li>
+            <li><a href="#mises-a-jour">9. Mises à jour automatiques</a></li>
+            <li><a href="#securite">10. Sécurité</a></li>
+            <li><a href="#depannage">11. Dépannage</a></li>
+            <li><a href="#glossaire">12. Glossaire</a></li>
+          </ul>
+
+          <h2 id="vue-ensemble">1. Vue d'ensemble</h2>
+          <p><strong>RelaisDesk</strong> est un service français de support et de contrôle à distance : vos techniciens prennent la main sur les postes de vos clients, gèrent un parc de machines et suivent leurs prestations depuis un seul outil.</p>
+          <p>Le service repose sur trois briques :</p>
+          <ul>
+            <li><strong>Ce site web</strong> (présentation, tarifs, téléchargements, espaces client et technicien, documentation) ;</li>
+            <li><strong>L'API RelaisDesk</strong>, hébergée sur notre infrastructure : elle centralise les licences, les postes enrôlés, les équipes, les codes d'enrôlement et les mises à jour ;</li>
+            <li><strong>Les logiciels</strong> installés sur les postes (technicien et client), pour Windows, macOS et Linux.</li>
+          </ul>
+          <p>Le moteur de session à distance est basé sur <strong>RustDesk Community (AGPLv3)</strong>, adapté à notre infrastructure. Voyez la page <a href="logiciel-libre.html">Logiciel libre &amp; sources</a> pour le détail des sources et licences. Pour démarrer pas à pas, suivez le <a href="guide-demarrage.html">guide de démarrage</a>.</p>
+
+          <h2 id="logiciels">2. Les logiciels</h2>
+          <p>Deux logiciels complémentaires, tous deux en version 1.0 :</p>
+          <ul>
+            <li><strong>RelaisDesk Technicien</strong> : le poste de travail du dépanneur. Gestion du parc (dossiers, recherche, états), connexion aux postes clients, équipes et droits, catalogue de prestations, enrôlement des machines, mises à jour.</li>
+            <li><strong>RelaisDesk Client</strong> (viewer) : le logiciel léger côté poste assisté. Il reçoit les sessions à distance et gère l'accès permanent (mot de passe) pour les interventions sans l'utilisateur.</li>
+          </ul>
+          <h3>Plateformes et téléchargements</h3>
+          <table>
+            <thead>
+              <tr><th>Système</th><th>Technicien</th><th>Client</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Windows 64 bits</td><td><a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Setup_1.0.0.exe">Setup (.exe)</a> / <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Portable.exe">Portable (.exe)</a></td><td><a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Setup.exe">Setup (.exe)</a> / <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Portable.exe">Portable (.exe)</a></td></tr>
+              <tr><td>macOS (Intel et Apple Silicon)</td><td><a href="/#downloads">DMG Technicien</a></td><td><a href="/#downloads">DMG Client</a></td></tr>
+              <tr><td>Linux (Debian/Ubuntu)</td><td><a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien.deb">Paquet (.deb)</a> / <a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_Technicien_Linux">binaire</a></td><td><a href="https://api.relaisdesk.fr/api/v1/downloads/RelaisDesk_viewer.deb">Paquet (.deb)</a></td></tr>
+            </tbody>
+          </table>
+          <p>Retrouvez tous les liens sur la section <a href="/#downloads">Téléchargements</a> de l'accueil. Chaque fichier est accompagné de son empreinte SHA-256 (<code>SHA256SUMS.txt</code>) et d'un manifeste signé qui permet aux logiciels de vérifier l'intégrité des mises à jour.</p>
+
+          <h2 id="enrolement">3. Enrôlement des postes</h2>
+          <p><strong>Enrôler</strong> un poste, c'est le rattacher à votre licence pour qu'il apparaisse dans votre parc et accepte les sessions de vos techniciens. Deux types de codes existent :</p>
+          <ul>
+            <li><strong>Code permanent <code>PERM-…</code></strong> : pour un poste unique, généré depuis le logiciel technicien ou l'espace technicien web. Usage unique, idéal pour l'assistance au cas par cas.</li>
+            <li><strong>Token de parc <code>PARK-…</code></strong> : multi-usages, prévu pour équiper plusieurs machines avec le même code. Chaque token a un quota d'utilisations, une durée de vie (30 jours par défaut) et peut être révoqué à tout moment. Les postes déjà enrôlés restent connectés après révocation.</li>
+          </ul>
+          <p>Sur le poste, l'enrôlement se fait depuis le logiciel client (<code>--enroll</code>) en saisissant le code, puis en définissant le <strong>mot de passe permanent</strong> : c'est lui qui autorise l'accès sans surveillance. Si le mot de passe est déjà configuré, l'enrôlement le conserve.</p>
+          <p>Bon à savoir : si un enrôlement est interrompu (réponse perdue, réinstallation du setup), le rejouer ne crée pas de doublon — le poste retrouve sa fiche existante.</p>
+          <h2 id="deploiement-masse">4. Déploiement de masse (GPO, Intune, SCCM)</h2>
+          <p>Pour équiper des dizaines ou centaines de postes, combinez un token de parc <code>PARK-…</code> avec l'installation silencieuse. Méthode recommandée (aucun secret visible sur les lignes de commande) :</p>
+          <pre><code>$env:RELAISDESK_ENROLL_CODE='PARK-XXXX-…'; $env:RELAISDESK_ENROLL_PASSWORD='mot-de-passe-postes'; .\RelaisDesk_Setup.exe /S</code></pre>
+          <p>En repli, les commutateurs <code>/ENROLLCODE=</code> et <code>/PASSWORD=</code> restent acceptés. Le logiciel technicien génère la commande prête à copier lors de la création d'un token.</p>
+          <ul>
+            <li>En cas d'échec d'enrôlement, l'installeur se termine en <strong>code 1</strong> pour que l'outil de déploiement rejoue automatiquement.</li>
+            <li>Sans mot de passe fourni, le mode silencieux <strong>échoue proprement</strong> au lieu d'attendre : prévoyez toujours le mot de passe ou pré-configurez-le.</li>
+            <li>Sous Linux (script, en root) : <code>RELAISDESK_ENROLL_CODE='PARK-…' relaisdesk-viewer --enroll --silent</code>.</li>
+          </ul>
+
+          <h2 id="parc">5. Gestion du parc et dossiers</h2>
+          <p>Le tableau de bord technicien affiche vos postes avec leur état (<strong>en ligne / hors ligne</strong>), leur alias, leur système et leur dossier. La recherche instantanée filtre sur l'alias, le nom d'hôte, les identifiants et le système.</p>
+          <h3>Dossiers</h3>
+          <p>Organisez le parc en arborescence : la <strong>Racine</strong> affiche tout le parc, chaque dossier affiche son sous-arbre avec compteurs. Vous pouvez créer des sous-dossiers, renommer, déplacer (y compris vers la racine) et supprimer des dossiers — les postes d'un dossier supprimé sont replacés à la racine, jamais perdus.</p>
+          <h3>Fiche poste</h3>
+          <p>Cliquez sur un poste pour voir le détail et agir : connexion à distance, changement d'alias, déplacement vers un autre dossier. Les postes apparaissent dès leur enrôlement et signalent leur présence en continu.</p>
+
+          <h2 id="equipes">6. Équipes et droits</h2>
+          <p>Invitez vos techniciens <strong>par e-mail</strong> depuis l'onglet « Équipes &amp; droits » : chacun reçoit son accès personnel et installe le logiciel technicien. Vous pouvez renvoyer une invitation ou révoquer un accès à tout moment.</p>
+          <p>Le bouton <strong>Dossiers</strong> d'un membre définit son périmètre : cochez les dossiers autorisés, ou laissez vide pour donner accès à tout le parc. C'est le moyen simple de cloisonner les équipes (par site, par client, par région) sans multiplier les licences.</p>
+          <p>Les comptes techniciens peuvent être protégés par <strong>double authentification</strong> (voir section 8).</p>
+
+          <h2 id="prestations">7. Prestations et catalogue</h2>
+          <p>Le logiciel technicien embarque un <strong>catalogue de tarifs</strong> : définissez vos prestations avec un prix <strong>au forfait</strong> ou <strong>à l'heure</strong>. L'ajout et la suppression d'un tarif rafraîchissent l'écran silencieusement, sans interrompre votre travail.</p>
+          <p>Les <strong>travaux</strong> suivent vos interventions facturables : chaque travail a un statut (à faire, en cours, terminé, annulé) que vous faites progresser depuis le panneau Prestations. La facturation elle-même passe par le portail sécurisé accessible depuis votre espace client.</p>
+
+          <h2 id="compte">8. Compte client, licence et 2FA</h2>
+          <p>Votre <strong>espace client</strong> centralise l'abonnement, les licences, les clés, les factures et la double authentification.</p>
+          <h3>Licence et clé Relais</h3>
+          <p>Chaque licence autorise un nombre de connexions simultanées selon votre offre. La <strong>clé Relais</strong>, générée depuis l'espace client, verrouille la licence à votre poste et protège le compte contre la fraude (voir le <a href="guide-demarrage.html">guide de démarrage</a>, étape 2).</p>
+          <h3>Double authentification (2FA)</h3>
+          <p>Activez la 2FA depuis l'espace client : flashez le QR code avec votre application d'authentification (Google Authenticator, 1Password, etc.) et conservez précieusement les <strong>codes de secours</strong> affichés — ils permettent de se reconnecter en cas de perte du téléphone. Les secrets 2FA sont <strong>chiffrés</strong> sur nos serveurs.</p>
+          <h3>Mot de passe et sessions</h3>
+          <p>Les mots de passe sont stockés sous forme de condensats irréversibles (bcrypt) et ne transitent jamais en clair. Chaque connexion ouvre une session à durée limitée ; la réinitialisation du mot de passe révoque les anciennes sessions et préserve la 2FA.</p>
+          <h2 id="mises-a-jour">9. Mises à jour automatiques</h2>
+          <p>À chaque démarrage, le logiciel technicien vérifie si une nouvelle version existe. Si oui, une <strong>notification</strong> s'affiche : acceptez-la et l'installation se fait <strong>toute seule</strong>, sans réinstallation manuelle.</p>
+          <p>Chaque mise à jour est vérifiée avant installation : le manifeste de version est <strong>signé cryptographiquement</strong>, et chaque fichier est contrôlé par son empreinte SHA-256. Un fichier altéré ou une signature invalide bloque l'installation.</p>
+
+          <h2 id="securite">10. Sécurité</h2>
+          <p>La sécurité est traitée comme une fonctionnalité à part entière, pas comme une option :</p>
+          <ul>
+            <li><strong>Authentification forte</strong> : mots de passe bcrypt, double authentification TOTP, codes de secours, sessions à durée limitée ;</li>
+            <li><strong>Secrets protégés</strong> : les secrets 2FA sont chiffrés au repos, les codes d'enrôlement ne sont jamais affichés en clair sur les postes déployés en masse (transmission par variables d'environnement) ;</li>
+            <li><strong>Chaîne de confiance logicielle</strong> : manifestes signés (Ed25519), empreintes SHA-256 vérifiées à l'installation comme aux mises à jour ;</li>
+            <li><strong>Sessions cloisonnées</strong> : chaque technicien n'accède qu'à son périmètre de dossiers, chaque session est authentifiée.</li>
+          </ul>
+          <p>Le détail de notre politique (chiffrement, sauvegardes, divulgation de vulnérabilités) est sur la page <a href="securite.html">Sécurité &amp; Vulnérabilités</a>. Pour la conformité données personnelles, voyez la <a href="politique-confidentialite.html">politique de confidentialité</a> et l'annexe <a href="sous-traitance-rgpd.html">RGPD</a>.</p>
+
+          <h2 id="depannage">11. Dépannage</h2>
+          <h3>Le code d'enrôlement est refusé</h3>
+          <p>Vérifiez qu'il est saisi en entier (tirets compris) et qu'il n'a pas expiré : un token de parc a une durée de vie limitée et un quota d'utilisations, affichés lors de sa création. Un token révoqué n'enrôle plus aucun nouveau poste.</p>
+          <h3>Le poste n'apparaît pas dans le parc</h3>
+          <p>L'enrôlement a peut-être échoué côté réseau : rejouez-le, c'est sans risque (pas de doublon). Vérifiez aussi que le poste a accès à Internet et que l'antivirus ne bloque pas le logiciel.</p>
+          <h3>Le poste reste « hors ligne »</h3>
+          <p>Le poste doit être allumé, connecté et avec le service RelaisDesk démarré. Sur Windows, vérifiez que le service est bien installé (l'assistant le fait par défaut) ; sur macOS, vérifiez les autorisations d'enregistrement d'écran.</p>
+          <h3>L'accès sans surveillance ne fonctionne pas</h3>
+          <p>Le mot de passe permanent n'est probablement pas défini sur le poste : ouvrez le logiciel client et configurez-le (Paramètres &gt; Sécurité), ou redeployez avec le mot de passe fourni.</p>
+          <h3>La mise à jour échoue</h3>
+          <p>Retentez au redémarrage suivant : la vérification se relance automatiquement. Si le problème persiste, téléchargez la dernière version depuis la section <a href="/#downloads">Téléchargements</a> et réinstallez par-dessus — vos enrôlements et réglages sont conservés.</p>
+          <h3>J'ai perdu ma 2FA et mes codes de secours</h3>
+          <p>Écrivez-nous via le <a href="contact.html">formulaire de contact</a> depuis votre adresse e-mail de compte : après vérification d'identité, nous réinitialiserons votre second facteur.</p>
+
+          <h2 id="glossaire">12. Glossaire</h2>
+          <ul>
+            <li><strong>Code <code>PERM-…</code></strong> : code d'enrôlement à usage unique pour un poste.</li>
+            <li><strong>Token <code>PARK-…</code></strong> : code d'enrôlement multi-usages pour équiper un parc, avec quota, durée de vie et révocation.</li>
+            <li><strong>Clé Relais</strong> : clé générée depuis l'espace client qui verrouille une licence à un poste.</li>
+            <li><strong>Racine</strong> : le dossier de tête du parc, qui affiche l'ensemble des postes.</li>
+            <li><strong>Forfait / taux horaire</strong> : les deux modes de tarification d'une prestation au catalogue.</li>
+            <li><strong>Manifeste</strong> : le fichier signé qui décrit la dernière version officielle des logiciels et permet aux mises à jour de se vérifier.</li>
+            <li><strong>2FA / TOTP</strong> : double authentification par code temporaire (application mobile) en plus du mot de passe.</li>
+          </ul>
+
+          <h2>Besoin d'aide ?</h2>
+          <p>Commencez par le <a href="guide-demarrage.html">guide de démarrage</a> et la <a href="/#faq">FAQ</a>. Pour le reste, écrivez-nous via le <a href="contact.html">formulaire de contact</a> ou à <a href="mailto:contact@relaisdesk.fr">contact@relaisdesk.fr</a>.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="/#downloads">Télécharger les logiciels</a>
+            <a class="btn btn-secondary" href="client/">Ouvrir l'espace client</a>
+          </div>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <a href="/" class="logo-group" style="margin-bottom: 1rem;" aria-label="Accueil RelaisDesk">
+            <img src="logo.avif" alt="" class="logo-img" width="42" height="42" loading="lazy">
+            <span>Relais<span class="gradient-text">Desk</span></span>
+          </a>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">
+            Service de support et de contrôle à distance basé sur RustDesk Community (AGPLv3).
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Navigation</h4>
+          <ul>
+            <li><a href="/#features">Fonctionnalités</a></li>
+            <li><a href="/#pricing">Tarifs</a></li>
+            <li><a href="/#downloads">Téléchargements</a></li>
+            <li><a href="client/">Espace Client</a></li>
+            <li><a href="comparatif.html">Comparatif</a></li>
+            <li><a href="guide-demarrage.html">Guide de démarrage</a></li>
+            <li><a href="documentation.html">Documentation</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Sécurité & Conformité</h4>
+          <ul>
+            <li><a href="securite.html">Sécurité & Vulnérabilités</a></li>
+            <li><a href="sous-traitance-rgpd.html">Sous-traitance RGPD (DPA)</a></li>
+            <li><a href="politique-confidentialite.html">Politique de confidentialité</a></li>
+            <li><a href="logiciel-libre.html">Logiciel libre & sources</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Contact & Légal</h4>
+          <ul>
+            <li><a href="contact.html">Formulaire de contact</a></li>
+            <li><a href="mentions-legales.html">Mentions légales</a></li>
+            <li><a href="cgv.html">Conditions Générales</a></li>
+            <li><a href="formulaire-retractation.html">Exercer une rétractation</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 RelaisDesk. Tous droits réservés.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="maintenance.js"></script>
+</body>
+</html>

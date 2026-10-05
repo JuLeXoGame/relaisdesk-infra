@@ -1469,6 +1469,16 @@ h1, h2, h3, h4 {
   color: var(--text-primary);
 }
 
+.legal-body a:not(.btn) {
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.legal-body a:not(.btn):hover {
+  text-decoration-thickness: 2px;
+}
+
 .legal-body table {
   width: 100%;
   border-collapse: collapse;
