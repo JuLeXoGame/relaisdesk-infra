@@ -556,7 +556,14 @@ func TestSelfUpdateVerifyFile(t *testing.T) {
 func TestSelfUpdateApplyRejectsSwappedFile(t *testing.T) {
 	dir := t.TempDir()
 	staged := filepath.Join(dir, "staged")
+	// Magic bytes must match the platform: SelfUpdateApply checks the
+	// executable format before the hash.
 	original := []byte("\x7fELF-version-originale")
+	swapped := []byte("\x7fELF-version-substitue")
+	if runtime.GOOS == "windows" {
+		original = []byte("MZ-version-originale-win")
+		swapped = []byte("MZ-version-substitue-win")
+	}
 	sum := sha256.Sum256(original)
 	info := &SelfUpdateInfo{
 		Available:      true,
@@ -565,7 +572,6 @@ func TestSelfUpdateApplyRejectsSwappedFile(t *testing.T) {
 		ArtifactSize:   int64(len(original)),
 	}
 	// Swap between download and apply: same size, valid magic, wrong bytes.
-	swapped := []byte("\x7fELF-version-substitue")
 	if len(swapped) != len(original) {
 		t.Fatalf("préparation du test incohérente: %d vs %d", len(swapped), len(original))
 	}

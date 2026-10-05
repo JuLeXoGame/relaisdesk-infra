@@ -43,8 +43,8 @@ func TestGeneratedViewerTomlUsesCommunityServersDirectly(t *testing.T) {
 		"relay-server = 'api.relaisdesk.fr'",
 		"api-server = 'https://api.relaisdesk.fr'",
 		"key = 'qdCKy9ILJQmM40BjSBn3s+7KMN+YR37CU7hWfYLmz74='",
-		"relaisdesk-token-file = 'C:\\Users\\test'",
-		"relaisdesk-proof-key-file = 'C:\\Users\\test'",
+		"relaisdesk-token-file = 'C:\\Users\\test\\AppData\\Roaming\\RelaisDesk\\authorization\\technician-network-token'",
+		"relaisdesk-proof-key-file = 'C:\\Users\\test\\AppData\\Roaming\\RelaisDesk\\authorization\\technician-proof-key'",
 	}
 	for _, value := range expected {
 		if !strings.Contains(content, value) {

@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -213,7 +214,8 @@ func TestSetHwCodecInFiles(t *testing.T) {
 	}
 	if info, err := os.Stat(p1); err != nil {
 		t.Fatal(err)
-	} else if info.Mode().Perm() != 0600 {
+	} else if runtime.GOOS != "windows" && info.Mode().Perm() != 0600 {
+		// Unix only: Go maps chmod to 0666/0444 on Windows.
 		t.Errorf("mode = %v, want 0600", info.Mode())
 	}
 	if _, err := setHwCodecInFiles([]string{filepath.Join(dir, "rien.toml")}, true); err == nil {
