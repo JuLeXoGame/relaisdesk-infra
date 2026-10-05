@@ -704,12 +704,24 @@ var (
 )
 
 func showDashboardScreen(email, expiresAt string, targetTab ...int) {
+	showDashboardScreenInner(email, expiresAt, false, targetTab...)
+}
+
+// showDashboardScreenSilent reconstruit le tableau de bord sans écran de
+// chargement (l'ancien contenu reste affiché pendant le rafraîchissement).
+func showDashboardScreenSilent(email, expiresAt string, targetTab ...int) {
+	showDashboardScreenInner(email, expiresAt, true, targetTab...)
+}
+
+func showDashboardScreenInner(email, expiresAt string, silent bool, targetTab ...int) {
 	if dashboardCancel != nil {
 		close(dashboardCancel)
 		dashboardCancel = nil
 	}
 
-	showLoadingScreen(T("loading_dashboard"))
+	if !silent {
+		showLoadingScreen(T("loading_dashboard"))
+	}
 
 	go func() {
 		token := sessionToken
@@ -748,6 +760,9 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 			}
 			relaunch := func(panelID int) {
 				showDashboardScreen(email, expiresAt, panelID)
+			}
+			relaunchSilent := func(panelID int) {
+				showDashboardScreenSilent(email, expiresAt, panelID)
 			}
 
 			// Header Section
@@ -1097,7 +1112,7 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 			permListContainer.SetMinSize(fyne.NewSize(400, 150))
 
 			// Live search & folder controls
-			currentFolderID := "ALL"
+			currentFolderID := ""
 			if pendingFleetFolder != "" {
 				currentFolderID = pendingFleetFolder
 				pendingFleetFolder = ""
@@ -1111,13 +1126,13 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 				nameEntry := widget.NewEntry()
 				nameEntry.SetPlaceHolder("Ex: Agence Lyon, Comptabilité...")
 
-				pChoices := buildFolderOptions(foldersResp, false)
+				pChoices := buildFolderOptions(foldersResp)
 				pLabels := make([]string, len(pChoices))
 				selectedParentID := ""
 				initialIdx := 0
 				for i, pc := range pChoices {
 					pLabels[i] = pc.label
-					if defaultParentID != "" && defaultParentID != "ALL" && pc.id == defaultParentID {
+					if defaultParentID != "" && pc.id == defaultParentID {
 						selectedParentID = pc.id
 						initialIdx = i
 					}
@@ -1156,7 +1171,7 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 				}
 
 				dlgTitle := T("btn_new_folder")
-				if defaultParentID != "" && defaultParentID != "ALL" {
+				if defaultParentID != "" {
 					parentAncestors := getFolderAncestors(defaultParentID, foldersResp)
 					if len(parentAncestors) >= 2 {
 						dlgTitle = T("level3_subfolder_hint")
@@ -1206,15 +1221,11 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 			newFolderBtn.Importance = widget.HighImportance
 
 			newSubFolderBtn := widget.NewButton(T("btn_new_subfolder"), func() {
-				target := currentFolderID
-				if target == "ALL" {
-					target = ""
-				}
-				openCreateFolderDialog(target)
+				openCreateFolderDialog(currentFolderID)
 			})
 
 			renameFolderBtn := widget.NewButton(T("btn_rename_folder"), func() {
-				if currentFolderID == "ALL" || currentFolderID == "" {
+				if currentFolderID == "" {
 					dialog.ShowInformation(T("btn_rename_folder"), "Veuillez sélectionner un dossier à renommer.", mainWindow)
 					return
 				}
@@ -1242,7 +1253,7 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 			})
 
 			deleteFolderBtn := widget.NewButton(T("btn_delete_folder"), func() {
-				if currentFolderID == "ALL" || currentFolderID == "" {
+				if currentFolderID == "" {
 					dialog.ShowInformation(T("btn_delete_folder"), "Veuillez sélectionner un dossier à supprimer.", mainWindow)
 					return
 				}
@@ -1273,7 +1284,7 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 
 			var openMoveFolderDialog func()
 			moveFolderBtn := widget.NewButton(T("btn_move_folder"), func() {
-				if currentFolderID == "ALL" || currentFolderID == "" {
+				if currentFolderID == "" {
 					dialog.ShowInformation(T("btn_move_folder"), T("move_folder_select_first"), mainWindow)
 					return
 				}
@@ -1344,20 +1355,7 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 
 			filterAndRender := func() {
 				filtered := []DeviceItem{}
-				var allowedFolderIDs map[string]bool
-				if currentFolderID != "ALL" && currentFolderID != "" {
-					allowedFolderIDs = getFolderAndDescendantIDs(currentFolderID, foldersResp)
-				}
-				for _, d := range devicesResp {
-					if currentFolderID == "" {
-						if d.FolderID != "" {
-							continue
-						}
-					} else if currentFolderID != "ALL" {
-						if !allowedFolderIDs[d.FolderID] {
-							continue
-						}
-					}
+				for _, d := range filterDevicesByFolder(devicesResp, currentFolderID, foldersResp) {
 					if searchQuery != "" {
 						fName := strings.ToLower(getFolderBreadcrumbPath(d.FolderID, foldersResp))
 						if !strings.Contains(strings.ToLower(d.Alias), searchQuery) &&
@@ -1383,17 +1381,8 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 			}
 
 			countInFolderTree := func(fID string) int {
-				if fID == "ALL" {
-					return len(devicesResp)
-				}
 				if fID == "" {
-					c := 0
-					for _, d := range devicesResp {
-						if d.FolderID == "" {
-							c++
-						}
-					}
-					return c
+					return len(devicesResp)
 				}
 				c := 0
 				descendantIDs := getFolderAndDescendantIDs(fID, foldersResp)
@@ -1444,14 +1433,7 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 				}
 				breadcrumbsBox.Add(rootBtn)
 
-				if currentFolderID == "ALL" {
-					sep := widget.NewLabelWithStyle("  ➔  ", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-					allBtn := widget.NewButton(T("breadcrumb_all_devices"), nil)
-					allBtn.Importance = widget.HighImportance
-					allBtn.Disable()
-					breadcrumbsBox.Add(sep)
-					breadcrumbsBox.Add(allBtn)
-				} else if currentFolderID != "" {
+				if currentFolderID != "" {
 					ancestors := getFolderAncestors(currentFolderID, foldersResp)
 					for i, a := range ancestors {
 						sep := widget.NewLabelWithStyle("  ➔  ", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
@@ -1517,15 +1499,8 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 
 			renderFleetTree = func() {
 				fleetTreeBox.Objects = nil
-				addTreeRow("ALL", fmt.Sprintf("%s (%d)", T("breadcrumb_all_devices"), len(devicesResp)), fleetTreeIcon("all"), 0, false)
-				rootCount := 0
-				for _, d := range devicesResp {
-					if d.FolderID == "" {
-						rootCount++
-					}
-				}
 				topFolders := getDirectChildFolders("", foldersResp)
-				addTreeRow("", fmt.Sprintf("%s (%d)", T("folder_root"), rootCount), fleetTreeIcon("root"), 0, len(topFolders) > 0)
+				addTreeRow("", fmt.Sprintf("%s (%d)", T("folder_root"), countInFolderTree("")), fleetTreeIcon("root"), 0, len(topFolders) > 0)
 				if !fleetCollapsed[collapseKey("")] {
 					var addLevel func(parentID string, depth int)
 					addLevel = func(parentID string, depth int) {
@@ -1544,7 +1519,7 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 
 			selectFolder = func(fID string) {
 				currentFolderID = fID
-				inFolder := currentFolderID != "ALL" && currentFolderID != ""
+				inFolder := currentFolderID != ""
 				if inFolder {
 					renameFolderBtn.Show()
 					moveFolderBtn.Show()
@@ -1656,7 +1631,9 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 					case PanelHistory:
 						builtPanels[panelID] = customerGate(panelID, historyPanel)
 					case PanelServices:
-						builtPanels[panelID] = customerGate(panelID, servicesPanel)
+						builtPanels[panelID] = customerGatePanel(panelID, relaunch, func(pid int, rl func(int)) fyne.CanvasObject {
+							return servicesPanel(pid, rl, relaunchSilent)
+						})
 					case PanelSettings:
 						builtPanels[panelID] = customerGate(panelID, settingsPanel)
 					default:
@@ -2079,7 +2056,7 @@ func buildDevicesObjects(devices []DeviceItem, folders []DeviceFolderItem, email
 		}
 
 		moveBtn := widget.NewButton(T("btn_move_device"), func() {
-			moveOpts := buildFolderOptions(folders, false)
+			moveOpts := buildFolderOptions(folders)
 
 			labels := make([]string, len(moveOpts))
 			selectedTargetID := ""

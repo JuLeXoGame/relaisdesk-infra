@@ -583,10 +583,6 @@ var messages = map[string]map[Lang]string{
 		LangFR: "Dossier :",
 		LangEN: "Folder:",
 	},
-	"folder_all": {
-		LangFR: "📁 Tous les postes",
-		LangEN: "📁 All devices",
-	},
 	"folder_root": {
 		LangFR: "Racine",
 		LangEN: "Root",
@@ -594,10 +590,6 @@ var messages = map[string]map[Lang]string{
 	"breadcrumb_root": {
 		LangFR: "🏠 Racine",
 		LangEN: "🏠 Root",
-	},
-	"breadcrumb_all_devices": {
-		LangFR: "👁️ Tous les postes",
-		LangEN: "👁️ All devices",
 	},
 	"subfolders_label": {
 		LangFR: "Sous-dossiers :",

@@ -199,6 +199,39 @@ func TestErrorWithLinksContentHasHyperlinks(t *testing.T) {
 	showErrorWithLinks(nil, w)
 }
 
+// Régression : le dialogue « Dossiers » de l'onglet équipe s'ouvrait écrasé
+// (VScroll sans taille min). On reproduit le dimensionnement d'un dialogue
+// (fenêtre à la MinSize du contenu) et on exige une liste utilisable.
+func TestTeamFoldersDialogContentHasUsableHeight(t *testing.T) {
+	a := test.NewApp()
+	defer a.Quit()
+	SetLang(LangFR)
+	defer SetLang(LangFR)
+	member := customerTeamMember{Email: "membre@example.test", FolderIDs: []string{"f1"}}
+	folders := []customerFolder{
+		{FolderID: "f1", Name: "Compta"},
+		{FolderID: "f2", Name: "Technique"},
+		{FolderID: "f3", Name: "Direction"},
+	}
+	content, check, _ := teamFoldersDialogContent(member, folders)
+	if len(check.Selected) != 1 {
+		t.Fatalf("présélection = %d cases, attendu 1", len(check.Selected))
+	}
+	w := a.NewWindow("dossiers")
+	defer w.Close()
+	w.SetContent(content)
+	w.Resize(content.MinSize())
+	w.Content().Refresh()
+	var scrolls []*container.Scroll
+	collectPanelScrolls(w.Content(), &scrolls)
+	if len(scrolls) != 1 {
+		t.Fatalf("attendu 1 scroll, trouvé %d", len(scrolls))
+	}
+	if h := scrolls[0].Size().Height; h < 150 {
+		t.Errorf("scroll affiche sur %.0fpx de haut, liste écrasee (attendu >= 150)", h)
+	}
+}
+
 func TestFolderRootLabelHasNoEmojiIcon(t *testing.T) {
 	defer SetLang(LangFR)
 	SetLang(LangFR)

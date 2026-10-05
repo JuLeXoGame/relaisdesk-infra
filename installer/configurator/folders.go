@@ -11,12 +11,9 @@ type folderOption struct {
 }
 
 // buildFolderOptions generates a hierarchical list of folder options with visual tree indentation (↳ 📁).
-// If includeAll is true, an initial "ALL" option is prepended.
-func buildFolderOptions(folders []DeviceFolderItem, includeAll bool) []folderOption {
-	options := make([]folderOption, 0, len(folders)+2)
-	if includeAll {
-		options = append(options, folderOption{id: "ALL", label: T("folder_all")})
-	}
+// The root ("") always comes first and shows the whole park.
+func buildFolderOptions(folders []DeviceFolderItem) []folderOption {
+	options := make([]folderOption, 0, len(folders)+1)
 	options = append(options, folderOption{id: "", label: T("folder_root")})
 
 	var addChildren func(parentID string, level int)
@@ -81,7 +78,7 @@ func buildFolderMoveOptions(folders []DeviceFolderItem, excludeID string) []fold
 
 // getDeviceFolderName returns the display name for a folder ID.
 func getDeviceFolderName(folderID string, folders []DeviceFolderItem) string {
-	if folderID == "" || folderID == "ALL" {
+	if folderID == "" {
 		return ""
 	}
 	for _, f := range folders {
@@ -95,7 +92,7 @@ func getDeviceFolderName(folderID string, folders []DeviceFolderItem) string {
 // getFolderAncestors returns the chain of ancestor folders from top-level down to the target folder.
 // For example: [Siège Paris, Comptabilité, Serveurs]
 func getFolderAncestors(folderID string, folders []DeviceFolderItem) []DeviceFolderItem {
-	if folderID == "" || folderID == "ALL" {
+	if folderID == "" {
 		return nil
 	}
 	var ancestors []DeviceFolderItem
@@ -135,9 +132,28 @@ func getFolderAndDescendantIDs(folderID string, folders []DeviceFolderItem) map[
 	return ids
 }
 
+// filterDevicesByFolder returns the devices visible under folderID. The root
+// ("") shows the whole park; any other folder shows its subtree (shared by
+// the graphical tree and the Linux terminal UI).
+func filterDevicesByFolder(devices []DeviceItem, folderID string, folders []DeviceFolderItem) []DeviceItem {
+	if folderID == "" {
+		out := make([]DeviceItem, len(devices))
+		copy(out, devices)
+		return out
+	}
+	allowed := getFolderAndDescendantIDs(folderID, folders)
+	out := []DeviceItem{}
+	for _, d := range devices {
+		if allowed[d.FolderID] {
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
 // getFolderBreadcrumbPath returns a human-readable breadcrumb trail, e.g. "Siège Paris > Comptabilité > Serveurs".
 func getFolderBreadcrumbPath(folderID string, folders []DeviceFolderItem) string {
-	if folderID == "" || folderID == "ALL" {
+	if folderID == "" {
 		return ""
 	}
 	ancestors := getFolderAncestors(folderID, folders)

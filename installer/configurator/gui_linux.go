@@ -381,7 +381,7 @@ func handleGenerateTempCodeLinux(token string) {
 }
 
 func handleFleetManagementLinux(token, rustdeskPath string) {
-	currentFolderID := "ALL"
+	currentFolderID := ""
 
 	for {
 		devices, err := listTechnicianDevices(token)
@@ -396,30 +396,12 @@ func handleFleetManagementLinux(token, rustdeskPath string) {
 		folders, _ := listTechnicianFolders(token)
 
 		// Filtrage hiérarchique récursif selon le dossier sélectionné
-		var filtered []DeviceItem
-		var allowedFolderIDs map[string]bool
-		if currentFolderID != "ALL" && currentFolderID != "" {
-			allowedFolderIDs = getFolderAndDescendantIDs(currentFolderID, folders)
-		}
-
-		for _, d := range devices {
-			if currentFolderID == "" {
-				if d.FolderID != "" {
-					continue
-				}
-			} else if currentFolderID != "ALL" {
-				if !allowedFolderIDs[d.FolderID] {
-					continue
-				}
-			}
-			filtered = append(filtered, d)
-		}
+		// (la racine affiche tout le parc).
+		filtered := filterDevicesByFolder(devices, currentFolderID, folders)
 
 		// Calcul du fil d'Ariane pour le dossier actif
-		currentPath := "👁️ Tous les postes"
-		if currentFolderID == "" {
-			currentPath = "🏠 Racine"
-		} else if currentFolderID != "ALL" {
+		currentPath := "🏠 Racine"
+		if currentFolderID != "" {
 			currentPath = "🏠 Racine > " + getFolderBreadcrumbPath(currentFolderID, folders)
 		}
 
@@ -463,18 +445,12 @@ func handleFleetManagementLinux(token, rustdeskPath string) {
 		}
 
 		if devChoice == "folder_nav" {
-			folderOptions := buildFolderOptions(folders, true)
+			folderOptions := buildFolderOptions(folders)
 			navItems := make([][2]string, 0, len(folderOptions))
 			for _, fo := range folderOptions {
 				count := 0
-				if fo.id == "ALL" {
+				if fo.id == "" {
 					count = len(devices)
-				} else if fo.id == "" {
-					for _, d := range devices {
-						if d.FolderID == "" {
-							count++
-						}
-					}
 				} else {
 					descIDs := getFolderAndDescendantIDs(fo.id, folders)
 					for _, d := range devices {
@@ -495,7 +471,7 @@ func handleFleetManagementLinux(token, rustdeskPath string) {
 		if devChoice == "new_folder" {
 			name, nameOk := promptEntryLinux("Nouveau dossier", "Nom du dossier ou sous-dossier :", "", false)
 			if nameOk && strings.TrimSpace(name) != "" {
-				parentOptions := buildFolderOptions(folders, false)
+				parentOptions := buildFolderOptions(folders)
 				pItems := make([][2]string, 0, len(parentOptions))
 				for _, po := range parentOptions {
 					pItems = append(pItems, [2]string{po.id, po.label})
@@ -622,7 +598,7 @@ func handleFleetManagementLinux(token, rustdeskPath string) {
 			if !ok {
 				continue
 			}
-			fOpts := buildFolderOptions(folders, false)
+			fOpts := buildFolderOptions(folders)
 			folderItems := make([][2]string, 0, len(fOpts))
 			for _, fo := range fOpts {
 				folderItems = append(folderItems, [2]string{fo.id, fo.label})

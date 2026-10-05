@@ -24,9 +24,6 @@ func TestFolderBreadcrumbsThreeLevels(t *testing.T) {
 	if path := getFolderBreadcrumbPath("", folders); path != "" {
 		t.Errorf("expected empty breadcrumb for root, got %q", path)
 	}
-	if path := getFolderBreadcrumbPath("ALL", folders); path != "" {
-		t.Errorf("expected empty breadcrumb for ALL, got %q", path)
-	}
 	if depth := getFolderDepth("", folders); depth != 0 {
 		t.Errorf("expected depth 0 for root, got %d", depth)
 	}
@@ -137,15 +134,16 @@ func TestDirectChildFolders(t *testing.T) {
 func TestBuildFolderOptionsIndentation(t *testing.T) {
 	folders := sampleThreeLevelFolders()
 
-	optsWithAll := buildFolderOptions(folders, true)
-	if len(optsWithAll) < 3 || optsWithAll[0].id != "ALL" || optsWithAll[1].id != "" {
-		t.Fatalf("expected options with ALL and Root, got %+v", optsWithAll)
+	opts := buildFolderOptions(folders)
+	if len(opts) < 2 || opts[0].id != "" {
+		t.Fatalf("expected options with Root first, got %+v", opts)
 	}
-
-	optsNoAll := buildFolderOptions(folders, false)
-	if len(optsNoAll) < 2 || optsNoAll[0].id != "" {
-		t.Fatalf("expected options with Root first, got %+v", optsNoAll)
+	for _, o := range opts {
+		if o.id == "ALL" {
+			t.Fatalf("unexpected ALL option: %+v", opts)
+		}
 	}
+	optsNoAll := opts
 
 	// Verify indentation for 3 levels:
 	// Level 1: "📁 Agence Lyon", "📁 Siège Paris"
@@ -174,6 +172,41 @@ func TestBuildFolderOptionsIndentation(t *testing.T) {
 	}
 	if serveursOpt == nil || !strings.HasPrefix(serveursOpt.label, "    ↳ 📁 ") {
 		t.Errorf("expected level 3 prefix '    ↳ 📁 ', got %v", serveursOpt)
+	}
+}
+
+// La racine affiche tout le parc (fusion de l'ancienne vue « Tous les
+// postes ») ; un dossier affiche son sous-arbre.
+func TestFilterDevicesByFolder(t *testing.T) {
+	folders := sampleThreeLevelFolders()
+	devices := []DeviceItem{
+		{DeviceID: "d-root", FolderID: ""},
+		{DeviceID: "d-paris", FolderID: "fld-paris"},
+		{DeviceID: "d-compta", FolderID: "fld-compta"},
+		{DeviceID: "d-serveurs", FolderID: "fld-serveurs"},
+		{DeviceID: "d-lyon", FolderID: "fld-lyon"},
+	}
+	ids := func(devs []DeviceItem) []string {
+		out := []string{}
+		for _, d := range devs {
+			out = append(out, d.DeviceID)
+		}
+		return out
+	}
+	if got := ids(filterDevicesByFolder(devices, "", folders)); !reflect.DeepEqual(got, []string{"d-root", "d-paris", "d-compta", "d-serveurs", "d-lyon"}) {
+		t.Errorf("racine = %v, attendu tout le parc", got)
+	}
+	if got := ids(filterDevicesByFolder(devices, "fld-paris", folders)); !reflect.DeepEqual(got, []string{"d-paris", "d-compta", "d-serveurs"}) {
+		t.Errorf("sous-arbre paris = %v", got)
+	}
+	if got := ids(filterDevicesByFolder(devices, "fld-compta", folders)); !reflect.DeepEqual(got, []string{"d-compta", "d-serveurs"}) {
+		t.Errorf("sous-arbre compta = %v", got)
+	}
+	if got := filterDevicesByFolder(devices, "fld-inconnu", folders); len(got) != 0 {
+		t.Errorf("dossier inconnu = %v, attendu vide", ids(got))
+	}
+	if got := filterDevicesByFolder(nil, "", folders); len(got) != 0 {
+		t.Errorf("parc vide racine = %v", ids(got))
 	}
 }
 

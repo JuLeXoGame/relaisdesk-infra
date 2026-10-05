@@ -281,7 +281,9 @@ func teamInviteForm(licOptions []string, licByLabel map[string]string, folders [
 	return form
 }
 
-func openTeamFoldersDialog(member customerTeamMember, folders []customerFolder, panelID int, relaunch func(int)) {
+// teamFoldersDialogContent construit le contenu du dialogue « Dossiers »
+// (extrait pour test headless : un VScroll sans taille min écrase la liste).
+func teamFoldersDialogContent(member customerTeamMember, folders []customerFolder) (fyne.CanvasObject, *widget.CheckGroup, map[string]string) {
 	labels, byID := sortedFolderOptions(folders)
 	check := widget.NewCheckGroup(labels, nil)
 	initial := []string{}
@@ -293,10 +295,19 @@ func openTeamFoldersDialog(member customerTeamMember, folders []customerFolder, 
 		}
 	}
 	check.SetSelected(initial)
+	scroll := container.NewVScroll(check)
+	// Sans taille min, le dialogue se réduit à la MinSize du scroll (32px)
+	// et la liste est inutilisable.
+	scroll.SetMinSize(fyne.NewSize(460, 240))
 	content := container.NewVBox(
 		widget.NewLabel(TF("team_folders_dialog_sub", member.Email)),
-		container.NewVScroll(check),
+		scroll,
 	)
+	return content, check, byID
+}
+
+func openTeamFoldersDialog(member customerTeamMember, folders []customerFolder, panelID int, relaunch func(int)) {
+	content, check, byID := teamFoldersDialogContent(member, folders)
 	dialog.ShowCustomConfirm(T("team_folders_btn"), T("dialog_save_btn"), T("dialog_cancel_btn"), content, func(ok bool) {
 		if !ok {
 			return
@@ -732,7 +743,10 @@ func openInterventionCompleteDialog(item customerInterventionView, panelID int, 
 
 // servicesPanel reproduit les prestations web : marchand Stripe, conditions,
 // catalogue et encaissements.
-func servicesPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
+// servicesPanel affiche le catalogue de tarifs et les prestations.
+// relaunchSilent (sans écran de chargement) sert aux ajouts/suppressions de
+// tarifs ; les autres actions gardent le rechargement classique.
+func servicesPanel(panelID int, relaunch func(int), relaunchSilent func(int)) fyne.CanvasObject {
 	return asyncFetchPanel(panelID, relaunch, func(token string) (fyne.CanvasObject, error) {
 		nav, err := getCustomerServiceBilling(token)
 		if err != nil {
@@ -844,13 +858,13 @@ func servicesPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 							if err != nil {
 								if isCustomerSessionExpired(err) {
 									clearCustomerSession()
-									relaunch(panelID)
+									relaunchSilent(panelID)
 									return
 								}
 								dialog.ShowError(err, mainWindow)
 								return
 							}
-							relaunch(panelID)
+							relaunchSilent(panelID)
 						})
 					}()
 				}, mainWindow)
@@ -866,7 +880,7 @@ func servicesPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 			))
 		}
 		addRateBtn := widget.NewButton(T("services_rate_add_btn"), func() {
-			openServiceRateDialog(panelID, relaunch)
+			openServiceRateDialog(panelID, relaunchSilent)
 		})
 		ratesBox.Add(addRateBtn)
 		ratesCard := createCardBox(container.NewVBox(
