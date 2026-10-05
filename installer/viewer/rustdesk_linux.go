@@ -54,33 +54,54 @@ func findRustDesk() (string, error) {
 	return path, nil
 }
 
+// stageVerifiedDeb writes embedded bytes to a temp .deb and re-verifies the
+// hash from disk before returning the path. The re-read closes the swap
+// window between staging and the pkexec root install (polkit prompts the
+// user while the file sits in /tmp). The caller owns removal.
+func stageVerifiedDeb(data []byte, expectedSHA, pattern string) (string, error) {
+	if len(data) == 0 || len(data) > maxRustDeskDownloadSize {
+		return "", fmt.Errorf("paquet RustDesk RelaisDesk intégré invalide")
+	}
+	if !bytesMatchSHA256(data, expectedSHA) {
+		return "", fmt.Errorf("empreinte SHA-256 invalide pour le paquet RustDesk RelaisDesk")
+	}
+	out, err := os.CreateTemp("", pattern)
+	if err != nil {
+		return "", err
+	}
+	tempPath := out.Name()
+	fail := func(err error) (string, error) {
+		out.Close()
+		os.Remove(tempPath)
+		return "", err
+	}
+	if _, err := out.Write(data); err != nil {
+		return fail(err)
+	}
+	if err := out.Sync(); err != nil {
+		return fail(err)
+	}
+	if err := out.Close(); err != nil {
+		os.Remove(tempPath)
+		return "", err
+	}
+	if !fileMatchesSHA256(tempPath, expectedSHA) {
+		os.Remove(tempPath)
+		return "", fmt.Errorf("paquet temporaire modifié après écriture, installation refusée")
+	}
+	return tempPath, nil
+}
+
 func installRustDesk() error {
 	if !validPinnedSHA256(RUSTDESK_PACKAGE_EXPECTED_SHA256) ||
 		!validPinnedSHA256(RUSTDESK_EXPECTED_SHA256) {
 		return fmt.Errorf("empreintes du client RustDesk RelaisDesk non configurées")
 	}
-	if len(embeddedRustDeskPackage) == 0 || len(embeddedRustDeskPackage) > maxRustDeskDownloadSize {
-		return fmt.Errorf("paquet RustDesk RelaisDesk intégré invalide")
-	}
-	if !bytesMatchSHA256(embeddedRustDeskPackage, RUSTDESK_PACKAGE_EXPECTED_SHA256) {
-		return fmt.Errorf("empreinte SHA-256 invalide pour le paquet RustDesk RelaisDesk")
-	}
-	out, err := os.CreateTemp("", "relaisdesk-viewer-rustdesk-*.deb")
+	tempPath, err := stageVerifiedDeb(embeddedRustDeskPackage, RUSTDESK_PACKAGE_EXPECTED_SHA256, "relaisdesk-viewer-rustdesk-*.deb")
 	if err != nil {
 		return err
 	}
-	tempPath := out.Name()
 	defer os.Remove(tempPath)
-
-	if _, err := out.Write(embeddedRustDeskPackage); err != nil {
-		return err
-	}
-	if err := out.Sync(); err != nil {
-		return err
-	}
-	if err := out.Close(); err != nil {
-		return err
-	}
 	_ = os.Chmod(tempPath, 0644)
 
 	var cmd *exec.Cmd

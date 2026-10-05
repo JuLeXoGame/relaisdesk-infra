@@ -41,6 +41,7 @@ type Config struct {
 	StripeCancelURL            string
 	TrialsEnabled              bool
 	TrialFingerprintKey        string
+	TOTPDataKey                string
 
 	// SMTP configuration (Strictly port 587 STARTTLS or 465 TLS direct)
 	SMTPHost            string
@@ -168,6 +169,7 @@ func LoadConfig() *Config {
 		StripeCancelURL:                 getEnv("STRIPE_CANCEL_URL", "https://relaisdesk.fr/?order=cancel"),
 		TrialsEnabled:                   getEnv("TRIALS_ENABLED", "false") == "true",
 		TrialFingerprintKey:             getEnv("TRIAL_FINGERPRINT_KEY", ""),
+		TOTPDataKey:                     getEnv("TOTP_DATA_KEY", ""),
 		SMTPHost:                        getEnv("SMTP_HOST", ""),
 		SMTPPort:                        getEnvInt("SMTP_PORT", 587),
 		SMTPUser:                        getEnv("SMTP_USER", ""),
@@ -382,6 +384,16 @@ func (c *Config) ValidateServerSettings() error {
 
 func (c *Config) TrialKey() []byte {
 	key, err := base64.RawURLEncoding.DecodeString(c.TrialFingerprintKey)
+	if err != nil || len(key) != 32 {
+		return nil
+	}
+	return key
+}
+
+// TOTPKey decodes the at-rest encryption key for TOTP secrets (32 random
+// bytes, base64url). Nil when absent or malformed: TOTP writes fail closed.
+func (c *Config) TOTPKey() []byte {
+	key, err := base64.RawURLEncoding.DecodeString(c.TOTPDataKey)
 	if err != nil || len(key) != 32 {
 		return nil
 	}

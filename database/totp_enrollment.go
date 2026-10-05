@@ -43,10 +43,18 @@ func enableCustomerTOTPTx(tx *sql.Tx, email, secret, code string, recovery []str
 	if enabled {
 		return errors.New("la double authentification existante ne peut pas être remplacée par cette opération")
 	}
-	var expectedSecret, expectedRecovery string
+	var expectedSecretStored, expectedRecoveryStored string
 	var expiryRaw any
-	if err = tx.QueryRow(`SELECT secret,recovery_codes,expires_at FROM totp_enrollments WHERE email=? COLLATE NOCASE`, email).Scan(&expectedSecret, &expectedRecovery, &expiryRaw); err != nil {
+	if err = tx.QueryRow(`SELECT secret,recovery_codes,expires_at FROM totp_enrollments WHERE email=? COLLATE NOCASE`, email).Scan(&expectedSecretStored, &expectedRecoveryStored, &expiryRaw); err != nil {
 		return errors.New("préparation 2FA introuvable ou expirée")
+	}
+	expectedSecret, _, err := openTOTPSecret(expectedSecretStored)
+	if err != nil {
+		return err
+	}
+	expectedRecovery, _, err := openTOTPSecret(expectedRecoveryStored)
+	if err != nil {
+		return err
 	}
 	expiry, err := ParseSQLiteTime(expiryRaw)
 	if err != nil || !expiry.After(now) {
@@ -63,7 +71,15 @@ func enableCustomerTOTPTx(tx *sql.Tx, email, secret, code string, recovery []str
 	if len(recovery) != recoveryCount || secret != expectedSecret || string(encoded) != expectedRecovery || !ValidateTOTPCode(secret, strings.TrimSpace(code), now) {
 		return errors.New("paramètres ou code de confirmation 2FA incorrects")
 	}
-	result, err := tx.Exec(`UPDATE customer_accounts SET totp_enabled=1,totp_secret=?,totp_recovery_codes=?,totp_confirmed_at=? WHERE email=? COLLATE NOCASE AND COALESCE(totp_enabled,0)=0`, secret, expectedRecovery, now.Format(time.RFC3339), email)
+	sealedSecret, err := protectTOTPSecret(secret)
+	if err != nil {
+		return err
+	}
+	sealedRecovery, err := protectTOTPSecret(expectedRecovery)
+	if err != nil {
+		return err
+	}
+	result, err := tx.Exec(`UPDATE customer_accounts SET totp_enabled=1,totp_secret=?,totp_recovery_codes=?,totp_confirmed_at=? WHERE email=? COLLATE NOCASE AND COALESCE(totp_enabled,0)=0`, sealedSecret, sealedRecovery, now.Format(time.RFC3339), email)
 	if err != nil {
 		return err
 	}

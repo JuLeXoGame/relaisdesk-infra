@@ -98,6 +98,14 @@ func main() {
 	}
 	defer db.Close()
 
+	// At-rest encryption for TOTP secrets. Without a key the API still
+	// starts (legacy rows keep verifying) but TOTP enrollment and recovery
+	// updates fail closed.
+	dbpkg.SetTOTPDataKey(cfg.TOTPKey())
+	if len(cfg.TOTPKey()) != 32 {
+		log.Print("[SECURITY WARNING] TOTP_DATA_KEY absente ou invalide : l'enrôlement 2FA est désactivé jusqu'à sa configuration (32 octets aléatoires en base64url)")
+	}
+
 	if cfg.StripeMode() != "" {
 		if err := dbpkg.BindBillingEnvironment(db, cfg.StripeMode()); err != nil {
 			log.Fatalf("Stripe : %v", err)

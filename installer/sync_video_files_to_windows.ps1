@@ -110,6 +110,8 @@ $files = @(
   "installer/configurator/api_status_test.go",
   "installer/configurator/fleet_tokens.go",
   "installer/configurator/fleet_tokens_test.go",
+  "installer/configurator/rustdesk_linux_stage_test.go",
+  "installer/viewer/rustdesk_linux_stage_test.go",
   "rustdesk/src/core_main.rs",
   "rustdesk/src/relaisdesk_meter.rs",
   "rustdesk/src/relaisdesk_fleet_linux.rs",

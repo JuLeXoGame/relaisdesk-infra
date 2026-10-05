@@ -206,7 +206,9 @@ func TestSecurityResetPreservesMFAAndRevokesSessions(t *testing.T) {
 	if err = db.QueryRow("SELECT totp_secret FROM customer_accounts WHERE email=?", lic.Email).Scan(&stored); err != nil {
 		t.Fatal(err)
 	}
-	if stored != oldSecret || !auditAuthorized(t, db, token, false) || auditAuthorized(t, db, existing, false) {
+	// Secrets are encrypted at rest: compare the opened value.
+	opened, err := dbpkg.OpenStoredTOTPSecret(stored)
+	if err != nil || opened != oldSecret || !auditAuthorized(t, db, token, false) || auditAuthorized(t, db, existing, false) {
 		t.Fatal("reset did not preserve MFA and revoke old sessions")
 	}
 }
@@ -237,7 +239,9 @@ func TestSecurityExistingFactorCannotBeOverwritten(t *testing.T) {
 	if err = db.QueryRow("SELECT totp_secret FROM customer_accounts WHERE email=?", lic.Email).Scan(&stored); err != nil {
 		t.Fatal(err)
 	}
-	if stored != oldSecret {
+	// Secrets are encrypted at rest: compare the opened value.
+	opened, err := dbpkg.OpenStoredTOTPSecret(stored)
+	if err != nil || opened != oldSecret {
 		t.Fatal("factor changed")
 	}
 }

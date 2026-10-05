@@ -160,7 +160,32 @@ func getMFAConfigTx(tx *sql.Tx, licenseID, email string) (enabled bool, secret, 
 			if !s.Valid || s.String == "" {
 				return false, "", "", "", errors.New("configuration 2FA invalide")
 			}
-			return true, s.String, r.String, spec.source, nil
+			secret, secretLegacy, err := openTOTPSecret(s.String)
+			if err != nil {
+				return false, "", "", "", err
+			}
+			recovery := r.String
+			recoveryLegacy := false
+			if r.Valid && r.String != "" {
+				opened, legacy, err := openTOTPSecret(r.String)
+				if err != nil {
+					return false, "", "", "", err
+				}
+				recovery, recoveryLegacy = opened, legacy
+			}
+			// Opportunistic migration: re-protect legacy plaintext rows on
+			// read (skipped silently when no key is provisioned).
+			if secretLegacy && secret != "" {
+				if sealed, err := protectTOTPSecret(secret); err == nil {
+					_, _ = tx.Exec(`UPDATE `+spec.table+` SET totp_secret=? WHERE `+spec.field+` = ? COLLATE NOCASE`, sealed, spec.value)
+				}
+			}
+			if recoveryLegacy && recovery != "" {
+				if sealed, err := protectTOTPSecret(recovery); err == nil {
+					_, _ = tx.Exec(`UPDATE `+spec.table+` SET totp_recovery_codes=? WHERE `+spec.field+` = ? COLLATE NOCASE`, sealed, spec.value)
+				}
+			}
+			return true, secret, recovery, spec.source, nil
 		}
 	}
 	return false, "", "", "", nil
@@ -205,7 +230,22 @@ func consumeMFACodeTx(tx *sql.Tx, licenseID, email, code string, now time.Time) 
 	if err != nil || !valid {
 		return errors.New("code d'authentification ou code de secours incorrect")
 	}
-	res, err := tx.Exec(`UPDATE `+table+` SET totp_recovery_codes=? WHERE `+field+` = ? COLLATE NOCASE AND totp_recovery_codes=?`, updated, value, recovery)
+	// Ciphertext is randomized: re-read the stored blob for compare-and-swap
+	// (keeps the double-spend guard), and persist the updated blob protected
+	// whenever a key is available.
+	var stored string
+	if err := tx.QueryRow(`SELECT totp_recovery_codes FROM `+table+` WHERE `+field+` = ? COLLATE NOCASE`, value).Scan(&stored); err != nil {
+		return err
+	}
+	updatedStored := updated
+	if strings.HasPrefix(stored, totpProtectedPrefix) || totpKeyAvailable() {
+		sealed, err := protectTOTPSecret(updated)
+		if err != nil {
+			return err
+		}
+		updatedStored = sealed
+	}
+	res, err := tx.Exec(`UPDATE `+table+` SET totp_recovery_codes=? WHERE `+field+` = ? COLLATE NOCASE AND totp_recovery_codes=?`, updatedStored, value, stored)
 	if err != nil {
 		return err
 	}

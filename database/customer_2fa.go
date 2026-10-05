@@ -358,7 +358,15 @@ func SetupCustomerTOTP(db *sql.DB, email string) (secret string, otpauthURL stri
 	if enabled {
 		return "", "", nil, errors.New("la double authentification est déjà activée ; désactivez-la avec votre facteur actuel avant de la remplacer")
 	}
-	_, err = tx.Exec("INSERT INTO totp_enrollments(email,secret,recovery_codes,expires_at) VALUES (?,?,?,?) ON CONFLICT(email) DO UPDATE SET secret=excluded.secret,recovery_codes=excluded.recovery_codes,expires_at=excluded.expires_at", email, secret, string(encoded), time.Now().UTC().Add(10*time.Minute).Format(time.RFC3339))
+	sealedSecret, err := protectTOTPSecret(secret)
+	if err != nil {
+		return "", "", nil, err
+	}
+	sealedRecovery, err := protectTOTPSecret(string(encoded))
+	if err != nil {
+		return "", "", nil, err
+	}
+	_, err = tx.Exec("INSERT INTO totp_enrollments(email,secret,recovery_codes,expires_at) VALUES (?,?,?,?) ON CONFLICT(email) DO UPDATE SET secret=excluded.secret,recovery_codes=excluded.recovery_codes,expires_at=excluded.expires_at", email, sealedSecret, sealedRecovery, time.Now().UTC().Add(10*time.Minute).Format(time.RFC3339))
 	if err != nil {
 		return "", "", nil, err
 	}
@@ -432,8 +440,12 @@ func GetCustomerTOTPStatus(db *sql.DB, email string) (enabled bool, confirmedAt 
 	}
 
 	remaining := 0
-	if recCodes.Valid {
-		remaining = CountRemainingRecoveryCodes(recCodes.String)
+	if recCodes.Valid && recCodes.String != "" {
+		opened, _, err := openTOTPSecret(recCodes.String)
+		if err != nil {
+			return false, "", 0, err
+		}
+		remaining = CountRemainingRecoveryCodes(opened)
 	}
 
 	cAt := ""
@@ -469,7 +481,11 @@ func RegenerateCustomerRecoveryCodes(db *sql.DB, email, password string, mfaCode
 	if err != nil {
 		return nil, err
 	}
-	if _, err = tx.Exec("UPDATE customer_accounts SET totp_recovery_codes=? WHERE email=? COLLATE NOCASE", string(encoded), email); err != nil {
+	sealed, err := protectTOTPSecret(string(encoded))
+	if err != nil {
+		return nil, err
+	}
+	if _, err = tx.Exec("UPDATE customer_accounts SET totp_recovery_codes=? WHERE email=? COLLATE NOCASE", sealed, email); err != nil {
 		return nil, err
 	}
 	if err = tx.Commit(); err != nil {
