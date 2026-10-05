@@ -4,11 +4,15 @@
     Pipeline release Windows : NSIS + signature + synchro WSL, en une commande.
 
 .DESCRIPTION
-    1. Copie les entrees fraiches depuis l'arbre WSL (viewer.exe, configurator.exe,
-       artefacts downloads sauf les 2 Setups, sign_manifest.ps1 de reference).
+    Pre-requis : build-rustdesk-windows.ps1 (et build_linux_*.ps1 pour Linux)
+    executes avant, sur cette machine Windows qui est la source de verite
+    pour tout artefact compile.
+    1. Copie depuis l'arbre WSL les artefacts NON construits ici (DMG macOS
+       issus de la CI, LIRE-MOI) + sign_manifest.ps1 de reference. Les
+       artefacts Windows et Linux locaux (frais du build) sont preserves.
     2. Rebuild les 2 installateurs NSIS.
     3. Regenere SHA256SUMS.txt + release-manifest.json signe.
-    4. Recopie Setups + SHA + manifeste vers l'arbre WSL.
+    4. Recopie Setups + portables + artefacts Linux + SHA + manifeste vers WSL.
     5. Verifie les empreintes.
 
     Lancement (contourne la strategie d'execution pour toute la chaine) :
@@ -37,8 +41,8 @@ function Require-File($path, $label) {
 }
 
 Step "0/5 - Verification des acces"
-Require-File "$WslProject\installer\build\viewer.exe" "entree WSL viewer.exe"
-Require-File "$WslProject\installer\build\configurator.exe" "entree WSL configurator.exe"
+Require-File (Join-Path $WinBuild "viewer.exe") "viewer.exe local (lancez build-rustdesk-windows.ps1 d'abord)"
+Require-File (Join-Path $WinBuild "configurator.exe") "configurator.exe local (lancez build-rustdesk-windows.ps1 d'abord)"
 Require-File (Join-Path $WinInstaller "rebuild_nsis.ps1") "rebuild_nsis.ps1"
 Require-File "$WslProject\installer\sign_manifest.ps1" "sign_manifest.ps1 (WSL, reference)"
 Require-File $SigningKey "cle de signature"
@@ -50,9 +54,18 @@ foreach ($p in @("C:\Program Files (x86)\NSIS", "C:\Program Files\NSIS")) {
 if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) { throw "makensis introuvable (ni PATH ni C:\Program Files*\NSIS)" }
 Write-Host "OK"
 
-Step "1/5 - Copie WSL -> Windows (entrees NSIS + artefacts)"
-Copy-Item "$WslProject\installer\build\configurator.exe", "$WslProject\installer\build\viewer.exe" -Destination $WinBuild -Force
-Copy-Item "$WslDl\*" -Destination $WinDl -Force -Exclude RelaisDesk_Setup.exe, RelaisDesk_Technicien_Setup_1.0.0.exe, SHA256SUMS.txt, release-manifest.json
+Step "1/5 - Copie WSL -> Windows (artefacts non construits ici)"
+# Les lanceurs et artefacts Windows/Linux locaux sont FRAIS (build prealable) :
+# on ne les ecrase jamais avec les copies WSL. Seuls les DMG (CI), LIRE-MOI
+# et .htaccess transitent dans ce sens.
+$LocallyBuilt = @(
+    "RelaisDesk_Setup.exe", "RelaisDesk_Technicien_Setup_1.0.0.exe",
+    "RelaisDesk_Portable.exe", "RelaisDesk_Technicien_Portable.exe",
+    "RelaisDesk_Technicien.deb", "RelaisDesk_Technicien_Linux",
+    "RelaisDesk_viewer.deb", "RelaisDesk_Viewer_Linux",
+    "SHA256SUMS.txt", "release-manifest.json"
+)
+Copy-Item "$WslDl\*" -Destination $WinDl -Force -Exclude $LocallyBuilt
 Copy-Item "$WslProject\installer\sign_manifest.ps1" -Destination $WinInstaller -Force
 Get-ChildItem (Join-Path $WinInstaller "*.ps1") | Unblock-File -ErrorAction SilentlyContinue
 Write-Host "OK"
@@ -86,16 +99,33 @@ try {
 Write-Host "OK"
 
 Step "4/5 - Retour Windows -> WSL"
-$back = @($setupViewer, (Join-Path $WinDl "SHA256SUMS.txt"), (Join-Path $WinDl "release-manifest.json"))
+$back = @(
+    $setupViewer,
+    (Join-Path $WinDl "RelaisDesk_Portable.exe"),
+    (Join-Path $WinDl "RelaisDesk_Technicien_Portable.exe"),
+    (Join-Path $WinDl "RelaisDesk_Technicien.deb"),
+    (Join-Path $WinDl "RelaisDesk_Technicien_Linux"),
+    (Join-Path $WinDl "RelaisDesk_viewer.deb"),
+    (Join-Path $WinDl "RelaisDesk_Viewer_Linux"),
+    (Join-Path $WinDl "SHA256SUMS.txt"),
+    (Join-Path $WinDl "release-manifest.json")
+)
 if (-not $TechnicianOnly) { $back += $setupTech }
+foreach ($f in $back) {
+    if (-not (Test-Path -LiteralPath $f)) {
+        throw "$(Split-Path $f -Leaf) introuvable cote Windows : lancez build-rustdesk-windows.ps1 (et build_linux_technicien.ps1 + build_linux_viewer.ps1 pour Linux) avant release_windows.ps1"
+    }
+}
 Copy-Item $back -Destination $WslDl -Force
+Copy-Item (Join-Path $WinBuild "viewer.exe"), (Join-Path $WinBuild "configurator.exe") -Destination "$WslProject\installer\build" -Force
 Write-Host "OK"
 
 Step "5/5 - Verification croisee"
-$wslSetup = "$WslDl\RelaisDesk_Setup.exe"
-Require-File $wslSetup "Setup recopie WSL"
-$hWin = (Get-FileHash -LiteralPath $setupViewer -Algorithm SHA256).Hash
-$hWsl = (Get-FileHash -LiteralPath $wslSetup -Algorithm SHA256).Hash
-if ($hWin -ne $hWsl) { throw "empreinte differente entre Windows et WSL !" }
+foreach ($f in $back) {
+    $leaf = Split-Path $f -Leaf
+    $hWin = (Get-FileHash -LiteralPath $f -Algorithm SHA256).Hash
+    $hWsl = (Get-FileHash -LiteralPath "$WslDl\$leaf" -Algorithm SHA256).Hash
+    if ($hWin -ne $hWsl) { throw "empreinte differente entre Windows et WSL pour $leaf !" }
+}
 Write-Host ""
-Write-Host "TERMINE : Setups + SHA256SUMS.txt + release-manifest.json a jour des deux cotes." -ForegroundColor Green
+Write-Host "TERMINE : Setups + portables + Linux + SHA256SUMS.txt + release-manifest.json a jour des deux cotes." -ForegroundColor Green
