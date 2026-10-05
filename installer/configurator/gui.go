@@ -975,7 +975,7 @@ func showDashboardScreen(email, expiresAt string, targetTab ...int) {
 			parkCopyCmdBtn = widget.NewButton(T("park_copy_setup_cmd"), func() {
 				code := strings.TrimPrefix(parkResultLabel.Text, "Token : ")
 				if code != "" {
-					mainWindow.Clipboard().SetContent("RelaisDesk_Setup.exe /S /ENROLLCODE=" + code + " /PASSWORD=<mdp>")
+					mainWindow.Clipboard().SetContent("$env:RELAISDESK_ENROLL_CODE='" + code + "'; $env:RELAISDESK_ENROLL_PASSWORD='<mdp>'; .\\RelaisDesk_Setup.exe /S")
 					dialog.ShowInformation(T("park_copy_setup_cmd"), T("park_setup_cmd_copied"), mainWindow)
 				}
 			})

@@ -984,3 +984,65 @@ func TestTechnicianParkTokenAPI(t *testing.T) {
 		t.Fatalf("après revoke: %+v", listed2.ParkTokens)
 	}
 }
+
+// A technician session is scoped to its own licence: a foreign license_id in
+// the body or query string must never mint or list another licence's tokens.
+func TestTechnicianParkTokenIgnoresForeignLicense(t *testing.T) {
+	db, err := dbpkg.InitDatabase(filepath.Join(t.TempDir(), "tech-park-scope.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	licA, err := dbpkg.CreateLicense(db, "scope-a@example.com", 30, 2, "A")
+	if err != nil {
+		t.Fatal(err)
+	}
+	licB, err := dbpkg.CreateLicense(db, "scope-b@example.com", 30, 2, "B")
+	if err != nil {
+		t.Fatal(err)
+	}
+	session, err := dbpkg.CreateTechnicianSession(db, licA.LicenseID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	do := func(h http.HandlerFunc, method, path string, body any) *httptest.ResponseRecorder {
+		var raw []byte
+		if body != nil {
+			raw, _ = json.Marshal(body)
+		}
+		req := httptest.NewRequest(method, path, bytes.NewReader(raw))
+		req.Header.Set("Authorization", "Bearer "+session)
+		rec := httptest.NewRecorder()
+		middleware.TechnicianAuth(db)(h).ServeHTTP(rec, req)
+		return rec
+	}
+	rec := do(TechnicianCreateParkTokenHandler(db), http.MethodPost, "/api/v1/technician/device-park-tokens", map[string]any{
+		"license_id": licB.LicenseID, "label": "tentative", "max_uses": 5, "ttl_days": 7,
+	})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create = %d (%s)", rec.Code, rec.Body.String())
+	}
+	var created struct {
+		ParkToken struct {
+			LicenseID string `json:"license_id"`
+		} `json:"park_token"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
+		t.Fatal(err)
+	}
+	if created.ParkToken.LicenseID != licA.LicenseID {
+		t.Fatalf("token créé pour %q, want %q (contexte technicien)", created.ParkToken.LicenseID, licA.LicenseID)
+	}
+	rec = do(TechnicianListParkTokensHandler(db), http.MethodGet, "/api/v1/technician/device-park-tokens?license_id="+licB.LicenseID, nil)
+	var listed struct {
+		ParkTokens []struct {
+			LicenseID string `json:"license_id"`
+		} `json:"park_tokens"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &listed); err != nil {
+		t.Fatal(err)
+	}
+	if len(listed.ParkTokens) != 1 || listed.ParkTokens[0].LicenseID != licA.LicenseID {
+		t.Fatalf("list avec license_id étrangère = %+v, want les tokens de %q", listed.ParkTokens, licA.LicenseID)
+	}
+}

@@ -173,6 +173,23 @@ func enrollDeviceWithParkTokenTx(tx *sql.Tx, db *sql.DB, code, rustdeskID, hostn
 	if quotas[0].Used > quotas[0].Limit {
 		return nil, ErrDeviceLimit
 	}
+	// Idempotent replay: a runner that lost the first response (GPO/Intune
+	// retry, operator re-run, crash before saving state) must not burn a
+	// second fleet slot and token use. Same licence + same RustDesk ID +
+	// same proof key = same install (a reinstall mints a fresh key, so it
+	// still enrolls anew). The proof was already verified by the caller.
+	if rustdeskID != "" && publicKey != "" {
+		var existingID string
+		if err := tx.QueryRow("SELECT device_id FROM devices WHERE license_id=? AND rustdesk_id=? AND device_public_key=? AND enrollment_version=2 AND is_active=1", licenseID, rustdeskID, publicKey).Scan(&existingID); err == nil {
+			if err := consumeDeviceNonce(tx, existingID, p); err != nil {
+				return nil, err
+			}
+			if err := tx.Commit(); err != nil {
+				return nil, err
+			}
+			return GetDeviceByID(db, existingID)
+		}
+	}
 	// Atomic cap: concurrent waves cannot overshoot max_uses (immediate
 	// transactions serialize writers, and the conditional UPDATE is the
 	// arbiter).

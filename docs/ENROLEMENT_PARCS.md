@@ -28,22 +28,37 @@ L'alias par défaut est le hostname (renommable ensuite).
 
 ## 2. Déployer
 
+Méthode recommandée (aucun secret sur les lignes de commande, sinon visibles
+via le Gestionnaire des tâches) :
+
+```powershell
+$env:RELAISDESK_ENROLL_CODE='PARK-XXXX-…'; $env:RELAISDESK_ENROLL_PASSWORD='mot-de-passe-postes'; .\RelaisDesk_Setup.exe /S
+```
+
+Repli :
+
 ```bat
 RelaisDesk_Setup.exe /S /ENROLLCODE=PARK-XXXX-… /PASSWORD=mot-de-passe-postes
 ```
 
 - `/S` : silencieux (requis pour GPO/Intune/SCCM).
-- `/ENROLLCODE=` : token de parc (ou code `PERM-…` pour un poste unique).
-- `/PASSWORD=` : mot de passe permanent RustDesk (optionnel mais requis pour
-  l'accès sans surveillance ; transite par variable d'environnement, jamais
-  en argv, nettoyée après usage).
+- Code : token de parc (ou code `PERM-…` pour un poste unique), via
+  `RELAISDESK_ENROLL_CODE` ou `/ENROLLCODE=`.
+- Mot de passe permanent RustDesk : requis pour l'accès sans surveillance
+  (sans lui, le mode silencieux échoue au lieu d'attendre) ; via
+  `RELAISDESK_ENROLL_PASSWORD` ou `/PASSWORD=`. Transmis au viewer par
+  l'environnement et nettoyé après usage.
 - En cas d'échec d'enrôlement, l'installeur sort en code 1 pour que l'outil
-  de déploiement rejoue (l'enrôlement est réessayable sans `--unenroll`
-  tant qu'il n'a pas abouti).
+  de déploiement rejoue. Le rejouement est idempotent : même poste + même
+  clé = même fiche (aucun doublon, aucune consommation supplémentaire) ;
+  une réinstallation (nouvelle clé) crée un nouveau poste.
 
-Sous Linux (script) : installer le `.deb` puis
-`sudo relaisdesk-viewer --enroll PARK-…` (mot de passe via
-`RELAISDESK_ENROLL_PASSWORD` ou `@fichier`).
+Sous Linux (script, en root) : installer le `.deb` puis
+`relaisdesk-viewer --enroll --silent` avec le code via
+`RELAISDESK_ENROLL_CODE` (mot de passe via `RELAISDESK_ENROLL_PASSWORD` ou
+`@fichier`). Via sudo, préserver l'environnement (`sudo -E …`) car sudo
+filtre les variables par défaut. En interactif,
+`sudo relaisdesk-viewer --enroll` demande le code.
 
 ## 3. Limites dimensionnées pour les parcs
 

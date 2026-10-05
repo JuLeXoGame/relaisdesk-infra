@@ -46,6 +46,38 @@ func writeEnrollPasswordFile(password string) (string, error) {
 	return name, nil
 }
 
+// parseEnrollCLI splits `viewer --enroll` trailing arguments into the
+// enrollment code, the optional password source and the silent flag. The
+// flag is accepted anywhere among the arguments. A code starting with @ is a
+// one-shot handoff file left by the unelevated parent (consumed and deleted
+// here); an unreadable handoff yields an empty code.
+func parseEnrollCLI(args []string) (code, src string, silent bool) {
+	var positional []string
+	for _, a := range args {
+		switch strings.ToLower(strings.TrimSpace(a)) {
+		case "--silent", "-silent", "/silent", "--batch", "-batch", "/batch":
+			silent = true
+		default:
+			positional = append(positional, a)
+		}
+	}
+	if len(positional) >= 2 {
+		src = strings.TrimSpace(positional[1])
+	}
+	if len(positional) >= 1 {
+		code = strings.TrimSpace(positional[0])
+		if strings.HasPrefix(code, "@") {
+			fileCode, err := readEnrollPasswordFile(strings.TrimPrefix(code, "@"))
+			if err != nil {
+				return "", src, silent
+			}
+			code = strings.TrimSpace(fileCode)
+		}
+		code = strings.ToUpper(code)
+	}
+	return code, src, silent
+}
+
 func main() {
 	if len(os.Args) >= 2 {
 		arg := strings.ToLower(os.Args[1])
@@ -160,23 +192,27 @@ func main() {
 			return
 		}
 		if arg == "--enroll" || arg == "-enroll" || arg == "/enroll" {
-			code := ""
-			if len(os.Args) >= 3 {
-				code = os.Args[2]
-			} else {
+			code, src, silent := parseEnrollCLI(os.Args[2:])
+			codeFromEnv := false
+			if code == "" {
+				// Silent deployments (GPO/Intune/SCCM) pass the code via the
+				// environment so it never appears on any command line.
+				code = strings.ToUpper(strings.TrimSpace(os.Getenv("RELAISDESK_ENROLL_CODE")))
+				codeFromEnv = code != ""
+			}
+			if code == "" {
+				if silent {
+					log.Fatal("Code d'enrôlement requis en mode silencieux : passez-le en argument ou via RELAISDESK_ENROLL_CODE.")
+				}
 				fmt.Print("Entrez le code d'enrôlement permanent (ex: PERM-XXXX-XXXX) : ")
 				fmt.Scanln(&code)
+				code = strings.ToUpper(strings.TrimSpace(code))
 			}
-			code = strings.ToUpper(strings.TrimSpace(code))
 			if code == "" {
 				log.Fatal("Code d'enrôlement permanent requis.")
 			}
-			src := ""
-			if len(os.Args) >= 4 {
-				src = strings.TrimSpace(os.Args[3])
-				if src != "" && !strings.HasPrefix(src, "@") {
-					fmt.Fprintln(os.Stderr, "avertissement : mot de passe en ligne de commande (visible via ps) ; préférez @fichier ou RELAISDESK_ENROLL_PASSWORD")
-				}
+			if src != "" && !strings.HasPrefix(src, "@") {
+				fmt.Fprintln(os.Stderr, "avertissement : mot de passe en ligne de commande (visible via ps) ; préférez @fichier ou RELAISDESK_ENROLL_PASSWORD")
 			}
 			if src == "" {
 				src = strings.TrimSpace(os.Getenv("RELAISDESK_ENROLL_PASSWORD"))
@@ -193,7 +229,21 @@ func main() {
 					}
 					fwd = "@" + path
 				}
-				args := []string{os.Args[1], code}
+				// Same rule for a code received via the environment: keep it
+				// off the elevated child's command line.
+				fwdCode := code
+				if codeFromEnv {
+					path, err := writeEnrollPasswordFile(code)
+					if err != nil {
+						log.Fatalf("Préparation du code impossible: %v", err)
+					}
+					fwdCode = "@" + path
+				}
+				args := []string{os.Args[1]}
+				if silent {
+					args = append(args, "--silent")
+				}
+				args = append(args, fwdCode)
 				if fwd != "" {
 					args = append(args, fwd)
 				}
@@ -223,6 +273,9 @@ func main() {
 			} else {
 				hasPwd, _ := hasFleetPermanentPassword()
 				if !hasPwd {
+					if silent {
+						log.Fatal("Mot de passe permanent requis en mode silencieux : /PASSWORD= ou RELAISDESK_ENROLL_PASSWORD (ou pré-configurez le mot de passe RustDesk avant le déploiement).")
+					}
 					fmt.Println("Veuillez configurer un mot de passe permanent dans RustDesk (⚙️ Paramètres > Sécurité).")
 					_ = openRustDeskSettings()
 					fmt.Print("En attente de la configuration du mot de passe...")

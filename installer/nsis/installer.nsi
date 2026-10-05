@@ -126,29 +126,41 @@ Section "Programme principal" SEC01
     IntFmt $0 "0x%08X" $0
     WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "EstimatedSize" "$0"
 
-    ; Enrôlement de parc optionnel (déploiement de masse) :
+    ; Enrôlement de parc optionnel (déploiement de masse).
+    ; Méthode recommandée, aucun secret sur les lignes de commande (sinon
+    ; visibles via le Gestionnaire des tâches) :
+    ;   $env:RELAISDESK_ENROLL_CODE='PARK-XXXX-...' ; $env:RELAISDESK_ENROLL_PASSWORD='...' ; .\RelaisDesk_Setup.exe /S
+    ; Repli (le Setup.exe affiche brièvement les secrets via ps) :
     ;   RelaisDesk_Setup.exe /S /ENROLLCODE=PARK-XXXX /PASSWORD=secret
-    ; Le mot de passe transite par variable d'environnement (jamais en argv
-    ; du viewer) et la variable est nettoyée juste après usage. En cas
-    ; d'échec, l'installation est marquée en erreur pour que l'outil de
-    ; déploiement (GPO/Intune/SCCM) la rejoue.
+    ; Le viewer reçoit toujours le code via l'environnement et tourne en mode
+    ; silencieux (échec rapide, sans fenêtre ni attente). Les variables sont
+    ; nettoyées juste après usage. En cas d'échec, l'installation sort en
+    ; erreur pour que l'outil de déploiement (GPO/Intune/SCCM) la rejoue.
     StrCpy $R0 ""
-    ${GetOptions} $CMDLINE "/ENROLLCODE=" $R0
+    ReadEnvStr $R0 "RELAISDESK_ENROLL_CODE"
+    ${If} $R0 == ""
+        ${GetOptions} $CMDLINE "/ENROLLCODE=" $R0
+    ${EndIf}
     ${If} $R0 != ""
         DetailPrint "Enrôlement du poste..."
         StrCpy $R1 ""
-        ${GetOptions} $CMDLINE "/PASSWORD=" $R1
+        ReadEnvStr $R1 "RELAISDESK_ENROLL_PASSWORD"
+        ${If} $R1 == ""
+            ${GetOptions} $CMDLINE "/PASSWORD=" $R1
+        ${EndIf}
         ${If} $R1 != ""
             System::Call 'kernel32::SetEnvironmentVariable(t "RELAISDESK_ENROLL_PASSWORD", t "$R1")'
         ${EndIf}
-        ExecWait '"$INSTDIR\viewer.exe" --enroll $R0' $R2
+        System::Call 'kernel32::SetEnvironmentVariable(t "RELAISDESK_ENROLL_CODE", t "$R0")'
+        ExecWait '"$INSTDIR\viewer.exe" --enroll --silent' $R2
+        System::Call 'kernel32::SetEnvironmentVariable(t "RELAISDESK_ENROLL_CODE", t "")'
         System::Call 'kernel32::SetEnvironmentVariable(t "RELAISDESK_ENROLL_PASSWORD", t "")'
         ${If} $R2 != 0
             DetailPrint "Échec de l'enrôlement (code $R2)."
             IfSilent +2 0
             MessageBox MB_ICONEXCLAMATION "Installation terminée mais l'enrôlement a échoué (code $R2). Relancez avec un code valide."
             SetErrorLevel 1
-            Abort "Échec de l'enrôlement du poste."
+            Quit
         ${EndIf}
         DetailPrint "Poste enrôlé."
     ${EndIf}

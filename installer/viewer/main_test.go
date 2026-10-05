@@ -35,6 +35,41 @@ func TestEnrollPasswordFileRoundtrip(t *testing.T) {
 	}
 }
 
+func TestParseEnrollCLI(t *testing.T) {
+	code, src, silent := parseEnrollCLI([]string{"park-abc", "@pwfile"})
+	if code != "PARK-ABC" || src != "@pwfile" || silent {
+		t.Fatalf("classique = %q %q %v", code, src, silent)
+	}
+	code, src, silent = parseEnrollCLI([]string{"--silent", "perm-x"})
+	if code != "PERM-X" || src != "" || !silent {
+		t.Fatalf("silent avant = %q %q %v", code, src, silent)
+	}
+	code, _, silent = parseEnrollCLI([]string{"perm-x", "/batch"})
+	if code != "PERM-X" || !silent {
+		t.Fatalf("batch après = %q %v", code, silent)
+	}
+	if c, _, s := parseEnrollCLI(nil); c != "" || s {
+		t.Fatalf("vide = %q %v", c, s)
+	}
+	// One-shot @file code handoff is consumed and deleted.
+	path, err := writeEnrollPasswordFile("park-handoff")
+	if err != nil {
+		t.Fatal(err)
+	}
+	code, _, _ = parseEnrollCLI([]string{"@" + path})
+	if code != "PARK-HANDOFF" {
+		t.Fatalf("handoff = %q", code)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatal("fichier one-shot non supprimé")
+	}
+	// Unreadable handoff yields an empty code (caller falls back to env).
+	code, src, _ = parseEnrollCLI([]string{"@" + path, "@pw"})
+	if code != "" || src != "@pw" {
+		t.Fatalf("handoff illisible = %q %q", code, src)
+	}
+}
+
 func TestReadEnrollPasswordFileRejectsInvalid(t *testing.T) {
 	empty := t.TempDir() + "/empty"
 	if err := os.WriteFile(empty, nil, 0600); err != nil {

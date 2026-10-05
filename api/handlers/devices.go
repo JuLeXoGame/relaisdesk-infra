@@ -1001,14 +1001,14 @@ type createParkTokenRequest struct {
 
 // createParkTokenForOwner mints a park token after an ownership check done by
 // the caller. The plaintext token is returned once, at creation.
+// The licence always comes from the caller (technician session context or
+// verified customer ownership): any license_id in the body is ignored, so a
+// session can never mint tokens for another licence.
 func createParkTokenForOwner(w http.ResponseWriter, r *http.Request, db *sql.DB, customerID int64, licenseID string) {
 	var req createParkTokenRequest
 	if err := decodeSingleJSON(r, &req); err != nil {
 		writeJSONError(w, "Requête invalide", http.StatusBadRequest)
 		return
-	}
-	if strings.TrimSpace(req.LicenseID) != "" {
-		licenseID = req.LicenseID
 	}
 	tok, plaintext, err := dbpkg.CreateParkEnrollmentToken(db, customerID, licenseID, req.Label, req.FolderID, req.MaxUses, req.TTLDays)
 	if err != nil {
@@ -1024,10 +1024,9 @@ func createParkTokenForOwner(w http.ResponseWriter, r *http.Request, db *sql.DB,
 	})
 }
 
+// listParkTokensForOwner lists token metadata for the caller-verified licence
+// (any license_id query parameter is ignored for the same reason as above).
 func listParkTokensForOwner(w http.ResponseWriter, r *http.Request, db *sql.DB, customerID int64, licenseID string) {
-	if id := strings.TrimSpace(r.URL.Query().Get("license_id")); id != "" {
-		licenseID = id
-	}
 	toks, err := dbpkg.ListParkEnrollmentTokens(db, customerID, licenseID)
 	if err != nil {
 		writeJSONError(w, err.Error(), http.StatusBadRequest)

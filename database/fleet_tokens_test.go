@@ -86,6 +86,55 @@ func TestParkTokenLifecycle(t *testing.T) {
 	}
 }
 
+// A lost enroll response replayed by the same install (same proof key, same
+// RustDesk ID) must return the existing device without burning another token
+// use; a fresh key still enrolls a new device.
+func TestParkTokenEnrollIdempotent(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "park_idem.db")
+	db, err := InitDatabase(path)
+	if err != nil {
+		t.Fatalf("InitDatabase: %v", err)
+	}
+	defer db.Close()
+	lic, err := CreateLicense(db, "parc-idem@example.test", 365, 5, "")
+	if err != nil {
+		t.Fatalf("CreateLicense: %v", err)
+	}
+	_, plaintext, err := CreateParkEnrollmentToken(db, 0, lic.LicenseID, "rejouabilité", "", 10, 30)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	pub, key, _ := ed25519.GenerateKey(rand.Reader)
+	public := base64.RawURLEncoding.EncodeToString(pub)
+	first, err := EnrollDeviceWithFullInfo(db, plaintext, "90000101", "PC-REJOUÉ", "windows", public, "10.0.0.1", "", "", "test-agent",
+		signedDeviceTestProof(key, "enroll", plaintext, "90000101", "PC-REJOUÉ", "windows", false))
+	if err != nil {
+		t.Fatalf("enroll 1: %v", err)
+	}
+	replay, err := EnrollDeviceWithFullInfo(db, plaintext, "90000101", "PC-REJOUÉ", "windows", public, "10.0.0.1", "", "", "test-agent",
+		signedDeviceTestProof(key, "enroll", plaintext, "90000101", "PC-REJOUÉ", "windows", false))
+	if err != nil {
+		t.Fatalf("rejouement: %v", err)
+	}
+	if replay.DeviceID != first.DeviceID {
+		t.Fatalf("rejouement a créé %q, want %q (doublon)", replay.DeviceID, first.DeviceID)
+	}
+	listed, _ := ListParkEnrollmentTokens(db, 0, lic.LicenseID)
+	if listed[0].UseCount != 1 {
+		t.Fatalf("use_count = %d, want 1 après rejouement", listed[0].UseCount)
+	}
+	// A reinstall (fresh proof key) still enrolls a new device.
+	pub2, key2, _ := ed25519.GenerateKey(rand.Reader)
+	second, err := EnrollDeviceWithFullInfo(db, plaintext, "90000101", "PC-REJOUÉ", "windows", base64.RawURLEncoding.EncodeToString(pub2), "10.0.0.1", "", "", "test-agent",
+		signedDeviceTestProof(key2, "enroll", plaintext, "90000101", "PC-REJOUÉ", "windows", false))
+	if err != nil {
+		t.Fatalf("réinstallation: %v", err)
+	}
+	if second.DeviceID == first.DeviceID {
+		t.Fatal("réinstallation fusionnée à tort avec l'ancien poste")
+	}
+}
+
 func TestParkTokenRejectsBadInput(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "park_bad.db")
 	db, err := InitDatabase(path)
