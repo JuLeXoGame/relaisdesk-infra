@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -15,7 +16,7 @@ func TestEnrollPasswordFileRoundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if st.Mode().Perm() != 0600 {
+	if runtime.GOOS != "windows" && st.Mode().Perm() != 0600 {
 		t.Fatalf("permissions = %o, want 600", st.Mode().Perm())
 	}
 	got, err := readEnrollPasswordFile(path)
