@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
+    [string]$ProjectRoot = "",
     [switch]$SkipNativeDependencies,
     [switch]$SkipTests,
     [switch]$SkipLaunchers,
@@ -11,6 +11,19 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+    # $PSScriptRoot peut être vide selon le mode d'invocation (-File dans
+    # certains hôtes) : repli sur $PSCommandPath puis le répertoire courant.
+    $scriptDir = $PSScriptRoot
+    if ([string]::IsNullOrWhiteSpace($scriptDir) -and $PSCommandPath) {
+        $scriptDir = Split-Path -Parent $PSCommandPath
+    }
+    if ([string]::IsNullOrWhiteSpace($scriptDir)) {
+        $scriptDir = Join-Path (Get-Location).Path "scripts"
+    }
+    $ProjectRoot = Split-Path -Parent $scriptDir
+}
 
 $VcpkgToolCommit = "0ac8df3b98e3afcd8bf075fa74a6bd2c32613345"
 $SciterCommit = "f33df075d9eb2f8d252cb88f1b2c8096e56197ed"

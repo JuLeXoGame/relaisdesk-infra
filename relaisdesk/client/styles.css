@@ -156,3 +156,9 @@
 @media(max-width:850px){
 .nav-item{width:auto;flex:0 0 auto}
 }
+/* Explorateur des membres invités : même arbre que le parc */
+#teamSearchInput{margin-top:12px}
+.team-explorer{display:flex;gap:12px;align-items:flex-start;margin-top:12px}
+.team-tree-pane{width:270px;min-width:220px;max-width:38%}
+.team-members-list{flex:1;min-width:0}
+@media(max-width:850px){.team-explorer{flex-direction:column}.team-tree-pane{width:100%;max-width:none}}

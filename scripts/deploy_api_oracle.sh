@@ -36,7 +36,7 @@ if [ ! -f "$SSH_KEY" ]; then echo "Cle introuvable : $SSH_KEY" >&2; exit 1; fi
 command -v ssh >/dev/null || { echo "Commande introuvable : ssh" >&2; exit 1; }
 command -v scp >/dev/null || { echo "Commande introuvable : scp" >&2; exit 1; }
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 PREBUILT_DIR="$ROOT/prebuilt/api"
 SSH_OPTS=(-o BatchMode=yes -o StrictHostKeyChecking=accept-new -i "$SSH_KEY")
 

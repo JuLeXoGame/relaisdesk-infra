@@ -224,7 +224,7 @@ func openServiceDialog(kind, target string) {
 			}
 			notice := widget.NewLabel("Prépayé : le lien doit être payé avant la connexion.\nHoraire : seule la connexion confirmée compte, au prorata ; fermez toutes les prises en main avant d'envoyer le lien.\nLa facturation et les remboursements de la prestation relèvent de votre entreprise, pas de RelaisDesk.")
 			notice.Wrapping = fyne.TextWrapWord
-			win.SetContent(container.NewVScroll(container.NewVBox(summary, rateSelect, agreed, prepare, password, connect, reload, finish, cancel, pay, link, copy, message, notice)))
+			win.SetContent(NewPageVScroll(container.NewVBox(summary, rateSelect, agreed, prepare, password, connect, reload, finish, cancel, pay, link, copy, message, notice)))
 			win.SetOnClosed(func() {
 				delete(serviceWindows, win)
 				closed = true

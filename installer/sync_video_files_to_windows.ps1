@@ -12,6 +12,8 @@ $files = @(
   "installer/configurator/codec_perf_test.go",
   "installer/configurator/toml_quote.go",
   "installer/configurator/toml_quote_test.go",
+  "installer/configurator/smoothscroll.go",
+  "installer/configurator/smoothscroll_test.go",
   "installer/configurator/main.go",
   "installer/configurator/rustdesk_darwin.go",
   "installer/configurator/rustdesk_linux.go",
@@ -61,9 +63,14 @@ $files = @(
   "installer/viewer/rustdesk_windows.go",
   "installer/viewer/config_windows.go",
   "installer/build_linux_technicien.ps1",
+  "installer/build_linux_viewer.ps1",
   "installer/build_technicien_portable.ps1",
   "installer/build_viewer_windows.ps1",
+  "installer/release_windows.ps1",
+  "installer/rebuild_nsis.ps1",
+  "installer/sign_manifest.ps1",
   "scripts/build-rustdesk-windows.ps1",
+  "scripts/deploy_all.ps1",
   "scripts/rustdesk-sciter-vcpkg/vcpkg.json",
   "scripts/mirror-portable-oracle.ps1",
   "scripts/deploy-api-20260927.ps1",
@@ -128,6 +135,7 @@ $files = @(
   "installer/viewer/toml.go",
   "installer/viewer/rustdesk_windows_test.go",
   "installer/nsis/installer.nsi",
+  "installer/nsis/installer-configurator.nsi",
   "scripts/deploy-interventions-20260920.ps1"
 )
 foreach ($f in $files) {

@@ -3,7 +3,10 @@
 // Same customer application; team sessions never replace the personal session.
 (() => {
   let data = { licenses: [], members: [], memberships: [] };
-  let ownerFolders = [], techToken = '', cursor = 0, generation = 0, memberOnly = false, deviceRequest = 0;
+  let ownerFolders = [], techToken = '', cursor = 0, generation = 0, memberOnly = false, deviceRequest = 0, teamFolderId = '';
+  const teamCollapsed = new Set();
+  try { for (const id of (localStorage.getItem('rd_team_tree_collapsed') || '').split(',')) if (id) teamCollapsed.add(id); } catch (_) { /* stockage indisponible */ }
+  const saveTeamCollapsed = () => { try { localStorage.setItem('rd_team_tree_collapsed', [...teamCollapsed].join(',')); } catch (_) { /* stockage indisponible */ } };
   const text = (tag, value, className) => {
     const node = document.createElement(tag); node.textContent = value;
     if (className) node.className = className;
@@ -30,13 +33,144 @@
     if (window.rdServices) window.rdServices.navigation();
     if (memberOnly && commercialPanels.includes(state.currentPanel)) switchPanel('team-devices');
   }
+  // Explorateur des membres : même système que le parc (arbre des dossiers
+  // + recherche). Un dossier sélectionné montre les membres autorisés pour
+  // lui ou l'un de ses sous-dossiers ; la racine montre tout le forfait.
+  function teamLicenseFolders() {
+    const id = byId('teamLicense').value;
+    return ownerFolders.filter(f => !f.license_id || f.license_id === id);
+  }
+  function teamDescendantIds(folderId) {
+    const ids = new Set([folderId]);
+    const scope = teamLicenseFolders();
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const f of scope) {
+        if (ids.has(f.parent_folder_id || '') && !ids.has(f.folder_id)) { ids.add(f.folder_id); changed = true; }
+      }
+    }
+    return ids;
+  }
+  function teamLicenseMembers() {
+    const id = byId('teamLicense').value;
+    return data.members.filter(item => item.license_id === id);
+  }
+  function countTeamMembers(folderId) {
+    const list = teamLicenseMembers();
+    if (!folderId) return list.length;
+    const allowed = teamDescendantIds(folderId);
+    return list.filter(m => (m.folder_ids || []).some(fid => allowed.has(fid))).length;
+  }
+  function teamMembersIn(folderId) {
+    let list = teamLicenseMembers();
+    if (folderId) {
+      const allowed = teamDescendantIds(folderId);
+      list = list.filter(m => (m.folder_ids || []).some(fid => allowed.has(fid)));
+    }
+    const query = (byId('teamSearchInput')?.value || '').toLowerCase().trim();
+    if (query) {
+      list = list.filter(m => (m.email || '').toLowerCase().includes(query) ||
+        (m.license_id || '').toLowerCase().includes(query) ||
+        (m.status || '').toLowerCase().includes(query));
+    }
+    return list;
+  }
+  function buildTeamNodeRow({ folderId, icon, name, count, selected, hasChildren, collapsed }) {
+    const row = document.createElement('div');
+    row.className = `fleet-node${selected ? ' selected' : ''}`;
+    row.setAttribute('role', 'treeitem');
+    row.setAttribute('aria-selected', selected ? 'true' : 'false');
+    row.tabIndex = 0;
+    if (folderId) row.dataset.folderId = folderId;
+    const chevron = document.createElement('button');
+    chevron.type = 'button';
+    chevron.className = `fleet-chevron${hasChildren ? (collapsed ? '' : ' expanded') : ' leaf'}`;
+    chevron.innerHTML = FLEET_SVG.chevron;
+    const chevronLabel = collapsed ? 'Déplier' : 'Replier';
+    chevron.title = chevronLabel;
+    chevron.setAttribute('aria-label', `${chevronLabel} — ${name}`);
+    if (hasChildren) row.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    chevron.addEventListener('click', event => {
+      event.stopPropagation();
+      if (!hasChildren) return;
+      const key = folderId || '';
+      if (teamCollapsed.has(key)) teamCollapsed.delete(key); else teamCollapsed.add(key);
+      saveTeamCollapsed();
+      renderTeamTree();
+    });
+    row.append(chevron);
+    const iconWrap = document.createElement('span');
+    iconWrap.innerHTML = icon;
+    iconWrap.setAttribute('aria-hidden', 'true');
+    row.append(iconWrap.firstChild || iconWrap);
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'fleet-node-name';
+    nameSpan.textContent = name;
+    nameSpan.title = name;
+    row.append(nameSpan);
+    const countBadge = document.createElement('span');
+    countBadge.className = 'fleet-count';
+    countBadge.textContent = count;
+    row.append(countBadge);
+    const activate = () => selectTeamFolder(folderId);
+    row.addEventListener('click', activate);
+    row.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(); }
+    });
+    return row;
+  }
+  function renderTeamTree() {
+    const tree = byId('teamFolderTree');
+    if (!tree) return;
+    tree.replaceChildren();
+    const scope = teamLicenseFolders();
+    const childrenOf = pid => scope.filter(f => (f.parent_folder_id || '') === pid).sort((a, b) => a.name.localeCompare(b.name));
+    const buildLi = folder => {
+      const li = document.createElement('li');
+      li.setAttribute('role', 'none');
+      const children = childrenOf(folder.folder_id);
+      li.append(buildTeamNodeRow({
+        folderId: folder.folder_id, icon: FLEET_SVG.folder, name: folder.name,
+        count: countTeamMembers(folder.folder_id), selected: teamFolderId === folder.folder_id,
+        hasChildren: children.length > 0, collapsed: teamCollapsed.has(folder.folder_id)
+      }));
+      if (children.length && !teamCollapsed.has(folder.folder_id)) {
+        const group = document.createElement('ul');
+        group.setAttribute('role', 'group');
+        for (const child of children) group.append(buildLi(child));
+        li.append(group);
+      }
+      return li;
+    };
+    const rootLi = document.createElement('li');
+    rootLi.setAttribute('role', 'none');
+    const topChildren = childrenOf('');
+    rootLi.append(buildTeamNodeRow({
+      folderId: '', icon: FLEET_SVG.home, name: 'Tous les membres',
+      count: countTeamMembers(''), selected: teamFolderId === '',
+      hasChildren: topChildren.length > 0, collapsed: teamCollapsed.has('')
+    }));
+    if (topChildren.length && !teamCollapsed.has('')) {
+      const group = document.createElement('ul');
+      group.setAttribute('role', 'group');
+      for (const child of topChildren) group.append(buildLi(child));
+      rootLi.append(group);
+    }
+    tree.append(rootLi);
+  }
+  function selectTeamFolder(folderId) {
+    teamFolderId = folderId || '';
+    renderTeamTree();
+    renderMembers();
+  }
   function renderMembers() {
     const id = byId('teamLicense').value;
     const license = data.licenses.find(item => item.license_id === id);
     byId('teamCapacity').textContent = license ? `${license.used} / ${license.capacity} places occupées (utilisateurs et invitations en cours)` : 'Disponible avec un plan Pro ou supérieur actif.';
     byId('teamInvite').disabled = !license || !license.enabled || license.used >= license.capacity;
     const list = byId('teamMembers'); list.replaceChildren();
-    for (const member of data.members.filter(item => item.license_id === id)) {
+    for (const member of teamMembersIn(teamFolderId)) {
       const row = text('article', '', 'license-card');
       row.append(text('h3', member.email));
       const expired = member.status === 'invited' && new Date(member.invite_expires_at) <= new Date();
@@ -56,7 +190,10 @@
       }
       list.append(row);
     }
-    if (!list.children.length) list.append(text('p', 'Aucun utilisateur invité.'));
+    if (!list.children.length) {
+      const filtered = teamFolderId !== '' || (byId('teamSearchInput')?.value || '').trim() !== '';
+      list.append(text('p', filtered ? 'Aucun membre ne correspond à ce dossier ou à cette recherche.' : 'Aucun utilisateur invité.'));
+    }
   }
   function editMember(member = null) {
     const licenseID = byId('teamLicense').value;
@@ -120,7 +257,7 @@
         }
         if (data.memberships.some(item => item.license_id === previous)) teamContextSelect.value = previous;
       }
-      applyNavigation(); renderMembers();
+      applyNavigation(); renderTeamTree(); renderMembers();
       if (data.memberships.length) await loadDevices(false);
     } catch (err) { if (state.token === personalToken) setMessage(byId('appMessage'), `Équipes : ${err.message}`, true); }
   }
@@ -153,9 +290,10 @@
   window.rdTeams = {
     load,
     canOpen: name => !(memberOnly && commercialPanels.includes(name)),
-    clear: () => { generation++; techToken = ''; data = { licenses: [], members: [], memberships: [] }; memberOnly = false; ownerFolders = []; byId('teamMembers').replaceChildren(); byId('teamDeviceList').replaceChildren(); }
+    clear: () => { generation++; techToken = ''; teamFolderId = ''; data = { licenses: [], members: [], memberships: [] }; memberOnly = false; ownerFolders = []; const si = byId('teamSearchInput'); if (si) si.value = ''; const tree = byId('teamFolderTree'); if (tree) tree.replaceChildren(); byId('teamMembers').replaceChildren(); byId('teamDeviceList').replaceChildren(); }
   };
-  byId('teamLicense').addEventListener('change', renderMembers);
+  byId('teamLicense').addEventListener('change', () => { teamFolderId = ''; renderTeamTree(); renderMembers(); });
+  byId('teamSearchInput').addEventListener('input', renderMembers);
   byId('teamInvite').addEventListener('click', () => editMember());
   const refreshDevices = append => loadDevices(append).catch(err => setMessage(byId('appMessage'), err.message, true));
   byId('teamContext').addEventListener('change', () => { generation++; refreshDevices(false); });

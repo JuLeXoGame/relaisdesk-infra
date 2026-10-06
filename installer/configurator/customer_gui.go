@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	customerCardBorder = color.NRGBA{R: 35, G: 55, B: 85, A: 140}
+	customerCardBorder = color.NRGBA{R: 50, G: 120, B: 200, A: 220} // bright blue, same outline as enrolled PCs
 	customerCardFill   = color.NRGBA{R: 14, G: 20, B: 35, A: 255}
 )
 
@@ -212,7 +212,7 @@ func asyncCustomerPanel(panelID int, relaunch func(int), build func(*customerDas
 					box.Refresh()
 					return
 				}
-				box.Objects = []fyne.CanvasObject{container.NewVScroll(build(dash))}
+				box.Objects = []fyne.CanvasObject{NewPageVScroll(build(dash))}
 				box.Refresh()
 			})
 		}()
@@ -254,7 +254,7 @@ const customerCardWidth = 440
 // minimale d'un scroll vertical vaut 32px (Fyne), Center réduirait donc
 // la carte à une vignette inutilisable.
 func centeredCardScroll(card fyne.CanvasObject) fyne.CanvasObject {
-	scroll := container.NewVScroll(container.NewPadded(card))
+	scroll := NewPageVScroll(container.NewPadded(card))
 	scroll.SetMinSize(fyne.NewSize(customerCardWidth, 0))
 	return container.NewHBox(layout.NewSpacer(), scroll, layout.NewSpacer())
 }
@@ -307,7 +307,7 @@ func showErrorWithLinks(err error, parent fyne.Window) {
 		dialog.ShowError(err, parent)
 		return
 	}
-	scroll := container.NewVScroll(errorWithLinksContent(err.Error()))
+	scroll := NewSmoothVScroll(errorWithLinksContent(err.Error()))
 	scroll.SetMinSize(fyne.NewSize(520, 160))
 	dialog.ShowCustom(T("error"), "OK", scroll, parent)
 }
@@ -539,11 +539,10 @@ func overviewPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 			} else {
 				statusLabel.Importance = widget.DangerImportance
 			}
-			licenseRows.Add(container.NewVBox(
+			licenseRows.Add(createCardBox(container.NewVBox(
 				container.NewHBox(widget.NewLabelWithStyle(l.LicenseID, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), layout.NewSpacer(), statusLabel),
 				widget.NewLabel(TF("license_expiry_line", formatCustomerDateRFC3339(l.ExpiresAt), l.MaxConnections)),
-				widget.NewSeparator(),
-			))
+			), customerCardBorder, customerCardFill))
 		}
 		licensesCard := createCardBox(container.NewVBox(
 			widget.NewLabelWithStyle(T("licenses_title"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -597,8 +596,7 @@ func overviewPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 				})
 				row.Add(cancelBtn)
 			}
-			row.Add(widget.NewSeparator())
-			subsBox.Add(row)
+			subsBox.Add(createCardBox(row, customerCardBorder, customerCardFill))
 		}
 		subsCard := createCardBox(container.NewVBox(
 			widget.NewLabelWithStyle(T("subscriptions_title"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -653,7 +651,7 @@ func open2FAEnableDialog(panelID int, relaunch func(int)) {
 			form.Add(widget.NewLabel(T("twofa_code_label")))
 			form.Add(codeEntry)
 			dialog.ShowCustomConfirm(T("twofa_enable_btn"), T("dialog_confirm_btn"), T("dialog_cancel_btn"),
-				container.NewVScroll(form), func(ok bool) {
+				NewPageVScroll(form), func(ok bool) {
 					if !ok {
 						return
 					}

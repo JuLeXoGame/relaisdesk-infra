@@ -210,6 +210,52 @@ func TestFilterDevicesByFolder(t *testing.T) {
 	}
 }
 
+func TestFilterMembersByFolder(t *testing.T) {
+	folders := sampleThreeLevelFolders()
+	members := []customerTeamMember{
+		{MemberID: "m-none", FolderIDs: nil},
+		{MemberID: "m-paris", FolderIDs: []string{"fld-paris"}},
+		{MemberID: "m-multi", FolderIDs: []string{"fld-lyon", "fld-serveurs"}},
+		{MemberID: "m-unknown", FolderIDs: []string{"fld-inconnu"}},
+	}
+	ids := func(ms []customerTeamMember) []string {
+		out := []string{}
+		for _, m := range ms {
+			out = append(out, m.MemberID)
+		}
+		return out
+	}
+	if got := ids(filterMembersByFolder(members, "", folders)); !reflect.DeepEqual(got, []string{"m-none", "m-paris", "m-multi", "m-unknown"}) {
+		t.Errorf("racine = %v, attendu tous les membres", got)
+	}
+	if got := ids(filterMembersByFolder(members, "fld-paris", folders)); !reflect.DeepEqual(got, []string{"m-paris", "m-multi"}) {
+		t.Errorf("sous-arbre paris = %v (m-multi via fld-serveurs)", got)
+	}
+	if got := ids(filterMembersByFolder(members, "fld-lyon", folders)); !reflect.DeepEqual(got, []string{"m-multi"}) {
+		t.Errorf("lyon = %v", got)
+	}
+	if got := filterMembersByFolder(members, "fld-absent", folders); len(got) != 0 {
+		t.Errorf("dossier absent = %v, attendu vide", ids(got))
+	}
+	if got := filterMembersByFolder(nil, "", folders); len(got) != 0 {
+		t.Errorf("membres vides racine = %v", ids(got))
+	}
+}
+
+func TestCustomerFoldersConversion(t *testing.T) {
+	in := []customerFolder{
+		{FolderID: "a", Name: "A", ParentFolderID: "", LicenseID: "lic-1"},
+		{FolderID: "b", Name: "B", ParentFolderID: "a", LicenseID: "lic-1"},
+	}
+	out := customerFoldersToDeviceFolders(in)
+	if len(out) != 2 || out[0].FolderID != "a" || out[0].Name != "A" || out[1].ParentFolderID != "a" || out[1].LicenseID != "lic-1" {
+		t.Fatalf("conversion inattendue: %+v", out)
+	}
+	if got := getDirectChildFolders("", out); len(got) != 1 || got[0].FolderID != "a" {
+		t.Errorf("helpers partagés inutilisables après conversion: %+v", got)
+	}
+}
+
 func TestFolderCycleProtection(t *testing.T) {
 	// A circular parent reference must not enter an infinite loop
 	cycleFolders := []DeviceFolderItem{

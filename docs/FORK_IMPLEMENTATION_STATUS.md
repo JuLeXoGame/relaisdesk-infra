@@ -151,9 +151,11 @@ revendiqué.
 
 ## Blocages restants avant publication des binaires
 
-Docker et WSL ne sont pas installés sur le poste. GitHub CLI est authentifié sur
-le compte `JuLeXoGame`, les branches sources sont publiques et les CI client et
-serveur sont validées. Il reste :
+Docker n'est pas installé sur le poste. WSL (Ubuntu-22.04) est installé et sert
+de station de build Linux natif (GUI Fyne, voir `scripts/setup-wsl-go.sh` et
+`installer/configurator/build_linux.sh`) et de déploiement Oracle.
+GitHub CLI est authentifié sur le compte `JuLeXoGame`, les branches sources
+sont publiques et les CI client et serveur sont validées. Il reste :
 
 - à publier sous licence OSI le dépôt distinct des configurateurs, viewers et
   installateurs requis pour la candidature SignPath ;

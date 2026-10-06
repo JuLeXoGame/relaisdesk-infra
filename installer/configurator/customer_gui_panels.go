@@ -46,7 +46,7 @@ func asyncFetchPanel(panelID int, relaunch func(int), fetch func(token string) (
 					box.Refresh()
 					return
 				}
-				box.Objects = []fyne.CanvasObject{container.NewVScroll(content)}
+				box.Objects = []fyne.CanvasObject{NewPageVScroll(content)}
 				box.Refresh()
 			})
 		}()
@@ -91,6 +91,78 @@ func sortedFolderOptions(folders []customerFolder) ([]string, map[string]string)
 	return labels, byID
 }
 
+// buildTeamMemberRow rend une ligne membre (e-mail, statut, dossiers,
+// actions renvoyer/dossiers/révoquer) pour l'explorateur d'équipe.
+func buildTeamMemberRow(member customerTeamMember, names map[string]string, folders []customerFolder, panelID int, relaunch func(int)) fyne.CanvasObject {
+	folderNames := []string{}
+	for _, id := range member.FolderIDs {
+		if n, ok := names[id]; ok {
+			folderNames = append(folderNames, n)
+		} else {
+			folderNames = append(folderNames, id)
+		}
+	}
+	foldersLabel := strings.Join(folderNames, ", ")
+	if foldersLabel == "" {
+		foldersLabel = T("team_all_folders")
+	}
+	row := container.NewVBox(
+		container.NewHBox(
+			widget.NewLabelWithStyle(member.Email, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+			layout.NewSpacer(),
+			widget.NewLabel(member.Status),
+		),
+		widget.NewLabel(TF("team_member_line", member.LicenseID, foldersLabel)),
+	)
+	actions := []fyne.CanvasObject{}
+	if member.Status != "active" {
+		resendBtn := widget.NewButton(T("team_resend_btn"), func() {
+			go func() {
+				err := resendTeamInvitation(getCustomerSessionToken(), member.MemberID)
+				fyne.Do(func() {
+					if err != nil {
+						if isCustomerSessionExpired(err) {
+							clearCustomerSession()
+							relaunch(panelID)
+							return
+						}
+						dialog.ShowError(err, mainWindow)
+						return
+					}
+					dialog.ShowInformation(T("team_resend_btn"), T("team_resend_ok"), mainWindow)
+				})
+			}()
+		})
+		actions = append(actions, resendBtn)
+	}
+	foldersBtn := widget.NewButton(T("team_folders_btn"), func() {
+		openTeamFoldersDialog(member, folders, panelID, relaunch)
+	})
+	revokeBtn := widget.NewButton(T("team_revoke_btn"), func() {
+		dialog.ShowConfirm(T("team_revoke_btn"), TF("team_revoke_confirm", member.Email), func(ok bool) {
+			if !ok {
+				return
+			}
+			go func() {
+				err := revokeTeamMember(getCustomerSessionToken(), member.MemberID)
+				fyne.Do(func() {
+					if err != nil {
+						if isCustomerSessionExpired(err) {
+							clearCustomerSession()
+						}
+						dialog.ShowError(err, mainWindow)
+						return
+					}
+					relaunch(panelID)
+				})
+			}()
+		}, mainWindow)
+	})
+	actions = append(actions, foldersBtn, revokeBtn)
+	row.Add(container.NewHBox(actions...))
+	return createCardBox(row, customerCardBorder, customerCardFill)
+}
+
 // teamPanel reproduit la gestion d'équipe web : invitations, membres,
 // dossiers autorisés et équipes rejointes.
 func teamPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
@@ -124,84 +196,199 @@ func teamPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 			licBox,
 		), customerCardBorder, customerCardFill)
 
+		memberFolders := customerFoldersToDeviceFolders(folders)
+		currentMemberFolderID := ""
+		memberSearchQuery := ""
 		membersBox := container.NewVBox()
-		if len(team.Members) == 0 {
-			membersBox.Add(widget.NewLabel(T("team_no_members")))
+		membersScroll := NewSmoothVScroll(membersBox)
+		membersScroll.SetMinSize(fyne.NewSize(400, 220))
+
+		memberSearchEntry := widget.NewEntry()
+		memberSearchEntry.SetPlaceHolder(T("search_members_placeholder"))
+
+		memberBreadcrumbsBox := container.NewHBox()
+		memberTreeBox := container.NewVBox()
+
+		memberCollapsed := map[string]bool{}
+		for _, id := range strings.Split(fyneApp.Preferences().StringWithFallback("team_tree_collapsed", ""), ",") {
+			if id != "" {
+				memberCollapsed[id] = true
+			}
 		}
-		for _, m := range team.Members {
-			member := m
-			folderNames := []string{}
-			for _, id := range member.FolderIDs {
-				if n, ok := names[id]; ok {
-					folderNames = append(folderNames, n)
-				} else {
-					folderNames = append(folderNames, id)
+		saveMemberCollapsed := func() {
+			ids := []string{}
+			for id := range memberCollapsed {
+				ids = append(ids, id)
+			}
+			fyneApp.Preferences().SetString("team_tree_collapsed", strings.Join(ids, ","))
+		}
+		memberCollapseKey := func(folderID string) string {
+			if folderID == "" {
+				return "ROOT"
+			}
+			return folderID
+		}
+
+		countMembersInTree := func(fID string) int {
+			return len(filterMembersByFolder(team.Members, fID, memberFolders))
+		}
+
+		var selectMemberFolder func(string)
+		var renderMemberTree func()
+
+		filterAndRenderMembers := func() {
+			membersBox.Objects = nil
+			shown := 0
+			for _, m := range filterMembersByFolder(team.Members, currentMemberFolderID, memberFolders) {
+				if memberSearchQuery != "" {
+					if !strings.Contains(strings.ToLower(m.Email), memberSearchQuery) &&
+						!strings.Contains(strings.ToLower(m.LicenseID), memberSearchQuery) &&
+						!strings.Contains(strings.ToLower(m.Status), memberSearchQuery) {
+						continue
+					}
+				}
+				membersBox.Add(buildTeamMemberRow(m, names, folders, panelID, relaunch))
+				shown++
+			}
+			if shown == 0 {
+				membersBox.Add(widget.NewLabel(T("team_no_members")))
+			}
+			membersBox.Refresh()
+			membersScroll.Refresh()
+			membersScroll.ScrollToTop()
+		}
+
+		memberSearchEntry.OnChanged = func(text string) {
+			memberSearchQuery = strings.ToLower(strings.TrimSpace(text))
+			filterAndRenderMembers()
+		}
+
+		updateMemberBreadcrumbs := func() {
+			memberBreadcrumbsBox.Objects = nil
+
+			rootBtn := widget.NewButton(T("breadcrumb_root"), func() {
+				selectMemberFolder("")
+			})
+			if currentMemberFolderID == "" {
+				rootBtn.Importance = widget.HighImportance
+			} else {
+				rootBtn.Importance = widget.MediumImportance
+			}
+			memberBreadcrumbsBox.Add(rootBtn)
+
+			if currentMemberFolderID != "" {
+				ancestors := getFolderAncestors(currentMemberFolderID, memberFolders)
+				for i, a := range ancestors {
+					sep := widget.NewLabelWithStyle("  ➔  ", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+					memberBreadcrumbsBox.Add(sep)
+					ancID := a.FolderID
+					ancName := a.Name
+					isCurrent := (i == len(ancestors)-1)
+					if isCurrent {
+						curBtn := widget.NewButton("📁 "+ancName, nil)
+						curBtn.Importance = widget.HighImportance
+						curBtn.Disable()
+						memberBreadcrumbsBox.Add(curBtn)
+					} else {
+						crumbBtn := widget.NewButton("📁 "+ancName, func() {
+							selectMemberFolder(ancID)
+						})
+						crumbBtn.Importance = widget.MediumImportance
+						memberBreadcrumbsBox.Add(crumbBtn)
+					}
 				}
 			}
-			foldersLabel := strings.Join(folderNames, ", ")
-			if foldersLabel == "" {
-				foldersLabel = T("team_all_folders")
-			}
-			row := container.NewVBox(
-				container.NewHBox(
-					widget.NewLabelWithStyle(member.Email, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-					layout.NewSpacer(),
-					widget.NewLabel(member.Status),
-				),
-				widget.NewLabel(TF("team_member_line", member.LicenseID, foldersLabel)),
-			)
-			actions := []fyne.CanvasObject{}
-			if member.Status != "active" {
-				resendBtn := widget.NewButton(T("team_resend_btn"), func() {
-					go func() {
-						err := resendTeamInvitation(getCustomerSessionToken(), member.MemberID)
-						fyne.Do(func() {
-							if err != nil {
-								if isCustomerSessionExpired(err) {
-									clearCustomerSession()
-									relaunch(panelID)
-									return
-								}
-								dialog.ShowError(err, mainWindow)
-								return
-							}
-							dialog.ShowInformation(T("team_resend_btn"), T("team_resend_ok"), mainWindow)
-						})
-					}()
-				})
-				actions = append(actions, resendBtn)
-			}
-			foldersBtn := widget.NewButton(T("team_folders_btn"), func() {
-				openTeamFoldersDialog(member, folders, panelID, relaunch)
-			})
-			revokeBtn := widget.NewButton(T("team_revoke_btn"), func() {
-				dialog.ShowConfirm(T("team_revoke_btn"), TF("team_revoke_confirm", member.Email), func(ok bool) {
-					if !ok {
-						return
-					}
-					go func() {
-						err := revokeTeamMember(getCustomerSessionToken(), member.MemberID)
-						fyne.Do(func() {
-							if err != nil {
-								if isCustomerSessionExpired(err) {
-									clearCustomerSession()
-								}
-								dialog.ShowError(err, mainWindow)
-								return
-							}
-							relaunch(panelID)
-						})
-					}()
-				}, mainWindow)
-			})
-			actions = append(actions, foldersBtn, revokeBtn)
-			row.Add(container.NewHBox(actions...))
-			row.Add(widget.NewSeparator())
-			membersBox.Add(row)
+			memberBreadcrumbsBox.Refresh()
 		}
+
+		addMemberTreeRow := func(id, label string, icon fyne.Resource, depth int, hasChildren bool) {
+			row := container.NewHBox()
+			if depth > 0 {
+				row.Add(widget.NewLabel(strings.Repeat("  ", depth)))
+			}
+			if hasChildren {
+				glyph := "▾"
+				if memberCollapsed[memberCollapseKey(id)] {
+					glyph = "▸"
+				}
+				toggleID := id
+				toggleBtn := widget.NewButton(glyph, func() {
+					key := memberCollapseKey(toggleID)
+					if memberCollapsed[key] {
+						delete(memberCollapsed, key)
+					} else {
+						memberCollapsed[key] = true
+					}
+					saveMemberCollapsed()
+					renderMemberTree()
+				})
+				row.Add(toggleBtn)
+			} else {
+				row.Add(widget.NewLabel("   "))
+			}
+			navID := id
+			navBtn := widget.NewButtonWithIcon(label, icon, func() {
+				selectMemberFolder(navID)
+			})
+			navBtn.Alignment = widget.ButtonAlignLeading
+			if currentMemberFolderID == id {
+				navBtn.Importance = widget.HighImportance
+			} else {
+				navBtn.Importance = widget.MediumImportance
+			}
+			row.Add(navBtn)
+			memberTreeBox.Add(row)
+		}
+
+		renderMemberTree = func() {
+			memberTreeBox.Objects = nil
+			topFolders := getDirectChildFolders("", memberFolders)
+			addMemberTreeRow("", fmt.Sprintf("%s (%d)", T("folder_root"), countMembersInTree("")), fleetTreeIcon("root"), 0, len(topFolders) > 0)
+			if !memberCollapsed[memberCollapseKey("")] {
+				var addLevel func(parentID string, depth int)
+				addLevel = func(parentID string, depth int) {
+					for _, f := range getDirectChildFolders(parentID, memberFolders) {
+						children := getDirectChildFolders(f.FolderID, memberFolders)
+						addMemberTreeRow(f.FolderID, fmt.Sprintf("%s (%d)", f.Name, countMembersInTree(f.FolderID)), fleetTreeIcon("folder"), depth, len(children) > 0)
+						if len(children) > 0 && !memberCollapsed[memberCollapseKey(f.FolderID)] {
+							addLevel(f.FolderID, depth+1)
+						}
+					}
+				}
+				addLevel("", 1)
+			}
+			memberTreeBox.Refresh()
+		}
+
+		selectMemberFolder = func(fID string) {
+			currentMemberFolderID = fID
+			updateMemberBreadcrumbs()
+			renderMemberTree()
+			filterAndRenderMembers()
+		}
+
+		updateMemberBreadcrumbs()
+		renderMemberTree()
+		filterAndRenderMembers()
+
+		memberBreadcrumbsScroll := NewSmoothHScroll(memberBreadcrumbsBox)
+		memberBreadcrumbsScroll.SetMinSize(fyne.NewSize(0, 42))
+		memberTreePane := container.NewBorder(
+			container.NewVBox(
+				widget.NewLabelWithStyle(T("team_tree_title"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+				widget.NewSeparator(),
+			),
+			nil, nil, nil,
+			NewSmoothVScroll(memberTreeBox),
+		)
+		memberSplit := container.NewHSplit(memberTreePane, membersScroll)
+		memberSplit.Offset = 0.3
+
 		membersCard := createCardBox(container.NewVBox(
 			widget.NewLabelWithStyle(T("team_members_title"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-			membersBox,
+			memberSearchEntry,
+			memberBreadcrumbsScroll,
+			memberSplit,
 		), customerCardBorder, customerCardFill)
 
 		inviteCard := createCardBox(teamInviteForm(licOptions, licByLabel, folders, panelID, relaunch), customerCardBorder, customerCardFill)
@@ -211,8 +398,10 @@ func teamPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 			joinedBox.Add(widget.NewLabel(T("team_no_memberships")))
 		}
 		for _, ms := range team.Memberships {
-			joinedBox.Add(widget.NewLabel(TF("team_membership_line", ms.LicenseID, ms.Status)))
-			joinedBox.Add(widget.NewSeparator())
+			joinedBox.Add(createCardBox(
+				container.NewVBox(widget.NewLabel(TF("team_membership_line", ms.LicenseID, ms.Status))),
+				customerCardBorder, customerCardFill,
+			))
 		}
 		joinedCard := createCardBox(container.NewVBox(
 			widget.NewLabelWithStyle(T("team_joined_title"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -295,7 +484,7 @@ func teamFoldersDialogContent(member customerTeamMember, folders []customerFolde
 		}
 	}
 	check.SetSelected(initial)
-	scroll := container.NewVScroll(check)
+	scroll := NewSmoothVScroll(check)
 	// Sans taille min, le dialogue se réduit à la MinSize du scroll (32px)
 	// et la liste est inutilisable.
 	scroll.SetMinSize(fyne.NewSize(460, 240))
@@ -450,15 +639,14 @@ func billingPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 		}
 		for _, o := range dash.Orders {
 			order := o
-			ordersBox.Add(container.NewVBox(
+			ordersBox.Add(createCardBox(container.NewVBox(
 				container.NewHBox(
 					widget.NewLabelWithStyle(order.OrderID, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 					layout.NewSpacer(),
 					widget.NewLabel(order.Status),
 				),
 				widget.NewLabel(TF("order_detail_line", order.Plan, order.Technicians, formatEUR(order.Price), order.PaymentMethod, formatCustomerDateRFC3339(order.CreatedAt))),
-				widget.NewSeparator(),
-			))
+			), customerCardBorder, customerCardFill))
 		}
 		ordersCard := createCardBox(container.NewVBox(
 			widget.NewLabelWithStyle(T("orders_title"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -495,7 +683,7 @@ func billingPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 					})
 				}()
 			})
-			invoicesBox.Add(container.NewVBox(
+			invoicesBox.Add(createCardBox(container.NewVBox(
 				container.NewHBox(
 					widget.NewLabelWithStyle(invoice.InvoiceNumber, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 					layout.NewSpacer(),
@@ -503,8 +691,7 @@ func billingPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 				),
 				widget.NewLabel(TF("invoice_detail_line", formatEUR(invoice.AmountTTC), formatCustomerDateRFC3339(invoice.CreatedAt))),
 				container.NewHBox(pdfBtn, ciiBtn),
-				widget.NewSeparator(),
-			))
+			), customerCardBorder, customerCardFill))
 		}
 		invoicesCard := createCardBox(container.NewVBox(
 			widget.NewLabelWithStyle(T("invoices_title"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -538,11 +725,10 @@ func billingPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 					})
 				}()
 			})
-			subsBox.Add(container.NewVBox(
+			subsBox.Add(createCardBox(container.NewVBox(
 				widget.NewLabelWithStyle(fmt.Sprintf("%s — %d technicien(s)", s.Plan, s.Technicians), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 				portalBtn,
-				widget.NewSeparator(),
-			))
+			), customerCardBorder, customerCardFill))
 		}
 		subsCard := createCardBox(container.NewVBox(
 			widget.NewLabelWithStyle(T("subscriptions_title"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -626,8 +812,7 @@ func historyPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 			if len(actions) > 0 {
 				row.Add(container.NewHBox(actions...))
 			}
-			row.Add(widget.NewSeparator())
-			list.Add(row)
+			list.Add(createCardBox(row, customerCardBorder, customerCardFill))
 		}
 		return container.NewVBox(toolbar, list), nil
 	})
@@ -869,15 +1054,14 @@ func servicesPanel(panelID int, relaunch func(int), relaunchSilent func(int)) fy
 					}()
 				}, mainWindow)
 			})
-			ratesBox.Add(container.NewVBox(
+			ratesBox.Add(createCardBox(container.NewVBox(
 				container.NewHBox(
 					widget.NewLabelWithStyle(rate.Label, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 					layout.NewSpacer(),
 					widget.NewLabel(formatEUR(float64(rate.Cents)/100)+" "+unit),
 				),
 				delBtn,
-				widget.NewSeparator(),
-			))
+			), customerCardBorder, customerCardFill))
 		}
 		addRateBtn := widget.NewButton(T("services_rate_add_btn"), func() {
 			openServiceRateDialog(panelID, relaunchSilent)
@@ -940,8 +1124,7 @@ func servicesPanel(panelID int, relaunch func(int), relaunchSilent func(int)) fy
 			if len(actions) > 0 {
 				row.Add(container.NewHBox(actions...))
 			}
-			row.Add(widget.NewSeparator())
-			workBox.Add(row)
+			workBox.Add(createCardBox(row, customerCardBorder, customerCardFill))
 		}
 		workCard := createCardBox(container.NewVBox(
 			widget.NewLabelWithStyle(T("services_work_title"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),

@@ -20,6 +20,11 @@ import (
 
 func collectPanelScrolls(obj fyne.CanvasObject, out *[]*container.Scroll) {
 	switch o := obj.(type) {
+	case *smoothScroll:
+		*out = append(*out, o.Scroll)
+		if o.Content != nil {
+			collectPanelScrolls(o.Content, out)
+		}
 	case *container.Scroll:
 		*out = append(*out, o)
 		if o.Content != nil {
@@ -37,6 +42,10 @@ func countPanelEntries(obj fyne.CanvasObject) int {
 	switch o := obj.(type) {
 	case *widget.Entry:
 		n++
+	case *smoothScroll:
+		if o.Content != nil {
+			n += countPanelEntries(o.Content)
+		}
 	case *container.Scroll:
 		if o.Content != nil {
 			n += countPanelEntries(o.Content)

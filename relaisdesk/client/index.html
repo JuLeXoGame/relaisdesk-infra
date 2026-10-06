@@ -262,7 +262,14 @@
           <label for="teamLicense" id="teamLicenseLabel">Forfait</label><select id="teamLicense"></select>
           <p id="teamCapacity" role="status"></p>
           <button type="button" class="button primary" id="teamInvite">Inviter un technicien</button>
-          <div id="teamMembers" class="list"></div>
+          <input id="teamSearchInput" type="search" placeholder="Rechercher par e-mail, forfait, statut…" aria-label="Rechercher un membre">
+          <div class="team-explorer">
+            <div class="fleet-tree-pane team-tree-pane">
+              <div class="fleet-pane-head">Dossiers</div>
+              <ul id="teamFolderTree" class="fleet-tree" role="tree" aria-label="Dossiers des membres"></ul>
+            </div>
+            <div id="teamMembers" class="list team-members-list"></div>
+          </div>
         </div>
       </section>
       <section class="panel" id="panel-team-devices">

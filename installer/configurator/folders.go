@@ -151,6 +151,39 @@ func filterDevicesByFolder(devices []DeviceItem, folderID string, folders []Devi
 	return out
 }
 
+// customerFoldersToDeviceFolders adapts customer folders to the shared
+// folder helpers (same FolderID/ParentFolderID/Name semantics).
+func customerFoldersToDeviceFolders(folders []customerFolder) []DeviceFolderItem {
+	out := make([]DeviceFolderItem, 0, len(folders))
+	for _, f := range folders {
+		out = append(out, DeviceFolderItem{FolderID: f.FolderID, ParentFolderID: f.ParentFolderID, Name: f.Name, LicenseID: f.LicenseID})
+	}
+	return out
+}
+
+// filterMembersByFolder returns the team members visible under folderID,
+// mirroring filterDevicesByFolder: the root ("") shows every member, any
+// other folder shows members authorized for it or one of its descendants
+// (a member carries several authorized folders, a device a single one).
+func filterMembersByFolder(members []customerTeamMember, folderID string, folders []DeviceFolderItem) []customerTeamMember {
+	if folderID == "" {
+		out := make([]customerTeamMember, len(members))
+		copy(out, members)
+		return out
+	}
+	allowed := getFolderAndDescendantIDs(folderID, folders)
+	out := []customerTeamMember{}
+	for _, m := range members {
+		for _, id := range m.FolderIDs {
+			if allowed[id] {
+				out = append(out, m)
+				break
+			}
+		}
+	}
+	return out
+}
+
 // getFolderBreadcrumbPath returns a human-readable breadcrumb trail, e.g. "Siège Paris > Comptabilité > Serveurs".
 func getFolderBreadcrumbPath(folderID string, folders []DeviceFolderItem) string {
 	if folderID == "" {

@@ -13,11 +13,8 @@ Référence : [service_billing.go](../api/handlers/service_billing.go).
 - Go ≥ 1.26 dans WSL (une seule fois) :
 
 ```bash
-GO_VERSION=$(curl -fsSL https://go.dev/VERSION?m=text | head -n1)
-curl -fsSL -o /tmp/go.tgz "https://go.dev/dl/${GO_VERSION}.linux-amd64.tar.gz"
-rm -rf "$HOME/go-tool" && mkdir -p "$HOME/go-tool" \
-  && tar -C "$HOME/go-tool" -xzf /tmp/go.tgz
-export PATH="$HOME/go-tool/go/bin:$PATH"
+bash scripts/setup-wsl-go.sh
+export PATH="$HOME/sdk/go/bin:$PATH"
 go version
 ```
 

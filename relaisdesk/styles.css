@@ -1479,6 +1479,14 @@ h1, h2, h3, h4 {
   text-decoration-thickness: 2px;
 }
 
+/* Accueil : liens bleus passés en blanc (boutons, navigation et pied de page exclus). */
+.page-home > :not(.footer) a:not(.btn):not(.nav-link):not(.logo-group) {
+  color: #ffffff;
+}
+.page-home > :not(.footer) a:not(.btn):not(.nav-link):not(.logo-group):hover {
+  color: #ffffff;
+}
+
 .legal-body table {
   width: 100%;
   border-collapse: collapse;

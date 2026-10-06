@@ -831,7 +831,7 @@ func showDashboardScreenInner(email, expiresAt string, silent bool, targetTab ..
 				color.NRGBA{R: 14, G: 21, B: 36, A: 255},
 			)
 
-			listContainer := container.NewVScroll(buildCodesList(dashResp.Codes, email, expiresAt))
+			listContainer := NewSmoothVScroll(buildCodesList(dashResp.Codes, email, expiresAt))
 			listContainer.SetMinSize(fyne.NewSize(400, 150))
 
 			tab1Content := container.NewBorder(
@@ -883,10 +883,10 @@ func showDashboardScreenInner(email, expiresAt string, silent bool, targetTab ..
 
 			permStatsBox := container.NewHBox(
 				totalPostsLabel,
-				widget.NewLabel(" • "),
+				widget.NewLabel("   "),
 				greenDot,
 				onlineLabel,
-				widget.NewLabel(" • "),
+				widget.NewLabel("   "),
 				greyDot,
 				offlineLabel,
 			)
@@ -1035,7 +1035,11 @@ func showDashboardScreenInner(email, expiresAt string, silent bool, targetTab ..
 									}, mainWindow)
 								}))
 							}
-							parkListBox.Objects = append(parkListBox.Objects, row)
+							parkListBox.Objects = append(parkListBox.Objects, createCardBox(
+								row,
+								color.Color(color.NRGBA{R: 50, G: 120, B: 200, A: 220}),
+								color.Color(color.NRGBA{R: 15, G: 22, B: 38, A: 255}),
+							))
 						}
 						parkListBox.Refresh()
 					})
@@ -1103,12 +1107,12 @@ func showDashboardScreenInner(email, expiresAt string, silent bool, targetTab ..
 				parkListBox,
 			)
 			parkGenAccordion := widget.NewAccordion(
-				widget.NewAccordionItem("🎫 "+T("park_gen_card_title"), parkGenForm),
+				widget.NewAccordionItem("➕ "+T("park_gen_card_title"), parkGenForm),
 			)
 			refreshParkList()
 
 			permListBox := container.NewVBox(buildDevicesObjects(devicesResp, foldersResp, email, expiresAt, dashResp.RestrictedToFolders)...)
-			permListContainer := container.NewVScroll(permListBox)
+			permListContainer := NewSmoothVScroll(permListBox)
 			permListContainer.SetMinSize(fyne.NewSize(400, 150))
 
 			// Live search & folder controls
@@ -1537,7 +1541,7 @@ func showDashboardScreenInner(email, expiresAt string, silent bool, targetTab ..
 			updateBreadcrumbs()
 			renderFleetTree()
 
-			breadcrumbsScroll := container.NewHScroll(breadcrumbsBox)
+			breadcrumbsScroll := NewSmoothHScroll(breadcrumbsBox)
 			breadcrumbsScroll.SetMinSize(fyne.NewSize(0, 42))
 
 			folderActions := container.NewHBox(
@@ -1573,7 +1577,7 @@ func showDashboardScreenInner(email, expiresAt string, silent bool, targetTab ..
 					searchEntry,
 					folderBar,
 				),
-				color.NRGBA{R: 35, G: 55, B: 85, A: 140},
+				color.NRGBA{R: 50, G: 120, B: 200, A: 220},
 				color.NRGBA{R: 14, G: 20, B: 35, A: 255},
 			)
 
@@ -1583,7 +1587,7 @@ func showDashboardScreenInner(email, expiresAt string, silent bool, targetTab ..
 					widget.NewSeparator(),
 				),
 				nil, nil, nil,
-				container.NewVScroll(fleetTreeBox),
+				NewSmoothVScroll(fleetTreeBox),
 			)
 			fleetSplit := container.NewHSplit(fleetTreePane, permListContainer)
 			fleetSplit.Offset = 0.3
@@ -1828,7 +1832,7 @@ func showDashboardScreenInner(email, expiresAt string, silent bool, targetTab ..
 						})
 
 						footer := container.NewHBox(copyBtn, layout.NewSpacer(), closeBtn)
-						scrollContent := container.NewVScroll(container.NewVBox(
+						scrollContent := NewSmoothVScroll(container.NewVBox(
 							statusBanner,
 							widget.NewSeparator(),
 							checksBox,
@@ -2172,10 +2176,9 @@ func buildDevicesObjects(devices []DeviceItem, folders []DeviceFolderItem, email
 			cardBox.Add(detailLine2)
 		}
 
-		stroke := color.Color(color.NRGBA{R: 35, G: 55, B: 85, A: 160}) // subtle slate blue
+		stroke := color.Color(color.NRGBA{R: 50, G: 120, B: 200, A: 220}) // crisp bright blue, same outline for every card
 		fill := color.Color(color.NRGBA{R: 15, G: 22, B: 38, A: 255})
 		if d.Status == "online" {
-			stroke = color.Color(color.NRGBA{R: 50, G: 120, B: 200, A: 220}) // crisp bright blue
 			fill = color.Color(color.NRGBA{R: 17, G: 27, B: 46, A: 255})
 		}
 		card := createCardBox(cardBox, stroke, fill)
@@ -2338,10 +2341,9 @@ func buildCodesList(codes []CodeStat, email, expiresAt string) fyne.CanvasObject
 		}
 
 		row := container.NewBorder(nil, nil, nil, actions, infoBox)
-		stroke := color.Color(color.NRGBA{R: 45, G: 105, B: 180, A: 170}) // light blue
+		stroke := color.Color(color.NRGBA{R: 50, G: 120, B: 200, A: 220}) // crisp bright blue, same outline for every card
 		fill := color.Color(color.NRGBA{R: 16, G: 24, B: 42, A: 255})
 		if isRevokedOrExpired {
-			stroke = color.Color(color.NRGBA{R: 32, G: 44, B: 62, A: 120}) // muted dark slate
 			fill = color.Color(color.NRGBA{R: 13, G: 19, B: 32, A: 255})
 		}
 		card := createCardBox(row, stroke, fill)

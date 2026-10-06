@@ -272,12 +272,12 @@ var messages = map[string]map[Lang]string{
 		LangEN: "📞 Connect",
 	},
 	"copy_btn": {
-		LangFR: "📋 Copier code",
-		LangEN: "📋 Copy code",
+		LangFR: "Copier code",
+		LangEN: "Copy code",
 	},
 	"copy_id_btn": {
-		LangFR: "📋 Copier l'ID",
-		LangEN: "📋 Copy ID",
+		LangFR: "Copier l'ID",
+		LangEN: "Copy ID",
 	},
 	"id_copied": {
 		LangFR: "ID client %s copié dans le presse-papiers !",
@@ -394,10 +394,6 @@ var messages = map[string]map[Lang]string{
 	"perm_code_generated_popup": {
 		LangFR: "Code d'installation : %s\n\nCopié dans le presse-papiers. Valable 15 minutes pour un seul poste.\nWindows ou Linux avec systemd : service du fork et mot de passe permanent requis. Windows : Viewer en administrateur. Linux : nouvelles versions du Viewer et du fork, puis sudo relaisdesk-viewer --enroll (saisir le code).",
 		LangEN: "Installation code: %s\n\nCopied to clipboard. Valid 15 minutes for one device.\nWindows or Linux with systemd: fork service and permanent password required. Windows: run Viewer as administrator. Linux: updated Viewer and client fork, then sudo relaisdesk-viewer --enroll (enter the code).",
-	},
-	"devices_summary": {
-		LangFR: "🖥️ %d postes  •  🟢 %d en ligne  •  ⚪ %d hors ligne",
-		LangEN: "🖥️ %d devices  •  🟢 %d online  •  ⚪ %d offline",
 	},
 	"park_gen_card_title": {
 		LangFR: "Token de parc (enrôlement de masse GPO/Intune)",
@@ -559,6 +555,10 @@ var messages = map[string]map[Lang]string{
 		LangFR: "Rechercher par nom, hôte, dossier...",
 		LangEN: "Search by name, host, folder...",
 	},
+	"search_members_placeholder": {
+		LangFR: "Rechercher par e-mail, forfait, statut...",
+		LangEN: "Search by email, plan, status...",
+	},
 	"btn_new_folder": {
 		LangFR: "➕ Nouveau dossier",
 		LangEN: "➕ New folder",
@@ -576,8 +576,8 @@ var messages = map[string]map[Lang]string{
 		LangEN: "🗑️ Delete",
 	},
 	"btn_move_device": {
-		LangFR: "📁 Déplacer",
-		LangEN: "📁 Move",
+		LangFR: "Déplacer",
+		LangEN: "Move",
 	},
 	"folder_filter_label": {
 		LangFR: "Dossier :",
@@ -946,6 +946,10 @@ var messages = map[string]map[Lang]string{
 	"team_members_title": {
 		LangFR: "Membres invités",
 		LangEN: "Invited members",
+	},
+	"team_tree_title": {
+		LangFR: "Dossiers",
+		LangEN: "Folders",
 	},
 	"team_no_members": {
 		LangFR: "Aucun membre pour le moment.",
