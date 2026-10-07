@@ -61,7 +61,19 @@ function Invoke-NativeChecked {
         [Parameter(Mandatory)] [string]$FilePath,
         [string[]]$Arguments = @()
     )
-    & $FilePath @Arguments
+    # git/cargo/vcpkg écrivent leur progression sur stderr. PowerShell 5.1
+    # rend ce stderr terminant sous "Stop" même avec 2>&1 : on bascule en
+    # Continue le temps de l'appel et on ne juge que le code de sortie.
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & $FilePath @Arguments 2>&1 | ForEach-Object {
+            if ($_ -is [System.Management.Automation.ErrorRecord]) { "$($_.Exception.Message)" }
+            else { "$_" }
+        }
+    } finally {
+        $ErrorActionPreference = $prevEAP
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "Échec ($LASTEXITCODE) : $FilePath $($Arguments -join ' ')"
     }
