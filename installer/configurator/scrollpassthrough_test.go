@@ -172,6 +172,69 @@ func TestAdoptNestedScrolls(t *testing.T) {
 	}
 }
 
+func TestAdoptNestedScrollsThroughSplit(t *testing.T) {
+	a := test.NewApp()
+	defer a.Quit()
+	// Forme réelle du panneau Équipe : l'explorateur et la liste vivent
+	// dans un HSplit, qui n'est PAS un *fyne.Container (struct à champs
+	// Leading/Trailing) : le parcours doit le traverser explicitement.
+	treeScroll := NewSmoothVScroll(widget.NewLabel("dossiers"))
+	membersScroll := NewSmoothVScroll(widget.NewLabel("membres"))
+	treePane := container.NewBorder(widget.NewLabel("arborescence"), nil, nil, nil, treeScroll)
+	split := container.NewHSplit(treePane, membersScroll)
+	outer := NewSmoothVScroll(container.NewVBox(split))
+
+	adoptNestedScrolls(outer, outer.Scroll.Content)
+	if treeScroll.bubbleTo != outer {
+		t.Fatal("scroll explorateur derrière HSplit non rattaché à la page")
+	}
+	if membersScroll.bubbleTo != outer {
+		t.Fatal("scroll membres derrière HSplit non rattaché à la page")
+	}
+}
+
+func TestTeamPageWheelReachesPageThroughSplit(t *testing.T) {
+	stubSmoothAsync(t)
+	a := test.NewApp()
+	defer a.Quit()
+	// Réplique fidèle : carte + recherche + HSplit(explorateur court,
+	// liste membres) + suite de page. Un cran molette au-dessus de
+	// l'explorateur (contenu tenant dans sa vue) doit faire défiler la
+	// page, pas mourir dans l'imbriqué.
+	treeBox := container.NewVBox(widget.NewLabel("Test"), widget.NewLabel("Test2"))
+	treeScroll := NewSmoothVScroll(treeBox)
+	treeScroll.SetMinSize(fyne.NewSize(200, 120))
+	membersScroll := NewSmoothVScroll(tallBox(3))
+	membersScroll.SetMinSize(fyne.NewSize(200, 120))
+	split := container.NewHSplit(
+		container.NewBorder(widget.NewLabel("Dossiers"), nil, nil, nil, treeScroll),
+		membersScroll,
+	)
+	searchEntry := widget.NewEntry()
+	card := createCardBox(container.NewVBox(
+		widget.NewLabel("Membres"), searchEntry, split,
+	), color.White)
+	page := NewPageVScroll(container.NewVBox(card, tallBox(50)))
+	w := showSized(a, page, 500, 300)
+	defer w.Close()
+
+	if _, ok := entryPassThroughArmed[searchEntry]; !ok {
+		t.Fatal("champ recherche non armé")
+	}
+	page.ScrollToTop()
+	treeScroll.Scrolled(&fyne.ScrollEvent{Scrolled: fyne.NewDelta(0, -100)})
+	if treeScroll.targetY != 0 {
+		t.Fatalf("explorateur a consommé le cran (targetY=%v)", treeScroll.targetY)
+	}
+	if page.targetY != -100 {
+		t.Fatalf("cran non remonté : page targetY=%v, attendu -100", page.targetY)
+	}
+	driveSmoothToRest(t, page)
+	if page.Scroll.Offset.Y <= 0 {
+		t.Fatalf("offset page %.1f : la page n'a pas défilé", page.Scroll.Offset.Y)
+	}
+}
+
 func TestNewPageVScrollWiresNested(t *testing.T) {
 	a := test.NewApp()
 	defer a.Quit()

@@ -19,6 +19,7 @@ import (
 	"unicode/utf8"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
@@ -39,6 +40,10 @@ func NewPageVScroll(content fyne.CanvasObject) *smoothScroll {
 // scroll de page : un cran que l'imbriqué ne peut pas honorer remonte au
 // parent au lieu d'être avalé. L'ancêtre retenu est le smoothScroll le plus
 // proche (chaînage naturel quand un scroll vit dans le contenu d'un autre).
+// Le parcours traverse tous les contenants utilisés par les pages : les
+// *fyne.Container bien sûr, mais aussi *container.Split (struct à champs
+// Leading/Trailing, pas un *fyne.Container : le panneau Équipe y niche
+// l'explorateur et la liste) et le contenu des scrolls Fyne ordinaires.
 func adoptNestedScrolls(outer *smoothScroll, root fyne.CanvasObject) {
 	var walk func(obj fyne.CanvasObject, parent *smoothScroll)
 	walk = func(obj fyne.CanvasObject, parent *smoothScroll) {
@@ -51,6 +56,17 @@ func adoptNestedScrolls(outer *smoothScroll, root fyne.CanvasObject) {
 			o.bubbleTo = parent
 			if o.Scroll != nil && o.Scroll.Content != nil {
 				walk(o.Scroll.Content, o)
+			}
+		case *container.Scroll:
+			if o.Content != nil {
+				walk(o.Content, parent)
+			}
+		case *container.Split:
+			if o.Leading != nil {
+				walk(o.Leading, parent)
+			}
+			if o.Trailing != nil {
+				walk(o.Trailing, parent)
 			}
 		case *fyne.Container:
 			for _, child := range o.Objects {
@@ -89,6 +105,19 @@ func attachEntryPassThrough(root fyne.CanvasObject) {
 		case *smoothScroll:
 			if o.Scroll != nil && o.Scroll.Content != nil {
 				walk(o.Scroll.Content)
+			}
+		case *container.Scroll:
+			if o.Content != nil {
+				walk(o.Content)
+			}
+		case *container.Split:
+			// Même remarque que dans adoptNestedScrolls : Split n'est
+			// pas un *fyne.Container, il faut traverser Leading/Trailing.
+			if o.Leading != nil {
+				walk(o.Leading)
+			}
+			if o.Trailing != nil {
+				walk(o.Trailing)
 			}
 		case *fyne.Container:
 			for _, child := range o.Objects {
