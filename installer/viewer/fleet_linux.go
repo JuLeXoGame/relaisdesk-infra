@@ -186,11 +186,8 @@ func validateLinuxFleetBinary() (string, error) {
 	} else if !os.IsNotExist(err) {
 		return "", err
 	}
-	for _, libName := range []string{"libvpx.so.7", "libaom.so.3", "libyuv.so.0", "libjpeg.so.8"} {
-		libPath := "/usr/share/rustdesk/lib/" + libName
-		if _, err := os.Lstat(libPath); err != nil {
-			return "", fmt.Errorf("bibliothèque multimédia requise absente (%s) : %w", libName, err)
-		}
+	if err := checkRustDeskBundledLibs("/usr/share/rustdesk/lib", strings.Fields(RUSTDESK_BUNDLED_LIBS)); err != nil {
+		return "", err
 	}
 	return binary, nil
 }

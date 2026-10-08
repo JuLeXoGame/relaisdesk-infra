@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -462,5 +463,74 @@ func TestDebInnerSHA256Go(t *testing.T) {
 	}
 	if _, err := debInnerSHA256Go(broken, "x"); err == nil {
 		t.Fatal("archive tronquée acceptée")
+	}
+}
+
+// Regression: the fork links media codecs statically since the 2026-10-08
+// nightly, so libvpx.so.7, libaom.so.3, libyuv.so.0 and libjpeg.so.8 no
+// longer exist in the shipped lib/ dir. A stale hardcoded list broke
+// enrollment on a healthy install ("bibliothèque ... requise absente
+// (libvpx.so.7)"). The viewer manifest must exactly match the lib/ payload
+// of its pinned embedded deb; update both together in config_linux.go.
+func TestViewerBundledLibManifest(t *testing.T) {
+	const goFile = "../viewer/config_linux.go"
+	src := readTestFile(t, goFile)
+	re := regexp.MustCompile(`RUSTDESK_BUNDLED_LIBS\s*=\s*"([^"]*)"`)
+	m := re.FindStringSubmatch(src)
+	if m == nil {
+		t.Fatalf("RUSTDESK_BUNDLED_LIBS introuvable dans %s (renommer le test si le code a change)", goFile)
+	}
+	manifest := strings.Fields(m[1])
+	if len(manifest) == 0 {
+		t.Fatalf("%s: RUSTDESK_BUNDLED_LIBS vide", goFile)
+	}
+	if !slices.IsSorted(manifest) {
+		t.Errorf("%s: RUSTDESK_BUNDLED_LIBS doit rester trié: %q", goFile, manifest)
+	}
+	if deduped := slices.Compact(slices.Clone(manifest)); len(deduped) != len(manifest) {
+		t.Errorf("%s: RUSTDESK_BUNDLED_LIBS contient des doublons: %q", goFile, manifest)
+	}
+	for _, name := range manifest {
+		if strings.ContainsAny(name, "/\\") {
+			t.Errorf("%s: entrée inattendue %q dans RUSTDESK_BUNDLED_LIBS (noms de fichiers seuls)", goFile, name)
+		}
+	}
+	const debPath = "../viewer/embedded/rustdesk.deb"
+	raw, err := os.ReadFile(debPath)
+	if err != nil {
+		t.Skipf("%s absent, comparaison contournee", debPath)
+	}
+	dataTar, err := debDataTar(raw)
+	if err != nil {
+		t.Fatalf("extraction %s: %v", debPath, err)
+	}
+	stream, err := debDecompress(dataTar)
+	if err != nil {
+		t.Fatalf("décompression %s: %v", debPath, err)
+	}
+	var payload []string
+	tr := tar.NewReader(bytes.NewReader(stream))
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatalf("lecture tar %s: %v", debPath, err)
+		}
+		rest, ok := strings.CutPrefix(strings.TrimPrefix(hdr.Name, "./"), "usr/share/rustdesk/lib/")
+		if !ok || rest == "" || strings.Contains(rest, "/") || !hdr.FileInfo().Mode().IsRegular() {
+			continue
+		}
+		payload = append(payload, rest)
+	}
+	if len(payload) == 0 {
+		t.Fatalf("aucune bibliothèque lib/ dans %s", debPath)
+	}
+	slices.Sort(payload)
+	want := slices.Clone(manifest)
+	slices.Sort(want)
+	if !slices.Equal(want, payload) {
+		t.Fatalf("RUSTDESK_BUNDLED_LIBS ne correspond pas au payload lib/ de %s.\nmanifeste: %q\npayload:   %q", debPath, want, payload)
 	}
 }

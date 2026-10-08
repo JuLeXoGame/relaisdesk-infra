@@ -45,13 +45,24 @@ func findRustDesk() (string, error) {
 			return "", fmt.Errorf("bibliothèque RustDesk RelaisDesk obsolète")
 		}
 	}
-	for _, libName := range []string{"libvpx.so.7", "libaom.so.3", "libyuv.so.0", "libjpeg.so.8"} {
-		libPath := "/usr/share/rustdesk/lib/" + libName
-		if _, err := os.Lstat(libPath); err != nil {
-			return "", fmt.Errorf("bibliothèque multimédia requise absente (%s)", libName)
-		}
+	if err := checkRustDeskBundledLibs("/usr/share/rustdesk/lib", strings.Fields(RUSTDESK_BUNDLED_LIBS)); err != nil {
+		return "", err
 	}
 	return path, nil
+}
+
+// checkRustDeskBundledLibs ensures every library shipped in the lib/ dir of
+// the pinned deb is present in the installed tree.
+func checkRustDeskBundledLibs(libDir string, names []string) error {
+	if len(names) == 0 {
+		return fmt.Errorf("liste des bibliothèques RustDesk requises non configurée")
+	}
+	for _, name := range names {
+		if _, err := os.Lstat(filepath.Join(libDir, name)); err != nil {
+			return fmt.Errorf("bibliothèque RustDesk requise absente (%s) : %w", name, err)
+		}
+	}
+	return nil
 }
 
 // stageVerifiedDeb writes embedded bytes to a temp .deb and re-verifies the
