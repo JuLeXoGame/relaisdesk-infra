@@ -13,6 +13,7 @@ func installFleet(string) (*DeviceEnrollResponse, error) { return nil, fleetUnsu
 func uninstallFleet() error                              { return fleetUnsupported() }
 func runFleetService() error                             { return fleetUnsupported() }
 func fleetServiceExists() bool                           { return false }
+func fleetServiceRustDeskID() string                     { return "" }
 func fleetCheckAuthorization() error                     { return fleetUnsupported() }
 func writeFleetConfiguration(*fleetState) error          { return fleetUnsupported() }
 func fleetRustDeskRunning() bool                         { return false }

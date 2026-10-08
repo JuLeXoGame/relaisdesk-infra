@@ -1,6 +1,8 @@
-param([switch]$TechnicianOnly)
+param([switch]$TechnicianOnly, [switch]$ViewerOnly)
 
 $ErrorActionPreference = "Stop"
+
+if ($TechnicianOnly -and $ViewerOnly) { throw "TechnicianOnly et ViewerOnly sont exclusifs" }
 
 $NsisDir = "C:\Users\Administrator\Documents\Projets\projet\installer\nsis"
 $BuildDir = "C:\Users\Administrator\Documents\Projets\projet\installer\build"
@@ -21,13 +23,15 @@ foreach ($asset in @("icon.ico", "license.txt")) {
 Push-Location $NsisDir
 try {
     $version = "1.0.0"
-    $outTech = Join-Path $NsisDir "RelaisDesk_Technicien_Setup_1.0.0.exe"
-    $scriptTech = Join-Path $NsisDir "installer-configurator.nsi"
-    $argsTech = @("/INPUTCHARSET", "UTF8", "/V2", "/DPRODUCT_VERSION=$version", "/DOUTPUT_FILE=$outTech", $scriptTech)
-    & makensis @argsTech
-    if ($LASTEXITCODE -ne 0) { throw "Technicien NSIS failed" }
-    Copy-Item $outTech $DownloadsDir -Force
-    Copy-Item $outTech $BuildDir -Force
+    if (-not $ViewerOnly) {
+        $outTech = Join-Path $NsisDir "RelaisDesk_Technicien_Setup_1.0.0.exe"
+        $scriptTech = Join-Path $NsisDir "installer-configurator.nsi"
+        $argsTech = @("/INPUTCHARSET", "UTF8", "/V2", "/DPRODUCT_VERSION=$version", "/DOUTPUT_FILE=$outTech", $scriptTech)
+        & makensis @argsTech
+        if ($LASTEXITCODE -ne 0) { throw "Technicien NSIS failed" }
+        Copy-Item $outTech $DownloadsDir -Force
+        Copy-Item $outTech $BuildDir -Force
+    }
 
     if (-not $TechnicianOnly) {
         $outClient = Join-Path $NsisDir "RelaisDesk_Setup.exe"
@@ -37,9 +41,14 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "Client NSIS failed" }
         Copy-Item $outClient $DownloadsDir -Force
         Copy-Item $outClient $BuildDir -Force
-        Write-Host "Both NSIS installers rebuilt successfully."
-    } else {
+    }
+
+    if ($TechnicianOnly) {
         Write-Host "Technician NSIS installer rebuilt successfully."
+    } elseif ($ViewerOnly) {
+        Write-Host "Viewer NSIS installer rebuilt successfully."
+    } else {
+        Write-Host "Both NSIS installers rebuilt successfully."
     }
 } finally {
     Pop-Location

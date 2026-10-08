@@ -63,6 +63,7 @@ type deviceHeartbeatRequest struct {
 	MACAddress      string `json:"mac_address,omitempty"`
 	SubnetBroadcast string `json:"subnet_broadcast,omitempty"`
 	AgentVersion    string `json:"agent_version,omitempty"`
+	RustDeskID      string `json:"rustdesk_id,omitempty"`
 }
 
 type customerCreateEnrollmentRequest struct {
@@ -194,7 +195,7 @@ func DeviceHeartbeatHandler(db *sql.DB, cfg *config.Config, signers ...*networka
 		}
 
 		ip := getDeviceClientIP(r)
-		if err := dbpkg.DeviceHeartbeatWithFullInfo(db, identifier, ip, req.MACAddress, req.SubnetBroadcast, req.AgentVersion, req.DeviceProof); err != nil {
+		if err := dbpkg.DeviceHeartbeatWithFullInfo(db, identifier, ip, req.MACAddress, req.SubnetBroadcast, req.AgentVersion, req.RustDeskID, req.DeviceProof); err != nil {
 			writeJSONError(w, "Autorisation de poste refusée", http.StatusUnauthorized)
 			return
 		}

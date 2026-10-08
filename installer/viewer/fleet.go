@@ -110,7 +110,7 @@ func enrollFleet(ctx context.Context, code, id string, key ed25519.PrivateKey) (
 	}{proof, code, id, hostname, runtime.GOOS, base64.RawURLEncoding.EncodeToString(key.Public().(ed25519.PublicKey)), fleetPeerAuthVersion(), netInfo.MACAddress, netInfo.SubnetBroadcast, APP_VERSION}
 	return fleetRequest(ctx, "/api/v1/devices/enroll", payload)
 }
-func refreshFleet(ctx context.Context, state *fleetState, key ed25519.PrivateKey, ready bool) (*DeviceEnrollResponse, error) {
+func refreshFleet(ctx context.Context, state *fleetState, key ed25519.PrivateKey, ready bool, rustdeskID string) (*DeviceEnrollResponse, error) {
 	proof, err := signFleetRequest(key, "heartbeat", state.DeviceID, "", "", "", ready)
 	if err != nil {
 		return nil, err
@@ -123,7 +123,109 @@ func refreshFleet(ctx context.Context, state *fleetState, key ed25519.PrivateKey
 		MACAddress      string `json:"mac_address,omitempty"`
 		SubnetBroadcast string `json:"subnet_broadcast,omitempty"`
 		AgentVersion    string `json:"agent_version,omitempty"`
-	}{proof, state.DeviceID, fleetPeerAuthVersion(), netInfo.MACAddress, netInfo.SubnetBroadcast, APP_VERSION})
+		RustDeskID      string `json:"rustdesk_id,omitempty"`
+	}{proof, state.DeviceID, fleetPeerAuthVersion(), netInfo.MACAddress, netInfo.SubnetBroadcast, APP_VERSION, rustdeskID})
+}
+
+// parseRustDeskTomlID extracts the stored `id` from a RustDesk.toml file.
+// The engine registers that stored id, and --get-id reports the same
+// source, so the heartbeat reuses this cheap file read instead of spawning
+// the engine every cycle.
+func parseRustDeskTomlID(content []byte) string {
+	for _, line := range strings.Split(string(content), "\n") {
+		rest, ok := strings.CutPrefix(strings.TrimSpace(line), "id")
+		if !ok {
+			continue
+		}
+		rest = strings.TrimSpace(rest)
+		if !strings.HasPrefix(rest, "=") {
+			continue
+		}
+		if cand := strings.Trim(strings.TrimSpace(strings.TrimPrefix(rest, "=")), `"'`); isNumericRustDeskID(cand) {
+			return cand
+		}
+	}
+	return ""
+}
+
+// resolveEnrolledRustDeskID reads the live engine id, retrying transient
+// failures. The stored-toml fallback runs only after every live attempt
+// failed: a stale toml must never win over a readable engine, otherwise the
+// fleet registers a ghost id the engine no longer holds. A nil readStoredID
+// fails closed. Returns a valid id or "".
+func resolveEnrolledRustDeskID(getID func() (string, error), readStoredID func() string, attempts int, sleep func()) string {
+	if attempts < 1 {
+		attempts = 1
+	}
+	for i := 0; i < attempts; i++ {
+		if out, err := getID(); err == nil {
+			if cand := parseNumericRustDeskID(out); isNumericRustDeskID(cand) {
+				return cand
+			}
+		}
+		if i+1 < attempts && sleep != nil {
+			sleep()
+		}
+	}
+	if readStoredID == nil {
+		return ""
+	}
+	if cand := readStoredID(); isNumericRustDeskID(cand) {
+		return cand
+	}
+	return ""
+}
+
+// rustDeskIDDrifted reports whether a live re-read disagrees with the
+// enrolled id. An empty live value means "unknown", never drift.
+func rustDeskIDDrifted(enrolledID, liveID string) bool {
+	return liveID != "" && enrolledID != "" && liveID != enrolledID
+}
+
+// verifyEnrolledRustDeskID re-reads the live engine id once the fleet is
+// ready. On drift it warns: the heartbeat self-heals the row, but the
+// service may need a restart to register the live id.
+func verifyEnrolledRustDeskID(enrolledID string, getID func() (string, error)) {
+	live := resolveEnrolledRustDeskID(getID, nil, 5, nil)
+	if !rustDeskIDDrifted(enrolledID, live) {
+		return
+	}
+	log.Printf("Parc : identifiant RustDesk divergent (enrôlé %s, réel %s) ; le parc se resynchronisera automatiquement, redémarrez le service si le poste reste hors ligne", enrolledID, live)
+}
+
+// writeFileIfChangedAtomically replaces path only when content differs, via
+// temp-file + rename so readers never observe a torn file (RustDesk re-reads
+// its toml while the agent rewrites it). It reports whether it wrote.
+func writeFileIfChangedAtomically(path string, data []byte, perm os.FileMode) (bool, error) {
+	if current, err := os.ReadFile(path); err == nil {
+		if bytes.Equal(current, data) {
+			return false, nil
+		}
+	} else if !os.IsNotExist(err) {
+		return false, err
+	}
+	f, err := os.CreateTemp(filepath.Dir(path), ".relaisdesk-config-*")
+	if err != nil {
+		return false, err
+	}
+	name := f.Name()
+	defer os.Remove(name)
+	if err = f.Chmod(perm); err == nil {
+		_, err = f.Write(data)
+	}
+	if err == nil {
+		err = f.Sync()
+	}
+	if closeErr := f.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return false, err
+	}
+	if err = os.Rename(name, path); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 func saveFleetState(dir string, state *fleetState) error {
 	b, err := json.Marshal(state)
@@ -302,12 +404,16 @@ type fleetAgentHooks struct {
 	start     func() error
 	stop      func() error
 	wait      func(context.Context, time.Duration) bool
+	// rustdeskID reports the live engine id for heartbeat self-heal; nil
+	// means unknown (heartbeat omits the field).
+	rustdeskID func() string
 }
 
 func runFleetAgent(ctx context.Context, dir string) error {
 	return runFleetAgentWithHooks(ctx, dir, fleetAgentHooks{
 		configure: writeFleetConfiguration, running: fleetRustDeskRunning,
 		start: startFleetRustDesk, stop: stopFleetRustDesk,
+		rustdeskID: fleetServiceRustDeskID,
 		wait: func(ctx context.Context, d time.Duration) bool {
 			timer := time.NewTimer(d)
 			defer timer.Stop()
@@ -358,7 +464,11 @@ func runFleetAgentWithHooks(ctx context.Context, dir string, hooks fleetAgentHoo
 		if ctx.Err() != nil {
 			return nil
 		}
-		response, refreshErr := refreshFleet(ctx, state, key, hooks.running())
+		var liveID string
+		if hooks.rustdeskID != nil {
+			liveID = hooks.rustdeskID()
+		}
+		response, refreshErr := refreshFleet(ctx, state, key, hooks.running(), liveID)
 		if refreshErr != nil {
 			consecutiveErrors++
 			if refreshErr.Error() != lastRefreshError {
@@ -449,11 +559,15 @@ func resetRustDeskKeyConfirmed(dir string) {
 		return
 	}
 	lines := strings.Split(string(content), "\n")
-	var newLines []string
+	newLines := make([]string, 0, len(lines)+1)
 	found := false
+	changed := false
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "key_confirmed") {
+			if trimmed != "key_confirmed = false" {
+				changed = true
+			}
 			newLines = append(newLines, "key_confirmed = false")
 			found = true
 		} else {
@@ -462,6 +576,12 @@ func resetRustDeskKeyConfirmed(dir string) {
 	}
 	if !found {
 		newLines = append(newLines, "key_confirmed = false")
+		changed = true
 	}
-	_ = os.WriteFile(tomlPath, []byte(strings.Join(newLines, "\n")), 0600)
+	if !changed {
+		return
+	}
+	// Atomic replace: a truncate-write here races the running engine's own
+	// config reads and could wipe the stored id.
+	_, _ = writeFileIfChangedAtomically(tomlPath, []byte(strings.Join(newLines, "\n")), 0600)
 }

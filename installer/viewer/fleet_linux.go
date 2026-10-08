@@ -160,6 +160,17 @@ func stopFleetRustDesk() error {
 	return err
 }
 
+// fleetServiceRustDeskID reports the id stored in the service account's
+// RustDesk.toml (the same source --get-id reports). Best effort: "" when
+// unreadable, in which case the heartbeat omits the field.
+func fleetServiceRustDeskID() string {
+	content, err := os.ReadFile(linuxRustDeskConfig + "/RustDesk.toml")
+	if err != nil {
+		return ""
+	}
+	return parseRustDeskTomlID(content)
+}
+
 func validateLinuxFleetBinary() (string, error) {
 	binary, err := filepath.EvalSymlinks("/usr/bin/rustdesk")
 	if err != nil {
@@ -284,21 +295,9 @@ func writeFleetConfiguration(state *fleetState) error {
 	if err = checkLinuxFleetPath(linuxRustDeskConfig); err != nil {
 		return err
 	}
-	f, err := os.CreateTemp(linuxRustDeskConfig, ".relaisdesk-config-*")
-	if err != nil {
+	if _, err = writeFileIfChangedAtomically(path, data, 0644); err != nil {
 		return err
 	}
-	defer os.Remove(f.Name())
-	_ = f.Chmod(0644)
-	_, writeErr := f.Write(data)
-	err = errors.Join(writeErr, f.Sync(), f.Close())
-	if err != nil {
-		return err
-	}
-	if err = os.Rename(f.Name(), path); err != nil {
-		return err
-	}
-	_ = os.Chmod(path, 0644)
 	resetRustDeskKeyConfirmed(linuxRustDeskConfig)
 
 	// Export only generated connection settings, not the root account's other
@@ -342,40 +341,24 @@ func installFleet(code string) (_ *DeviceEnrollResponse, resultErr error) {
 	if err = startFleetRustDesk(); err != nil {
 		return nil, err
 	}
-	var id string
 	var lastErr error
 	var lastOut []byte
-	for attempt := 0; attempt < 20; attempt++ {
+	getID := func() (string, error) {
 		out, err := linuxFleetCommand(binary, "--get-id")
 		lastOut = out
 		lastErr = err
-		if err == nil {
-			cand := parseNumericRustDeskID(string(out))
-			if isNumericRustDeskID(cand) {
-				id = cand
-				break
-			}
+		if err != nil {
+			return "", err
 		}
-		if content, err := os.ReadFile(linuxRustDeskConfig + "/RustDesk.toml"); err == nil {
-			for _, line := range strings.Split(string(content), "\n") {
-				line = strings.TrimSpace(line)
-				if strings.HasPrefix(line, "id =") {
-					parts := strings.SplitN(line, "=", 2)
-					if len(parts) == 2 {
-						cand := strings.Trim(strings.TrimSpace(parts[1]), `"'`)
-						if isNumericRustDeskID(cand) {
-							id = cand
-							break
-						}
-					}
-				}
-			}
-			if id != "" {
-				break
-			}
-		}
-		time.Sleep(500 * time.Millisecond)
+		return string(out), nil
 	}
+	id := resolveEnrolledRustDeskID(getID, func() string {
+		content, err := os.ReadFile(linuxRustDeskConfig + "/RustDesk.toml")
+		if err != nil {
+			return ""
+		}
+		return parseRustDeskTomlID(content)
+	}, 20, func() { time.Sleep(500 * time.Millisecond) })
 	if !isNumericRustDeskID(id) {
 		if lastErr != nil || len(lastOut) > 0 {
 			return nil, fmt.Errorf("le service RustDesk n'a pas encore d'identifiant réel (sortie: %q, err: %v)", strings.TrimSpace(string(lastOut)), lastErr)
@@ -447,6 +430,13 @@ func installFleet(code string) (_ *DeviceEnrollResponse, resultErr error) {
 	for time.Now().Before(deadline) {
 		if _, err = linuxFleetRead(linuxFleetDir+"/ready", 64, true); err == nil && fleetRustDeskRunning() {
 			if isRustDeskKeyConfirmed(linuxRustDeskConfig) || time.Now().After(confirmDeadline) {
+				verifyEnrolledRustDeskID(id, func() (string, error) {
+					out, err := linuxFleetCommand(binary, "--get-id")
+					if err != nil {
+						return "", err
+					}
+					return string(out), nil
+				})
 				return response, nil
 			}
 		}

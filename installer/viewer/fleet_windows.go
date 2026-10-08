@@ -456,6 +456,21 @@ func fleetServiceConfigDir() (string, error) {
 	dir, err := windows.GetWindowsDirectory()
 	return filepath.Join(dir, "ServiceProfiles", "LocalService", "AppData", "Roaming", "RustDesk", "config"), err
 }
+
+// fleetServiceRustDeskID reports the id stored in the service account's
+// RustDesk.toml (the same source --get-id reports). Best effort: "" when
+// unreadable, in which case the heartbeat omits the field.
+func fleetServiceRustDeskID() string {
+	dir, err := fleetServiceConfigDir()
+	if err != nil {
+		return ""
+	}
+	content, err := os.ReadFile(filepath.Join(dir, "RustDesk.toml"))
+	if err != nil {
+		return ""
+	}
+	return parseRustDeskTomlID(content)
+}
 func validateFleetPrerequisites() (string, error) {
 	if !isElevated() {
 		return "", errors.New("relancez le Viewer en administrateur pour installer l'accès permanent")
@@ -540,7 +555,8 @@ func writeFleetConfiguration(state *fleetState) error {
 	config += "enable-remote-restart = 'Y'\r\n"
 	// Keep RustDesk's own encrypted password and identity in RustDesk.toml.
 	resetRustDeskKeyConfirmed(dir)
-	return os.WriteFile(filepath.Join(dir, "RustDesk2.toml"), []byte(config), 0600)
+	_, err = writeFileIfChangedAtomically(filepath.Join(dir, "RustDesk2.toml"), []byte(config), 0600)
+	return err
 }
 
 func installFleet(code string) (*DeviceEnrollResponse, error) {
@@ -554,20 +570,16 @@ func installFleet(code string) (*DeviceEnrollResponse, error) {
 	if err = startFleetRustDesk(); err != nil {
 		return nil, err
 	}
-	var id string
-	for attempt := 0; attempt < 20; attempt++ {
+	getID := func() (string, error) {
 		cmd := exec.Command(binary, "--get-id")
 		cmd.SysProcAttr = hideWindowSysProcAttr()
 		out, err := cmd.Output()
-		if err == nil {
-			cand := parseNumericRustDeskID(string(out))
-			if isNumericRustDeskID(cand) {
-				id = cand
-				break
-			}
+		if err != nil {
+			return "", err
 		}
-		time.Sleep(500 * time.Millisecond)
+		return string(out), nil
 	}
+	id := resolveEnrolledRustDeskID(getID, nil, 20, func() { time.Sleep(500 * time.Millisecond) })
 	if !isNumericRustDeskID(id) {
 		return nil, errors.New("le service RustDesk n'a pas encore d'identifiant valide")
 	}
@@ -648,6 +660,7 @@ func installFleet(code string) (*DeviceEnrollResponse, error) {
 	for time.Now().Before(deadline) {
 		if _, err := os.Stat(filepath.Join(dir, "ready")); err == nil {
 			if (rustDeskCfgDir != "" && isRustDeskKeyConfirmed(rustDeskCfgDir)) || time.Now().After(confirmDeadline) {
+				verifyEnrolledRustDeskID(id, getID)
 				return response, nil
 			}
 		}

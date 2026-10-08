@@ -35,7 +35,7 @@ func TestFleetRejectsPlaceholderAndHTTPFailures(t *testing.T) {
 	if requests != 0 {
 		t.Fatal("invalid ID sent to network")
 	}
-	if _, err := refreshFleet(context.Background(), &fleetState{DeviceID: "DEV-AUDT-0001"}, key, true); err != errFleetRevoked {
+	if _, err := refreshFleet(context.Background(), &fleetState{DeviceID: "DEV-AUDT-0001"}, key, true, ""); err != errFleetRevoked {
 		t.Fatalf("revocation ignored: %v", err)
 	}
 }

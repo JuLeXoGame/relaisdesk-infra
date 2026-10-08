@@ -106,6 +106,40 @@ func TestDeviceEnrollAndHeartbeat(t *testing.T) {
 	if err != nil || expiry.After(time.Now().Add(5*time.Minute)) {
 		t.Fatal("unbounded authorization")
 	}
+
+	// 3. Heartbeat carrying a rotated engine id updates the row; invalid
+	// values are ignored without failing the heartbeat.
+	beat := func(rustdeskID string) {
+		t.Helper()
+		proof := apiFleetTestProof(key, "heartbeat", dev.DeviceID, "", "", "", true)
+		body, _ := json.Marshal(map[string]any{
+			"device_id": dev.DeviceID, "rustdesk_id": rustdeskID,
+			"timestamp": proof.Timestamp, "nonce": proof.Nonce, "signature": proof.Signature, "ready": proof.Ready,
+		})
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/devices/heartbeat", bytes.NewReader(body))
+		req.RemoteAddr = "203.0.113.42:54321"
+		rec := httptest.NewRecorder()
+		DeviceHeartbeatHandler(db, &config.Config{}, signer)(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("heartbeat id=%q status=%d body=%s", rustdeskID, rec.Code, rec.Body.String())
+		}
+	}
+	beat("1027287547")
+	row, err := dbpkg.GetDeviceByID(db, dev.DeviceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if row.RustDeskID != "1027287547" {
+		t.Fatalf("rotated id not adopted: %q", row.RustDeskID)
+	}
+	beat("bogus")
+	row, err = dbpkg.GetDeviceByID(db, dev.DeviceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if row.RustDeskID != "1027287547" {
+		t.Fatalf("invalid heartbeat wiped id: %q", row.RustDeskID)
+	}
 }
 
 func apiFleetTestProof(key ed25519.PrivateKey, action, id, rd, host, osName string, ready bool) dbpkg.DeviceProof {

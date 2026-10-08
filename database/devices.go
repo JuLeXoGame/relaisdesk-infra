@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"log"
 	"net"
 	"strings"
 	"time"
@@ -337,7 +338,7 @@ func EnrollDevice(db *sql.DB, code, rustdeskID, hostname, osName, publicKey, ip 
 	return EnrollDeviceWithNetwork(db, code, rustdeskID, hostname, osName, publicKey, ip, "", "", proof...)
 }
 
-func DeviceHeartbeatWithFullInfo(db *sql.DB, identifier, ip, macAddress, subnetBroadcast, agentVersion string, proof ...DeviceProof) error {
+func DeviceHeartbeatWithFullInfo(db *sql.DB, identifier, ip, macAddress, subnetBroadcast, agentVersion, rustdeskID string, proof ...DeviceProof) error {
 	if db == nil || len(proof) != 1 {
 		return ErrDeviceAuthorization
 	}
@@ -380,11 +381,22 @@ func DeviceHeartbeatWithFullInfo(db *sql.DB, identifier, ip, macAddress, subnetB
 	if err != nil {
 		return err
 	}
+	// Self-heal: the engine id can rotate under a running agent (config
+	// rebuilt, keys regenerated). The agent reports its live id every
+	// cycle; adopt it so the fleet never keeps pointing at a ghost.
+	// Proof-checked above, own row only; invalid values never wipe.
+	rustdeskID = strings.TrimSpace(rustdeskID)
+	if ValidFleetRustDeskID(rustdeskID) && rustdeskID != d.RustDeskID {
+		if _, err = tx.Exec("UPDATE devices SET rustdesk_id=?,updated_at=? WHERE id=?", rustdeskID, now, d.ID); err != nil {
+			return err
+		}
+		log.Printf("[devices] %s: rustdesk_id %s -> %s (heartbeat)", identifier, d.RustDeskID, rustdeskID)
+	}
 	return tx.Commit()
 }
 
 func DeviceHeartbeatWithNetwork(db *sql.DB, identifier, ip, macAddress, subnetBroadcast string, proof ...DeviceProof) error {
-	return DeviceHeartbeatWithFullInfo(db, identifier, ip, macAddress, subnetBroadcast, "", proof...)
+	return DeviceHeartbeatWithFullInfo(db, identifier, ip, macAddress, subnetBroadcast, "", "", proof...)
 }
 
 func DeviceHeartbeat(db *sql.DB, identifier, ip string, proof ...DeviceProof) error {
