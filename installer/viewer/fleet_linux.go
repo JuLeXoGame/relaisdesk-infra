@@ -17,6 +17,7 @@ import (
 	"os/signal"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -714,6 +715,199 @@ func startLinuxFleetBroker(ctx context.Context) (func(), error) {
 	return func() { listener.Close(); <-done; workers.Wait() }, nil
 }
 
+// Display variables forwarded to GUI children spawned as root. The RustDesk
+// core initializes GTK even for CLI operations (--password-file), so an
+// elevated child started without a display aborts with "cannot open display".
+// pkexec and sudo keep DISPLAY/XAUTHORITY across elevation: forward them
+// instead of rebuilding a bare environment.
+var linuxDisplayForwardKeys = []string{
+	"DISPLAY",
+	"XAUTHORITY",
+	"WAYLAND_DISPLAY",
+	"XDG_RUNTIME_DIR",
+	"DBUS_SESSION_BUS_ADDRESS",
+}
+
+var linuxWaylandSocketPattern = regexp.MustCompile(`^wayland-[0-9]+$`)
+
+// linuxForwardDisplayEnv forwards the graphical session still present in our
+// own environment (normal pkexec/sudo case). Values come from the invoking
+// user's session and are trusted as-is.
+func linuxForwardDisplayEnv() []string {
+	var env []string
+	for _, k := range linuxDisplayForwardKeys {
+		if v, ok := os.LookupEnv(k); ok && strings.TrimSpace(v) != "" {
+			env = append(env, k+"="+v)
+		}
+	}
+	return env
+}
+
+func linuxDisplayEnvHasDisplay(env []string) bool {
+	for _, kv := range env {
+		if strings.HasPrefix(kv, "DISPLAY=") || strings.HasPrefix(kv, "WAYLAND_DISPLAY=") {
+			return true
+		}
+	}
+	return false
+}
+
+// linuxGUIChildEnv returns the display environment for a GUI child spawned as
+// root: whatever survived elevation wins (coherent session), otherwise resolve
+// the invoking user's console session (su, root login, ssh without -X).
+func linuxGUIChildEnv() []string {
+	if fwd := linuxForwardDisplayEnv(); linuxDisplayEnvHasDisplay(fwd) {
+		return fwd
+	}
+	return linuxResolveDisplayEnv()
+}
+
+// linuxInvokingUID returns the uid of the user who elevated us ("", if unknown).
+func linuxInvokingUID() string {
+	for _, k := range []string{"PKEXEC_UID", "SUDO_UID"} {
+		v := strings.TrimSpace(os.Getenv(k))
+		if v == "" || len(v) > 10 {
+			continue
+		}
+		digits := true
+		for i := 0; i < len(v); i++ {
+			if v[i] < '0' || v[i] > '9' {
+				digits = false
+				break
+			}
+		}
+		if digits {
+			return v
+		}
+	}
+	return ""
+}
+
+// linuxResolveDisplayEnv locates the invoking user's graphical session when
+// elevation scrubbed the environment. It returns nil when nothing usable is
+// found (headless machine).
+func linuxResolveDisplayEnv() []string {
+	uid := linuxInvokingUID()
+	if uid == "" {
+		return nil
+	}
+	home := ""
+	if u, err := user.LookupId(uid); err == nil {
+		home = u.HomeDir
+	}
+	return linuxResolveDisplayEnvFor(uid, home, "/tmp/.X11-unix", "/run/user")
+}
+
+// linuxResolveDisplayEnvFor builds a display environment from explicit inputs
+// (pure core of linuxResolveDisplayEnv, kept injectable for tests). X11 is
+// only reported with its session cookie; Wayland needs just its socket since
+// socket access is filesystem-permission based.
+func linuxResolveDisplayEnvFor(uid, home, x11Dir, runBase string) []string {
+	if uid == "" {
+		return nil
+	}
+	var env []string
+	if display := linuxFirstLiveX11Display(x11Dir); display != "" && home != "" {
+		if auth := filepath.Join(home, ".Xauthority"); linuxIsRegularFile(auth) {
+			env = append(env, "DISPLAY="+display, "XAUTHORITY="+auth)
+		}
+	}
+	if runDir := filepath.Join(runBase, uid); linuxIsDir(runDir) {
+		env = append(env, "XDG_RUNTIME_DIR="+runDir)
+		if sock := linuxFirstLiveWaylandSocket(runDir); sock != "" {
+			env = append(env, "WAYLAND_DISPLAY="+sock)
+		}
+		if bus := filepath.Join(runDir, "bus"); linuxFileExists(bus) {
+			env = append(env, "DBUS_SESSION_BUS_ADDRESS=unix:path="+bus)
+		}
+	}
+	if !linuxDisplayEnvHasDisplay(env) {
+		return nil
+	}
+	return env
+}
+
+// linuxFirstLiveX11Display returns the lowest live X11 display (":0", ":1",
+// ...) found in dir, "" when none answers (Xorg, XWayland and Xvfb all listen
+// there; the dial probe filters sockets left by crashed sessions).
+func linuxFirstLiveX11Display(dir string) string {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return ""
+	}
+	best, bestNum := "", -1
+	for _, e := range entries {
+		name := e.Name()
+		if !strings.HasPrefix(name, "X") {
+			continue
+		}
+		n, err := strconv.Atoi(strings.TrimPrefix(name, "X"))
+		if err != nil || n < 0 || (bestNum >= 0 && n >= bestNum) {
+			continue
+		}
+		if !linuxUnixSocketAlive(filepath.Join(dir, name)) {
+			continue
+		}
+		bestNum, best = n, ":"+strconv.Itoa(n)
+	}
+	return best
+}
+
+// linuxFirstLiveWaylandSocket returns the lowest live wayland socket name
+// ("wayland-0", ...) in a /run/user/<uid> directory, "" when none answers.
+func linuxFirstLiveWaylandSocket(runDir string) string {
+	entries, err := os.ReadDir(runDir)
+	if err != nil {
+		return ""
+	}
+	best, bestNum := "", -1
+	for _, e := range entries {
+		name := e.Name()
+		if !linuxWaylandSocketPattern.MatchString(name) {
+			continue
+		}
+		n, _ := strconv.Atoi(strings.TrimPrefix(name, "wayland-"))
+		if bestNum >= 0 && n >= bestNum {
+			continue
+		}
+		if !linuxUnixSocketAlive(filepath.Join(runDir, name)) {
+			continue
+		}
+		bestNum, best = n, name
+	}
+	return best
+}
+
+func linuxIsRegularFile(path string) bool {
+	st, err := os.Stat(path)
+	return err == nil && st.Mode().IsRegular()
+}
+
+func linuxIsDir(path string) bool {
+	st, err := os.Stat(path)
+	return err == nil && st.IsDir()
+}
+
+func linuxFileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+// linuxUnixSocketAlive reports whether path is a socket that answers (filters
+// stale X11/Wayland sockets left by crashed sessions).
+func linuxUnixSocketAlive(path string) bool {
+	st, err := os.Stat(path)
+	if err != nil || st.Mode()&os.ModeSocket == 0 {
+		return false
+	}
+	conn, err := net.DialTimeout("unix", path, 500*time.Millisecond)
+	if err != nil {
+		return false
+	}
+	_ = conn.Close()
+	return true
+}
+
 func setFleetPermanentPassword(password string) error {
 	password = strings.TrimSpace(password)
 	if len(password) < 6 {
@@ -730,9 +924,15 @@ func setFleetPermanentPassword(password string) error {
 	binary := "/usr/bin/rustdesk"
 	cmd := exec.Command(binary, "--password-file", pwdFile)
 	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "HOME=/root", "XDG_CONFIG_HOME=/root/.config", "LANG=C", "LC_ALL=C"}
+	guiEnv := linuxGUIChildEnv()
+	cmd.Env = append(cmd.Env, guiEnv...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("échec de la définition du mot de passe permanent : %s (%w)", strings.TrimSpace(string(out)), err)
+		detail := fmt.Errorf("échec de la définition du mot de passe permanent : %s (%w)", strings.TrimSpace(string(out)), err)
+		if !linuxDisplayEnvHasDisplay(guiEnv) {
+			return fmt.Errorf("%w — aucune session graphique détectée pour root : ouvrez une session sur le bureau du poste puis réessayez", detail)
+		}
+		return detail
 	}
 	return nil
 }
