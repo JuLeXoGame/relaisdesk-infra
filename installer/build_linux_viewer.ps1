@@ -32,9 +32,9 @@ $debMagic = [System.Text.Encoding]::ASCII.GetBytes("!<arch>")
 
 # Pins RustDesk attendus dans le binaire (doivent suivre config_linux.go ;
 # vérifiés par TestLinuxPinsMatchEmbeddedViewer et ci-dessous).
-$rustdeskElfSha = "36421cadea72a2a61b50c1b1bda247541c20163f3d501013eb2521cc6c56abff"
-$rustdeskDebSha = "b40be3e770028e83623a4ad97d879eb8080205c52ce00a7091cc76c4741bdd91"
-$rustdeskSoSha = "2c331c9fe6e99a14294dabc1a628b697294ca32f40f36eb1d92247c5087b9087"
+$rustdeskElfSha = "58ef1e984727d827836c8ad84ad50a4971db4a3cb80ad7a646982594af155c52"
+$rustdeskDebSha = "7ba39cc325f55ff0793b956ff23a6876a75d8682ab8126a9ce0451fe81bde2cf"
+$rustdeskSoSha = "851a44b2ac449f45ce61acf89d96253c496823202883ff50049c269bdcd93ff9"
 
 function Require-EmbeddedPins($binPath) {
     $latin1 = [System.Text.Encoding]::GetEncoding("iso-8859-1")

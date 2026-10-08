@@ -7,6 +7,7 @@
 #
 #   bash scripts/mirror-portable-oracle.sh --vps-target "ubuntu@79.72.27.213"
 #   bash scripts/mirror-portable-oracle.sh --vps-target "ubuntu@79.72.27.213" --full --stamp "release-1.0.0-20260924"
+#   bash scripts/mirror-portable-oracle.sh --vps-target "ubuntu@79.72.27.213" --files "RelaisDesk_Viewer_Linux RelaisDesk_viewer.deb SHA256SUMS.txt release-manifest.json" --stamp "..."
 #
 # La cle par defaut est ~/.ssh/oracle (format OpenSSH). Convertir une fois
 # le .ppk PuTTY via PuTTYgen (Windows) : Conversions -> Export OpenSSH key,
@@ -14,7 +15,9 @@
 #
 # Par defaut, le script transfere 3 fichiers (RelaisDesk_Portable.exe et
 # metadonnees). Avec --full, il transfere la release complete (12 binaires
-# dont 4 DMG macOS + SHA256SUMS.txt + release-manifest.json). Dans les deux cas, il les
+# dont 4 DMG macOS + SHA256SUMS.txt + release-manifest.json). --files restreint
+# au sous-ensemble nomme (noms valides contre la liste connue, SHA256SUMS.txt
+# obligatoire). Dans tous les cas, il les
 # installe dans /opt/relaisdesk/downloads (avec rollback), verifie les
 # sommes cote serveur et controle que le manifeste public correspond au local.
 # Les sommes entrantes sont controlees AVANT toute ecriture : un echec ne
@@ -28,6 +31,7 @@ SSH_KEY="$HOME/.ssh/oracle"
 STAMP="viewer-reenroll-20260921"
 FULL=0
 DRYRUN=0
+FILES_OVERRIDE=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -35,6 +39,7 @@ while [ $# -gt 0 ]; do
         --ssh-key) SSH_KEY="$2"; shift 2 ;;
         --stamp) STAMP="$2"; shift 2 ;;
         --full) FULL=1; shift ;;
+        --files) FILES_OVERRIDE="$2"; shift 2 ;;
         --dry-run) DRYRUN=1; shift ;;
         -h|--help) sed -n '2,19p' "$0"; exit 0 ;;
         *) echo "Option inconnue : $1" >&2; exit 1 ;;
@@ -51,6 +56,15 @@ SSH_OPTS=(-o BatchMode=yes -o StrictHostKeyChecking=accept-new -i "$SSH_KEY")
 FILES="RelaisDesk_Portable.exe SHA256SUMS.txt release-manifest.json"
 if [ "$FULL" = "1" ]; then
     FILES="RelaisDesk_Portable.exe RelaisDesk_Setup.exe RelaisDesk_Technicien.deb RelaisDesk_Technicien_Linux RelaisDesk_Technicien_Portable.exe RelaisDesk_Technicien_Setup_1.0.0.exe RelaisDesk_viewer.deb RelaisDesk_Viewer_Linux RelaisDesk_Mac.dmg RelaisDesk_Technicien_Mac.dmg RelaisDesk_Mac_Intel.dmg RelaisDesk_Technicien_Mac_Intel.dmg SHA256SUMS.txt release-manifest.json"
+fi
+if [ -n "$FILES_OVERRIDE" ]; then
+    if [ "$FULL" = "1" ]; then echo "--files et --full sont exclusifs" >&2; exit 1; fi
+    KNOWN="RelaisDesk_Portable.exe RelaisDesk_Setup.exe RelaisDesk_Technicien.deb RelaisDesk_Technicien_Linux RelaisDesk_Technicien_Portable.exe RelaisDesk_Technicien_Setup_1.0.0.exe RelaisDesk_viewer.deb RelaisDesk_Viewer_Linux RelaisDesk_Mac.dmg RelaisDesk_Technicien_Mac.dmg RelaisDesk_Mac_Intel.dmg RelaisDesk_Technicien_Mac_Intel.dmg SHA256SUMS.txt release-manifest.json"
+    for tok in $FILES_OVERRIDE; do
+        case " $KNOWN " in *" $tok "*) ;; *) echo "Fichier inconnu : $tok" >&2; exit 1;; esac
+    done
+    case " $FILES_OVERRIDE " in *" SHA256SUMS.txt "*) ;; *) echo "SHA256SUMS.txt obligatoire avec --files" >&2; exit 1;; esac
+    FILES="$FILES_OVERRIDE"
 fi
 
 for f in $FILES; do

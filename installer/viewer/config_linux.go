@@ -7,9 +7,9 @@ import "os"
 // Injected at build time. Empty values make installation and execution fail
 // closed, so an upstream RustDesk binary cannot be shipped accidentally.
 var (
-	RUSTDESK_EXPECTED_SHA256         = "36421cadea72a2a61b50c1b1bda247541c20163f3d501013eb2521cc6c56abff"
-	RUSTDESK_PACKAGE_EXPECTED_SHA256 = "b40be3e770028e83623a4ad97d879eb8080205c52ce00a7091cc76c4741bdd91"
-	RUSTDESK_SO_EXPECTED_SHA256      = "2c331c9fe6e99a14294dabc1a628b697294ca32f40f36eb1d92247c5087b9087"
+	RUSTDESK_EXPECTED_SHA256         = "58ef1e984727d827836c8ad84ad50a4971db4a3cb80ad7a646982594af155c52"
+	RUSTDESK_PACKAGE_EXPECTED_SHA256 = "7ba39cc325f55ff0793b956ff23a6876a75d8682ab8126a9ce0451fe81bde2cf"
+	RUSTDESK_SO_EXPECTED_SHA256      = "851a44b2ac449f45ce61acf89d96253c496823202883ff50049c269bdcd93ff9"
 )
 
 var (
