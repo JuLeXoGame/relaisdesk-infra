@@ -85,8 +85,14 @@ func startInterventionBridge(token, tokenFile, peer, interventionID string) (*in
 	interventionBridges.Lock()
 	defer interventionBridges.Unlock()
 	if existing := interventionBridges.peers[peer]; existing != nil {
-		if err := existing.rebind(interventionID); err != nil {
+		cancelEvicted, err := existing.rebind(interventionID)
+		if err != nil {
 			return nil, err
+		}
+		if cancelEvicted != nil {
+			// Best effort: the abandoned fiche is cancelled without
+			// blocking bridge creation for other peers.
+			go cancelEvicted()
 		}
 		return existing, nil
 	}
@@ -215,13 +221,39 @@ func (b *interventionBridge) handle(w http.ResponseWriter, r *http.Request) {
 // rebind moves a settled bridge to a new intervention so a later connection
 // to the same peer stays tracked. It refuses while a session is active or a
 // completion is in flight.
-func (b *interventionBridge) rebind(interventionID string) error {
+//
+// A bridge that never reported "connected" holds no live session: the engine
+// deliberately reports nothing for sessions that never connect (see
+// relaisdesk_intervention.rs), so the previous launch failed or was abandoned
+// and the retry supersedes it. Rebinding to another fiche then evicts the
+// stale one: the caller runs the returned closure to cancel it server-side.
+// A late "connected" from the abandoned engine is attributed to the new
+// fiche, which follows the peer session.
+func (b *interventionBridge) rebind(interventionID string) (cancelEvicted func(), err error) {
 	if b == nil || !validInterventionID(interventionID) {
-		return errors.New("suivi d'intervention invalide")
+		return nil, errors.New("suivi d'intervention invalide")
 	}
 	b.mu.Lock()
-	stopped, finalizing, finalized := b.stopped, b.finalizing, b.finalized
-	if !stopped && !finalizing && finalized {
+	stopped, finalizing, finalized, connected := b.stopped, b.finalizing, b.finalized, b.connected
+	sameWork := interventionID == b.work
+	var evicted, token string
+	switch {
+	case stopped || finalizing:
+		// Refused below; no state change.
+	case finalized:
+		// Settled session: take over and reset.
+		b.work = interventionID
+		b.connected = false
+		b.finalized = false
+	case sameWork:
+		// Retry of the fiche already tracked (the device endpoint reuses
+		// the in-progress fiche within 5 minutes): keep tracking it,
+		// nothing to evict. Refused below while connected.
+	case connected:
+		// Live session on another fiche: refused below, no state change.
+	default:
+		// Abandoned launch, no live session: evict the stale fiche.
+		evicted, token = b.work, b.token
 		b.work = interventionID
 		b.connected = false
 		b.finalized = false
@@ -229,14 +261,24 @@ func (b *interventionBridge) rebind(interventionID string) error {
 	b.mu.Unlock()
 	switch {
 	case stopped:
-		return errors.New("suivi d'intervention invalide")
+		return nil, errors.New("suivi d'intervention invalide")
 	case finalizing:
-		return errors.New("clôture en cours, réessayez")
-	case !finalized:
-		return errors.New("une intervention est déjà suivie sur ce poste")
+		return nil, errors.New("clôture en cours, réessayez")
+	case !finalized && connected:
+		return nil, errors.New("une intervention est déjà suivie sur ce poste")
+	}
+	if evicted != "" {
+		b.logBridgeEvent("bridge rebound to work=%s (evicted %s)", interventionID, evicted)
+		return func() {
+			if err := technicianCancelIntervention(token, evicted); err != nil {
+				b.logBridgeEvent("rebind evict: cancel %s failed: %v", evicted, err)
+			} else {
+				b.logBridgeEvent("rebind evict: cancelled %s", evicted)
+			}
+		}, nil
 	}
 	b.logBridgeEvent("bridge rebound to work=%s", interventionID)
-	return nil
+	return nil, nil
 }
 
 func (b *interventionBridge) cancelBeforeLaunch() {
