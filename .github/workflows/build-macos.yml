@@ -46,7 +46,7 @@ jobs:
         run: |
           git init rustdesk
           git -C rustdesk remote add origin https://github.com/JuLeXoGame/relaisdesk.git
-          git -C rustdesk fetch --depth 1 origin 6369510aaa95f6ae537e98d25db992940653c2db
+          git -C rustdesk fetch --depth 1 origin 1054d0f09e4e1d4aaea1309af714289e6055ba4b
           git -C rustdesk checkout --detach FETCH_HEAD
           git -C rustdesk submodule update --init --recursive --depth 1
 
@@ -92,6 +92,12 @@ jobs:
         working-directory: rustdesk
         run: |
           "$VCPKG_ROOT/vcpkg" install --triplet "${{ matrix.goarch == 'arm64' && 'arm64-osx' || 'x64-osx' }}" --x-install-root="$VCPKG_ROOT/installed"
+
+      - name: Verify AV1 SVC security bounds
+        run: |
+          native="$VCPKG_ROOT/installed/${{ matrix.goarch == 'arm64' && 'arm64-osx' || 'x64-osx' }}"
+          clang tests/aom_svc_bounds.c -I"$native/include" "$native/lib/libaom.a" -lc++ -o "$RUNNER_TEMP/aom-svc-test"
+          "$RUNNER_TEMP/aom-svc-test"
 
       - name: Generate Flutter bridge
         working-directory: rustdesk
