@@ -200,8 +200,16 @@ Invoke-InDirectory -Directory (Join-Path $RustDeskDir "libs\virtual_display\dyli
     -FilePath "cargo" -Arguments @("build", "--locked", "--release")
 
 # Nettoie les payloads orphelins des runs precedents (sinon le disque sature).
-Get-ChildItem -LiteralPath $PackageRoot -Directory -Filter 'payload-*' -ErrorAction SilentlyContinue |
-    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+$resolvedPackageRoot = [IO.Path]::GetFullPath($PackageRoot).TrimEnd('\')
+if (-not $resolvedPackageRoot.StartsWith($ProjectRoot.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Le dossier des payloads doit rester dans le projet.'
+}
+foreach ($oldPayload in @(Get-ChildItem -LiteralPath $PackageRoot -Directory -Filter 'payload-*' -ErrorAction SilentlyContinue)) {
+    $resolvedPayload = [IO.Path]::GetFullPath($oldPayload.FullName)
+    if ($oldPayload.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Lien inattendu : $resolvedPayload" }
+    if ([IO.Path]::GetDirectoryName($resolvedPayload) -ne $resolvedPackageRoot) { throw "Chemin inattendu : $resolvedPayload" }
+    Remove-Item -LiteralPath $resolvedPayload -Recurse -Force
+}
 New-Item -ItemType Directory -Force -Path $PackageRoot, $OutputDir | Out-Null
 $SciterPath = Join-Path $PackageRoot "sciter.dll"
 if (-not (Test-Path -LiteralPath $SciterPath)) {

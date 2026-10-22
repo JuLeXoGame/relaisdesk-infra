@@ -55,4 +55,6 @@ CREATE INDEX IF NOT EXISTS idx_devices_last_seen ON devices(last_seen_at);
 CREATE INDEX IF NOT EXISTS idx_devices_folder ON devices(folder_id);
 CREATE INDEX IF NOT EXISTS idx_team_members_owner ON team_members(owner_customer_id,license_id,status);
 CREATE INDEX IF NOT EXISTS idx_team_members_email ON team_members(email,status);
+CREATE INDEX IF NOT EXISTS idx_team_members_license_status ON team_members(license_id,status);
+CREATE INDEX IF NOT EXISTS idx_trial_license ON trial_applications(license_id);
 CREATE INDEX IF NOT EXISTS idx_team_sessions_member ON technician_sessions(team_member_id);

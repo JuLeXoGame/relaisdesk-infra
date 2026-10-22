@@ -50,11 +50,11 @@ func ValidateTechnicianSession(db *sql.DB, token string) (string, error) {
 	}
 
 	var licenseID string
-	var expiresAtRaw any
+	var expiresAtRaw, lastUsedRaw any
 	tokenHash := hashSessionToken(token)
 
-	query := `SELECT s.license_id, s.expires_at FROM technician_sessions s JOIN licences l ON l.license_id=s.license_id WHERE s.token = ? AND l.status='active' AND julianday(l.expires_at)>julianday('now') AND (UPPER(TRIM(COALESCE(l.notes,'')))!='ADMIN' OR julianday(s.last_used_at)>julianday('now','-2 hours'))`
-	err := db.QueryRow(query, tokenHash).Scan(&licenseID, &expiresAtRaw)
+	query := `SELECT s.license_id, s.expires_at, s.last_used_at FROM technician_sessions s JOIN licences l ON l.license_id=s.license_id WHERE s.token = ? AND l.status='active' AND julianday(l.expires_at)>julianday('now') AND (UPPER(TRIM(COALESCE(l.notes,'')))!='ADMIN' OR julianday(s.last_used_at)>julianday('now','-2 hours'))`
+	err := db.QueryRow(query, tokenHash).Scan(&licenseID, &expiresAtRaw, &lastUsedRaw)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", fmt.Errorf("session invalide ou inexistante")
@@ -75,7 +75,8 @@ func ValidateTechnicianSession(db *sql.DB, token string) (string, error) {
 		return "", fmt.Errorf("session d'équipe révoquée ou licence non éligible")
 	}
 
-	touchSessionLastUsed(db, "technician_sessions", "token", tokenHash, time.Now().UTC().Format("2006-01-02 15:04:05"))
+	lastUsed, _ := ParseSQLiteTime(lastUsedRaw)
+	touchSessionLastUsed(db, "technician_sessions", "token", tokenHash, lastUsed, time.Now().UTC())
 
 	return licenseID, nil
 }
@@ -138,7 +139,7 @@ func ValidateAdminSession(db *sql.DB, token string) error {
 		_, _ = db.Exec(`DELETE FROM admin_sessions WHERE token_hash = ?`, tokenHash)
 		return fmt.Errorf("session admin expirée")
 	}
-	touchSessionLastUsed(db, "admin_sessions", "token_hash", tokenHash, now.Format("2006-01-02 15:04:05"))
+	touchSessionLastUsed(db, "admin_sessions", "token_hash", tokenHash, lastUsedAt, now)
 	return nil
 }
 
@@ -190,19 +191,21 @@ func isSQLiteBusyError(err error) bool {
 		strings.Contains(msg, "sqlite_busy")
 }
 
-// touchSessionLastUsed refreshes last_used_at on a best-effort basis. The
-// session row was already authenticated by the caller, so a transient write
-// failure (SQLITE_BUSY when the dashboard fires parallel requests, slow disk,
-// read-only replica...) must never turn a valid session into a 401. It
-// retries lock contention briefly, then logs and lets validation succeed.
-func touchSessionLastUsed(db *sql.DB, table, column, tokenHash, timestamp string) {
+// Session activity is persisted at most every 30 seconds. Expiry and revocation
+// are still checked on every request; the idle cutoff is never extended.
+
+func touchSessionLastUsed(db *sql.DB, table, column, tokenHash string, previous, now time.Time) {
+	if !previous.IsZero() && now.Sub(previous) < 30*time.Second {
+		return
+	}
+	timestamp := now.UTC().Format(time.RFC3339)
 	const attempts = 5
 	var err error
 	for i := 0; i < attempts; i++ {
 		if i > 0 {
 			time.Sleep(time.Duration(5*i) * time.Millisecond)
 		}
-		_, err = db.Exec(`UPDATE `+table+` SET last_used_at = ? WHERE `+column+` = ?`, timestamp, tokenHash)
+		_, err = db.Exec(`UPDATE `+table+` SET last_used_at = ? WHERE `+column+` = ? AND (last_used_at IS NULL OR julianday(last_used_at) <= julianday(?, '-30 seconds'))`, timestamp, tokenHash, timestamp)
 		if err == nil {
 			return
 		}

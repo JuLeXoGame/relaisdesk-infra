@@ -1,6 +1,6 @@
 module tests
 
-go 1.26.6
+go 1.26.10
 
 require (
 	api v0.0.0
