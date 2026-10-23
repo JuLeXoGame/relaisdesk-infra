@@ -47,12 +47,12 @@ try {
     if ($GoCacheDirectory) { $env:GOCACHE=[IO.Path]::GetFullPath($GoCacheDirectory) }
     & python (Join-Path $PSScriptRoot 'stage-launcher-release.py') --project $project --destination (Join-Path $work 'sources') --platform windows --payload $WindowsPortable --payload-sha256 $PortableSHA256 --service-sha256 $NativeSHA256
     if ($LASTEXITCODE -ne 0) { throw 'Launcher staging failed.' }
+    $pinned=& (Join-Path $PSScriptRoot 'prepare-fleet-payload.ps1') -NativeExecutable $WindowsNativeExecutable -Destination (Join-Path $work 'sources/viewer/embedded/fleet')
+    if ($pinned -ne $NativeSHA256) { throw 'Native payload changed while staging.' }
     foreach ($app in @('configurator','viewer')) {
         $staged=Join-Path $work "sources/$app"
         $flags="-s -w -H windowsgui -X main.APIURL=https://api.relaisdesk.fr -X main.APP_VERSION=$Version -X main.RUSTDESK_EXPECTED_SHA256=$($PortableSHA256.ToLowerInvariant())"
         if ($app -eq 'viewer') {
-            $pinned=& (Join-Path $PSScriptRoot 'prepare-fleet-payload.ps1') -NativeExecutable $WindowsNativeExecutable -Destination (Join-Path $staged 'embedded/fleet')
-            if ($pinned -ne $NativeSHA256) { throw 'Native payload changed while staging.' }
             $flags+=" -X main.RUSTDESK_SERVICE_EXPECTED_SHA256=$pinned"
         } else {
             $flags+=" -X main.RELEASE_PUBLIC_KEY=$ReleasePublicKey"
