@@ -43,6 +43,10 @@ que lorsque `src/flutter_ffi.rs` est identique ; un nouvel environnement peut le
 régénérer avec flutter_rust_bridge_codegen 1.80.1 et cargo-expand 1.0.95, comme
 dans le workflow macOS. Vérifier `ldd -r` du lanceur Flutter et de la bibliothèque,
 et l'absence de dépendances dynamiques AOM, VPX et libyuv.
+Le contrôle du paquet natif reçoit ses dépendances de base avec
+`scripts/set-linux-native-dependencies.py` : glibc 2.35 minimum, libstdc++ 11
+minimum et libgcc-s1. Les empreintes du DEB doivent être recalculées après cette
+modification, puis injectées dans les deux lanceurs avant leur compilation.
 
 macOS est construit par `.github/workflows/build-macos.yml`, pour ARM64 et Intel.
 Le workflow fixe le commit client et les dépendances, régénère le pont Flutter,
