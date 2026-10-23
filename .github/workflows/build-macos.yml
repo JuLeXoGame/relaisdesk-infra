@@ -20,6 +20,7 @@ jobs:
     env:
       MACOSX_DEPLOYMENT_TARGET: ${{ matrix.min_macos }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - arch: aarch64-apple-darwin
@@ -146,7 +147,7 @@ jobs:
           engine_name=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$engine_app/Contents/Info.plist")
           engine_binary="$engine_app/Contents/MacOS/$engine_name"
           test -x "$engine_binary"
-          lipo -verify_arch "${{ matrix.goarch == 'arm64' && 'arm64' || 'x86_64' }}" "$engine_binary"
+          lipo "$engine_binary" -verify_arch "${{ matrix.goarch == 'arm64' && 'arm64' || 'x86_64' }}"
           engine_sha=$(shasum -a 256 "$engine_binary" | cut -d' ' -f1)
           echo "ENGINE_APP=$engine_app" >> "$GITHUB_ENV"
           echo "ENGINE_BINARY=$engine_binary" >> "$GITHUB_ENV"
@@ -201,7 +202,7 @@ jobs:
           cp "$ENGINE_APP/Contents/MacOS/service" build/RelaisDesk.app/Contents/MacOS/service
           test -x build/RelaisDesk.app/Contents/MacOS/service
           test "$(shasum -a 256 build/RelaisDesk.app/Contents/MacOS/rustdesk | cut -d' ' -f1)" = "$ENGINE_SHA256"
-          lipo -verify_arch "${{ matrix.goarch == 'arm64' && 'arm64' || 'x86_64' }}" build/RelaisDesk.app/Contents/MacOS/RelaisDesk
+          lipo build/RelaisDesk.app/Contents/MacOS/RelaisDesk -verify_arch "${{ matrix.goarch == 'arm64' && 'arm64' || 'x86_64' }}"
           codesign --force --sign - build/RelaisDesk.app
           codesign --verify --deep --strict build/RelaisDesk.app
           test "$(shasum -a 256 build/RelaisDesk.app/Contents/MacOS/rustdesk | cut -d' ' -f1)" = "$ENGINE_SHA256"
@@ -235,7 +236,7 @@ jobs:
           cp "$ENGINE_APP/Contents/MacOS/service" build_tech/RelaisDesk_Technicien.app/Contents/MacOS/service
           test -x build_tech/RelaisDesk_Technicien.app/Contents/MacOS/service
           test "$(shasum -a 256 build_tech/RelaisDesk_Technicien.app/Contents/MacOS/rustdesk | cut -d' ' -f1)" = "$ENGINE_SHA256"
-          lipo -verify_arch "${{ matrix.goarch == 'arm64' && 'arm64' || 'x86_64' }}" build_tech/RelaisDesk_Technicien.app/Contents/MacOS/RelaisDesk_Technicien
+          lipo build_tech/RelaisDesk_Technicien.app/Contents/MacOS/RelaisDesk_Technicien -verify_arch "${{ matrix.goarch == 'arm64' && 'arm64' || 'x86_64' }}"
           codesign --force --sign - build_tech/RelaisDesk_Technicien.app
           codesign --verify --deep --strict build_tech/RelaisDesk_Technicien.app
           test "$(shasum -a 256 build_tech/RelaisDesk_Technicien.app/Contents/MacOS/rustdesk | cut -d' ' -f1)" = "$ENGINE_SHA256"
