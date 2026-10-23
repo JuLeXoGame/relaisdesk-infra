@@ -56,11 +56,9 @@ mkdir -p "$WORK" "$OUTPUT"
     DEBPACK="$WORK/debpack"
     ( cd "$PROJECT/installer/debpack" && "$GO_EXE" build -trimpath -mod=readonly -o "$DEBPACK" . ) \
         || { echo "Go failed in installer/debpack" >&2; exit 1; }
+    python3 "$PROJECT/scripts/stage-launcher-release.py" --project "$PROJECT" --destination "$WORK/sources" --platform linux --payload "$NATIVE_PACKAGE" --payload-sha256 "$PACKAGE_SHA256" --runner-sha256 "$RUNNER_SHA256" --library-sha256 "$LIBRARY_SHA256"
     for app in viewer configurator; do
         STAGED="$WORK/sources/$app"
-        mkdir -p "$STAGED/embedded"
-        find "$PROJECT/installer/$app" -maxdepth 1 -type f \( -name '*.go' -o -name '*.png' -o -name '*.ico' -o -name 'go.mod' -o -name 'go.sum' \) -exec cp -t "$STAGED" {} +
-        cp "$NATIVE_PACKAGE" "$STAGED/embedded/rustdesk.deb"
         FLAGS="-s -w -X main.APIURL=https://api.relaisdesk.fr -X main.APP_VERSION=$VERSION -X main.RUSTDESK_EXPECTED_SHA256=${RUNNER_SHA256,,} -X main.RUSTDESK_PACKAGE_EXPECTED_SHA256=${PACKAGE_SHA256,,} -X main.RUSTDESK_SO_EXPECTED_SHA256=${LIBRARY_SHA256,,}"
         if [ "$app" = "configurator" ]; then FLAGS="$FLAGS -X main.RELEASE_PUBLIC_KEY=$RELEASE_PUBLIC_KEY"; fi
         if [ "$app" = "viewer" ]; then NAME="RelaisDesk_Viewer_Linux"; else NAME="RelaisDesk_Technicien_Linux"; fi
@@ -70,9 +68,13 @@ mkdir -p "$WORK" "$OUTPUT"
         # shellcheck disable=SC2086
         ( cd "$STAGED" && "$GO_EXE" test -c -trimpath -mod=readonly -tags ci -ldflags "$TESTFLAGS" -o "$WORK/$app.test" . ) || { echo "Go failed in $STAGED" >&2; exit 1; }
         # shellcheck disable=SC2086
-        ( cd "$STAGED" && "$GO_EXE" build -trimpath -mod=readonly -ldflags "$FLAGS" -o "$OUTPUT/$NAME" . ) || { echo "Go failed in $STAGED" >&2; exit 1; }
+        NATIVE_CGO=0
+        if [ "$app" = "configurator" ]; then NATIVE_CGO=1; fi
+        ( cd "$STAGED" && CGO_ENABLED="$NATIVE_CGO" "$GO_EXE" build -trimpath -mod=readonly -ldflags "$FLAGS" -o "$OUTPUT/$NAME" . ) || { echo "Go failed in $STAGED" >&2; exit 1; }
         if [ "$app" = "viewer" ]; then PKG="RelaisDesk_viewer.deb"; else PKG="RelaisDesk_Technicien.deb"; fi
-        "$DEBPACK" -bin "$OUTPUT/$NAME" -pkg "relaisdesk-$app" -name "relaisdesk-$app" -version "$VERSION" -desc "RelaisDesk $app - security test" -out "$OUTPUT/$PKG" \
+        DEPENDS=""
+        if [ "$app" = "configurator" ]; then DEPENDS="libc6 (>= 2.35), libgl1, libx11-6, libxcursor1, libxi6, libxinerama1, libxrandr2, libxxf86vm1, libxext6"; fi
+        "$DEBPACK" -bin "$OUTPUT/$NAME" -pkg "relaisdesk-$app" -name "relaisdesk-$app" -version "$VERSION" -desc "RelaisDesk $app - assistance a distance" -depends "$DEPENDS" -out "$OUTPUT/$PKG" \
             || { echo "Debian package creation failed." >&2; exit 1; }
     done
     ( cd "$OUTPUT" && sha256sum -- * | LC_ALL=C sort -k2 > SHA256SUMS.txt )

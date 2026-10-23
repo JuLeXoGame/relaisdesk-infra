@@ -45,14 +45,10 @@ try {
     $env:GOARCH='amd64'
     if (-not $env:GOTOOLCHAIN -or $env:GOTOOLCHAIN -eq 'local') { $env:GOTOOLCHAIN = 'auto' }
     if ($GoCacheDirectory) { $env:GOCACHE=[IO.Path]::GetFullPath($GoCacheDirectory) }
+    & python (Join-Path $PSScriptRoot 'stage-launcher-release.py') --project $project --destination (Join-Path $work 'sources') --platform windows --payload $WindowsPortable --payload-sha256 $PortableSHA256 --service-sha256 $NativeSHA256
+    if ($LASTEXITCODE -ne 0) { throw 'Launcher staging failed.' }
     foreach ($app in @('configurator','viewer')) {
-        $source=Join-Path $project "installer/$app"
         $staged=Join-Path $work "sources/$app"
-        New-Item -ItemType Directory -Path (Join-Path $staged 'embedded') -Force | Out-Null
-        Get-ChildItem -LiteralPath $source -File | Where-Object {
-            $_.Extension -in @('.go','.syso','.png','.ico','.manifest') -or $_.Name -in @('go.mod','go.sum')
-        } | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $staged }
-        Copy-Item -LiteralPath $WindowsPortable -Destination (Join-Path $staged 'embedded/rustdesk.exe')
         $flags="-s -w -H windowsgui -X main.APIURL=https://api.relaisdesk.fr -X main.APP_VERSION=$Version -X main.RUSTDESK_EXPECTED_SHA256=$($PortableSHA256.ToLowerInvariant())"
         if ($app -eq 'viewer') {
             $pinned=& (Join-Path $PSScriptRoot 'prepare-fleet-payload.ps1') -NativeExecutable $WindowsNativeExecutable -Destination (Join-Path $staged 'embedded/fleet')
