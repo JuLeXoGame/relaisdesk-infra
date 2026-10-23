@@ -1,0 +1,78 @@
+name: Package verified macOS engine 1.0.0
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/security-perf-1-0-20261023]
+    paths:
+      - .github/workflows/package-macos-verified-engine.yml
+      - scripts/package-macos-verified-engine.sh
+      - installer/viewer/rustdesk_darwin.go
+      - installer/configurator/rustdesk_darwin.go
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+            minimum: '12.3'
+          - arch: amd64
+            runner: macos-15-intel
+            minimum: '12.0'
+    runs-on: ${{ matrix.runner }}
+    env:
+      BUILD_ARCH: ${{ matrix.arch }}
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.minimum }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.10'
+          cache-dependency-path: |
+            installer/viewer/go.sum
+            installer/configurator/go.sum
+      - name: Test launcher code
+        run: |
+          (cd installer/viewer && go test -tags ci ./... && go vet -tags ci ./...)
+          (cd installer/configurator && go test -tags ci ./... && go vet -tags ci ./...)
+      - name: Retrieve and verify the original engine
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/JuLeXoGame/relaisdesk-infra/actions/runs/39916359240 --jq '.head_sha')" = 09bc44ca338e70aec6550777b64d88eabb94d4c3
+          ready=0
+          for attempt in $(seq 1 90); do
+            artifact_id=$(gh api repos/JuLeXoGame/relaisdesk-infra/actions/runs/39916359240/artifacts --jq ".artifacts[] | select(.name == \"relaisdesk-macos-engine-$BUILD_ARCH\" and .expired == false) | .id")
+            if [[ -n $artifact_id ]]; then ready=1; break; fi
+            echo "Waiting for verified $BUILD_ARCH engine: attempt $attempt"
+            sleep 30
+          done
+          test "$ready" = 1
+          gh run download 39916359240 --repo JuLeXoGame/relaisdesk-infra --name "relaisdesk-macos-engine-$BUILD_ARCH" --dir "$RUNNER_TEMP/verified-input"
+          mkdir "$RUNNER_TEMP/verified-engine"
+          tar -xzf "$RUNNER_TEMP/verified-input/engine-$BUILD_ARCH.tar.gz" -C "$RUNNER_TEMP/verified-engine"
+          engine_app="$RUNNER_TEMP/verified-engine/RelaisDesk.app"
+          expected=$(cat "$RUNNER_TEMP/verified-input/engine-$BUILD_ARCH.sha256")
+          [[ $expected =~ ^[0-9a-f]{64}$ ]]
+          test "$(shasum -a 256 "$engine_app/Contents/MacOS/RelaisDesk" | cut -d' ' -f1)" = "$expected"
+          codesign --verify --deep --strict "$engine_app"
+          echo "ENGINE_APP=$engine_app" >> "$GITHUB_ENV"
+          echo "ENGINE_SHA256=$expected" >> "$GITHUB_ENV"
+      - name: Build and verify complete applications and disk images
+        run: bash scripts/package-macos-verified-engine.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: relaisdesk-macos-dmg-${{ matrix.arch }}
+          if-no-files-found: error
+          path: |
+            RelaisDesk_Mac*.dmg
+            RelaisDesk_Technicien_Mac*.dmg
+            SHA256SUMS-macos-${{ matrix.arch }}.txt

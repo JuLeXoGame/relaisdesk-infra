@@ -54,6 +54,10 @@ func darwinCandidateUsable(path, expectedSHA string, exists, unpinnedOverride bo
 	return unpinnedOverride
 }
 
+func darwinBundledEnginePath(executable string) string {
+	return filepath.Clean(filepath.Join(filepath.Dir(executable), "..", "Helpers", "RelaisDeskEngine.app", "Contents", "MacOS", "RelaisDesk"))
+}
+
 func findRustDesk() (string, error) {
 	candidates := []string{
 		RUSTDESK_DEFAULT_APP_PATH,
@@ -62,7 +66,7 @@ func findRustDesk() (string, error) {
 
 	if self, err := os.Executable(); err == nil {
 		bundleDir := filepath.Dir(self)
-		candidates = append(candidates, filepath.Join(bundleDir, "rustdesk"), filepath.Join(bundleDir, "RelaisDesk"))
+		candidates = append(candidates, darwinBundledEnginePath(self), filepath.Join(bundleDir, "rustdesk"), filepath.Join(bundleDir, "RelaisDesk"))
 	}
 
 	for _, c := range candidates {
@@ -280,6 +284,7 @@ func launchRustDeskSessionCmd(rustdeskPath string, targetID string, password ...
 	}
 	return cmd, nil
 }
+
 // rustDesk2TomlPaths lists known RustDesk2.toml locations for --set-hwcodec.
 func rustDesk2TomlPaths() []string {
 	homeDir, err := os.UserHomeDir()
@@ -288,4 +293,3 @@ func rustDesk2TomlPaths() []string {
 	}
 	return []string{filepath.Join(homeDir, RUSTDESK_CONFIG_DIR_SUFFIX, RUSTDESK_CONFIG2_FILE)}
 }
-

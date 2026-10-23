@@ -53,6 +53,10 @@ func darwinCandidateUsable(path, expectedSHA string, exists, unpinnedOverride bo
 	return unpinnedOverride
 }
 
+func darwinBundledEnginePath(executable string) string {
+	return filepath.Clean(filepath.Join(filepath.Dir(executable), "..", "Helpers", "RelaisDeskEngine.app", "Contents", "MacOS", "RelaisDesk"))
+}
+
 func findRustDesk() (string, error) {
 	candidates := []string{
 		RUSTDESK_DEFAULT_APP_PATH,
@@ -61,7 +65,7 @@ func findRustDesk() (string, error) {
 
 	if self, err := os.Executable(); err == nil {
 		bundleDir := filepath.Dir(self)
-		candidates = append(candidates, filepath.Join(bundleDir, "rustdesk"), filepath.Join(bundleDir, "RelaisDesk"))
+		candidates = append(candidates, darwinBundledEnginePath(self), filepath.Join(bundleDir, "rustdesk"), filepath.Join(bundleDir, "RelaisDesk"))
 	}
 
 	for _, c := range candidates {
