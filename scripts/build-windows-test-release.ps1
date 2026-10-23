@@ -8,7 +8,7 @@ param(
     [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9_-]{43}$')][string]$ReleasePublicKey,
     [string]$GoExecutable = 'go',
     [string]$GoCacheDirectory,
-    [ValidatePattern('^[0-9]+\.[0-9]+\.[0-9]+$')][string]$Version = '1.0.3'
+    [ValidatePattern('^[0-9]+\.[0-9]+\.[0-9]+$')][string]$Version = '1.0.0'
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest

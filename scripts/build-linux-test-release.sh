@@ -5,7 +5,7 @@ set -euo pipefail
 
 NATIVE_PACKAGE=""; PACKAGE_SHA256=""; RUNNER_SHA256=""; LIBRARY_SHA256=""
 WORKDIR=""; OUTDIR=""; RELEASE_PUBLIC_KEY=""; GOCACHE_DIR=""
-GO_EXE="go"; VERSION="1.0.4"
+GO_EXE="go"; VERSION="1.0.0"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -19,7 +19,7 @@ while [ $# -gt 0 ]; do
         --go-cache-directory) GOCACHE_DIR="$2"; shift 2 ;;
         --go-executable) GO_EXE="$2"; shift 2 ;;
         --version) VERSION="$2"; shift 2 ;;
-        -h|--help) echo "Usage : $0 --native-package P --package-sha256 H --runner-sha256 H --library-sha256 H --working-directory W --output-directory O --release-public-key K --go-cache-directory G [--go-executable go] [--version 1.0.4]"; exit 0 ;;
+        -h|--help) echo "Usage : $0 --native-package P --package-sha256 H --runner-sha256 H --library-sha256 H --working-directory W --output-directory O --release-public-key K --go-cache-directory G [--go-executable go] [--version 1.0.0]"; exit 0 ;;
         *) echo "Option inconnue : $1" >&2; exit 1 ;;
     esac
 done
@@ -73,7 +73,7 @@ mkdir -p "$WORK" "$OUTPUT"
         ( cd "$STAGED" && CGO_ENABLED="$NATIVE_CGO" "$GO_EXE" build -trimpath -mod=readonly -ldflags "$FLAGS" -o "$OUTPUT/$NAME" . ) || { echo "Go failed in $STAGED" >&2; exit 1; }
         if [ "$app" = "viewer" ]; then PKG="RelaisDesk_viewer.deb"; else PKG="RelaisDesk_Technicien.deb"; fi
         DEPENDS=""
-        if [ "$app" = "configurator" ]; then DEPENDS="libc6 (>= 2.35), libgl1, libx11-6, libxcursor1, libxi6, libxinerama1, libxrandr2, libxxf86vm1, libxext6"; fi
+        if [ "$app" = "configurator" ]; then DEPENDS="libc6 (>= 2.35), libgl1, libx11-6, libxcursor1, libxi6, libxinerama1, libxrandr2, libxxf86vm1, libxext6, libwayland-client0, libwayland-cursor0, libwayland-egl1, libxkbcommon0"; fi
         "$DEBPACK" -bin "$OUTPUT/$NAME" -pkg "relaisdesk-$app" -name "relaisdesk-$app" -version "$VERSION" -desc "RelaisDesk $app - assistance a distance" -depends "$DEPENDS" -out "$OUTPUT/$PKG" \
             || { echo "Debian package creation failed." >&2; exit 1; }
     done
