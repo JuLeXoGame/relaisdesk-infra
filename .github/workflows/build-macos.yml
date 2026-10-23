@@ -7,10 +7,6 @@ on:
         description: 'Version de RelaisDesk (ex: 1.0.0)'
         required: true
         default: '1.0.0'
-      repackage_run_id:
-        description: 'Vérifier uniquement les métadonnées des DMG d’une compilation terminée'
-        required: false
-        default: ''
   push:
     tags:
       - 'v*'
@@ -20,7 +16,6 @@ permissions:
 
 jobs:
   build-macos:
-    if: ${{ inputs.repackage_run_id == '' }}
     runs-on: ${{ matrix.runner }}
     env:
       MACOSX_DEPLOYMENT_TARGET: ${{ matrix.min_macos }}
@@ -203,6 +198,8 @@ jobs:
           cp -R "$ENGINE_APP/Contents/Frameworks" build/RelaisDesk.app/Contents/
           cp -R "$ENGINE_APP/Contents/Resources/." build/RelaisDesk.app/Contents/Resources/
           cp "$ENGINE_BINARY" build/RelaisDesk.app/Contents/MacOS/rustdesk
+          cp "$ENGINE_APP/Contents/MacOS/service" build/RelaisDesk.app/Contents/MacOS/service
+          test -x build/RelaisDesk.app/Contents/MacOS/service
           test "$(shasum -a 256 build/RelaisDesk.app/Contents/MacOS/rustdesk | cut -d' ' -f1)" = "$ENGINE_SHA256"
           lipo -verify_arch "${{ matrix.goarch == 'arm64' && 'arm64' || 'x86_64' }}" build/RelaisDesk.app/Contents/MacOS/RelaisDesk
           codesign --force --sign - build/RelaisDesk.app
@@ -235,6 +232,8 @@ jobs:
           cp -R "$ENGINE_APP/Contents/Frameworks" build_tech/RelaisDesk_Technicien.app/Contents/
           cp -R "$ENGINE_APP/Contents/Resources/." build_tech/RelaisDesk_Technicien.app/Contents/Resources/
           cp "$ENGINE_BINARY" build_tech/RelaisDesk_Technicien.app/Contents/MacOS/rustdesk
+          cp "$ENGINE_APP/Contents/MacOS/service" build_tech/RelaisDesk_Technicien.app/Contents/MacOS/service
+          test -x build_tech/RelaisDesk_Technicien.app/Contents/MacOS/service
           test "$(shasum -a 256 build_tech/RelaisDesk_Technicien.app/Contents/MacOS/rustdesk | cut -d' ' -f1)" = "$ENGINE_SHA256"
           lipo -verify_arch "${{ matrix.goarch == 'arm64' && 'arm64' || 'x86_64' }}" build_tech/RelaisDesk_Technicien.app/Contents/MacOS/RelaisDesk_Technicien
           codesign --force --sign - build_tech/RelaisDesk_Technicien.app
@@ -277,11 +276,3 @@ jobs:
             RelaisDesk_Technicien_Mac*.dmg
             SHA256SUMS-macos-${{ matrix.goarch }}.txt
 
-  package-compatibility:
-    if: ${{ inputs.repackage_run_id != '' }}
-    permissions:
-      contents: read
-      actions: read
-    uses: ./.github/workflows/repackage-macos-compatibility.yml
-    with:
-      run_id: ${{ inputs.repackage_run_id }}
