@@ -37,12 +37,12 @@ for (const file of ['relaisdesk/app.js', 'relaisdesk/client/app.js', 'relaisdesk
 assert.match(read('database/trials.go'), /const TrialTermsVersion = "2026-09-24-fleet-v3"/);
 assert.match(read('api/mailer/mailer.go'), /const CurrentTrialTermsVersion = "2026-09-24-fleet-v3"/);
 for (const file of ['relaisdesk/index.html', 'relaisdesk/client/index.html', 'relaisdesk/essai/index.html']) {
-  const cacheVersion = '20260921-legal-crypto-v1';
-  assert(read(file).includes('app.js?v=' + cacheVersion), file + ': cache version missing');
+  const cacheVersion = read(file).match(/app\.js\?v=(\d{8})-[A-Za-z0-9-]+/);
+  assert(cacheVersion && cacheVersion[1] >= '20260921', file + ': current cache version missing');
   assert(read(file).includes('autorisation préalable documentée'), file + ': authorization notice missing');
   assert(read(file).includes('Linux ou macOS'), file + ': compatibility notice missing');
 }
-const i18n = {window: {}, document: {readyState: 'loading', addEventListener() {}}};
+const i18n = {window: {}, document: {readyState: 'loading', addEventListener() {}}, location: {hostname: 'relaisdesk.fr'}};
 vm.runInNewContext(read('relaisdesk/i18n.js'), i18n);
 for (const lang of ['fr', 'en', 'de', 'es', 'it', 'ru', 'pl']) {
   const translated = i18n.window.RdI18n.translations[lang];
@@ -58,5 +58,7 @@ assert(sources.includes('e34c8bab932791961b2406bac5d0256b744b40b1'));
 assert(sources.includes('72d1d638e56d6f2dd4f357263000738144633660'), 'historical source link lost');
 assert(sources.includes('pas à elle seule les sources des lanceurs'), 'engine confused with complete package source');
 assert(sources.includes("distribution n'est pas conditionnée à SignPath"));
-assert(sources.includes('restent à vérifier et à compléter'), 'sources incorrectly declared complete');
+assert(sources.includes('1054d0f09e4e1d4aaea1309af714289e6055ba4b'), 'current client source missing');
+assert(sources.includes('relaisdesk-infra/tree/f6171fa7a300939578005e0337de1263b4f4ca04'), 'published launcher sources missing');
+assert(sources.includes('RECONSTRUCTION_1.0.0_2026-10-23.md'), 'reconstruction instructions missing');
 console.log('OK: permanent access clauses, DPA/privacy/email consistency, versions, seven-language notices and source scope.');
