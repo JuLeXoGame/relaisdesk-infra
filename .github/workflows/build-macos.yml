@@ -7,6 +7,10 @@ on:
         description: 'Version de RelaisDesk (ex: 1.0.0)'
         required: true
         default: '1.0.0'
+      repackage_run_id:
+        description: 'Vérifier uniquement les métadonnées des DMG d’une compilation terminée'
+        required: false
+        default: ''
   push:
     tags:
       - 'v*'
@@ -16,6 +20,7 @@ permissions:
 
 jobs:
   build-macos:
+    if: ${{ inputs.repackage_run_id == '' }}
     runs-on: ${{ matrix.runner }}
     env:
       MACOSX_DEPLOYMENT_TARGET: ${{ matrix.min_macos }}
@@ -271,3 +276,12 @@ jobs:
             RelaisDesk_Mac*.dmg
             RelaisDesk_Technicien_Mac*.dmg
             SHA256SUMS-macos-${{ matrix.goarch }}.txt
+
+  package-compatibility:
+    if: ${{ inputs.repackage_run_id != '' }}
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/repackage-macos-compatibility.yml
+    with:
+      run_id: ${{ inputs.repackage_run_id }}

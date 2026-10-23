@@ -1,6 +1,11 @@
 name: Verify and repackage macOS compatibility
 
 on:
+  workflow_call:
+    inputs:
+      run_id:
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       run_id:
