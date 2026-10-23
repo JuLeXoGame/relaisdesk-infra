@@ -1,0 +1,70 @@
+name: Verify and repackage macOS compatibility
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Completed Build RelaisDesk macOS run to verify and repackage
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  package:
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+            minimum: '12.3'
+            suffix: ''
+          - arch: amd64
+            runner: macos-15-intel
+            minimum: '12.0'
+            suffix: '_Intel'
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: relaisdesk-macos-dmg-${{ matrix.arch }}
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify inputs and minimum OS metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          shasum -a 256 -c "SHA256SUMS-macos-${{ matrix.arch }}.txt"
+          mkdir repacked
+          for name in "RelaisDesk_Mac${{ matrix.suffix }}.dmg" "RelaisDesk_Technicien_Mac${{ matrix.suffix }}.dmg"; do
+            mount=$(mktemp -d "$RUNNER_TEMP/relaisdesk-mount.XXXXXXXX")
+            pack=$(mktemp -d "$RUNNER_TEMP/relaisdesk-pack.XXXXXXXX")
+            hdiutil attach -readonly -nobrowse -mountpoint "$mount" "$name"
+            trap 'hdiutil detach "$mount"' EXIT
+            apps=( "$mount"/*.app )
+            test "${#apps[@]}" -eq 1
+            app="$pack/$(basename "${apps[0]}")"
+            ditto "${apps[0]}" "$app"
+            hdiutil detach "$mount"
+            trap - EXIT
+            plist="$app/Contents/Info.plist"
+            test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")" = 1.0.0
+            engine="$app/Contents/MacOS/rustdesk"
+            before=$(shasum -a 256 "$engine" | cut -d' ' -f1)
+            /usr/libexec/PlistBuddy -c 'Set :LSMinimumSystemVersion ${{ matrix.minimum }}' "$plist"
+            codesign --force --sign - --preserve-metadata=identifier,entitlements "$app"
+            codesign --verify --deep --strict "$app"
+            test "$(shasum -a 256 "$engine" | cut -d' ' -f1)" = "$before"
+            test "$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$plist")" = '${{ matrix.minimum }}'
+            ln -s /Applications "$pack/Applications"
+            hdiutil create -fs HFS+ -format UDZO -volname RelaisDesk -srcfolder "$pack" "repacked/$name"
+            hdiutil verify "repacked/$name"
+          done
+          cd repacked
+          shasum -a 256 ./*.dmg > "SHA256SUMS-macos-${{ matrix.arch }}.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: relaisdesk-macos-compatible-${{ matrix.arch }}
+          if-no-files-found: error
+          path: repacked/*

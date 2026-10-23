@@ -31,7 +31,7 @@ jobs:
             dmg_suffix: ""
           - arch: x86_64-apple-darwin
             runner: macos-15-intel
-            min_macos: '10.14'
+            min_macos: '12.0'
             target: x86_64-apple-darwin
             rustdesk_target: x86_64-apple-darwin
             goarch: amd64
@@ -194,6 +194,7 @@ jobs:
           /usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier fr.relaisdesk.viewer' build/RelaisDesk.app/Contents/Info.plist
           /usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString 1.0.0' build/RelaisDesk.app/Contents/Info.plist
           /usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 1.0.0' build/RelaisDesk.app/Contents/Info.plist
+          /usr/libexec/PlistBuddy -c 'Set :LSMinimumSystemVersion ${{ matrix.min_macos }}' build/RelaisDesk.app/Contents/Info.plist
           cp -R "$ENGINE_APP/Contents/Frameworks" build/RelaisDesk.app/Contents/
           cp -R "$ENGINE_APP/Contents/Resources/." build/RelaisDesk.app/Contents/Resources/
           cp "$ENGINE_BINARY" build/RelaisDesk.app/Contents/MacOS/rustdesk
@@ -225,6 +226,7 @@ jobs:
           /usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier fr.relaisdesk.technicien' build_tech/RelaisDesk_Technicien.app/Contents/Info.plist
           /usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString 1.0.0' build_tech/RelaisDesk_Technicien.app/Contents/Info.plist
           /usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 1.0.0' build_tech/RelaisDesk_Technicien.app/Contents/Info.plist
+          /usr/libexec/PlistBuddy -c 'Set :LSMinimumSystemVersion ${{ matrix.min_macos }}' build_tech/RelaisDesk_Technicien.app/Contents/Info.plist
           cp -R "$ENGINE_APP/Contents/Frameworks" build_tech/RelaisDesk_Technicien.app/Contents/
           cp -R "$ENGINE_APP/Contents/Resources/." build_tech/RelaisDesk_Technicien.app/Contents/Resources/
           cp "$ENGINE_BINARY" build_tech/RelaisDesk_Technicien.app/Contents/MacOS/rustdesk

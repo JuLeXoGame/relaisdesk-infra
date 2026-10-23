@@ -65,7 +65,7 @@ vm.runInNewContext(read('relaisdesk/legal-email.js'), {
 assert.equal(validHost.link.href, 'mailto:' + contact);
 assert.equal(validHost.link.textContent, contact);
 
-const pricing = vm.createContext({document: {addEventListener() {}}, window: {}});
+const pricing = vm.createContext({document: {addEventListener() {}}, window: {}, location: {hostname: 'relaisdesk.fr'}});
 vm.runInContext(read('relaisdesk/app.js'), pricing);
 for (const [capacity, expected] of [[10,199],[50,759],[100,1259],[500,4059]]) {
   assert.equal(vm.runInContext(`calculateUltraPrice(${capacity}, 'monthly')`, pricing), expected);
