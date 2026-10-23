@@ -59,6 +59,6 @@ assert(sources.includes('72d1d638e56d6f2dd4f357263000738144633660'), 'historical
 assert(sources.includes('pas à elle seule les sources des lanceurs'), 'engine confused with complete package source');
 assert(sources.includes("distribution n'est pas conditionnée à SignPath"));
 assert(sources.includes('1054d0f09e4e1d4aaea1309af714289e6055ba4b'), 'current client source missing');
-assert(sources.includes('relaisdesk-infra/tree/f6171fa7a300939578005e0337de1263b4f4ca04'), 'published launcher sources missing');
+assert(sources.includes('relaisdesk-infra/tree/3fff1a65eea8f340f700c45ee829b8f1833872db'), 'published launcher sources missing');
 assert(sources.includes('RECONSTRUCTION_1.0.0_2026-10-23.md'), 'reconstruction instructions missing');
 console.log('OK: permanent access clauses, DPA/privacy/email consistency, versions, seven-language notices and source scope.');
