@@ -9,7 +9,8 @@ nécessaires pour compiler les sources. Ils ne sont pas inclus dans les dépôts
 
 - Lanceurs Go et scripts : dépôt `JuLeXoGame/relaisdesk-infra`, branche
   `codex/security-perf-1-0-20261023`. Les changements de code d'assemblage et de
-  création Debian sont inclus dans le commit `01f72bb`.
+  création Debian sont inclus dans le commit `01f72bb`. Le commit `1cb44f9`
+  ajoute l'assemblage macOS conservant le moteur dans son application signée.
 - Moteur client : `JuLeXoGame/relaisdesk`, commit
   `1054d0f09e4e1d4aaea1309af714289e6055ba4b`.
 - Serveur : `JuLeXoGame/rustdesk-server`, commit
@@ -45,9 +46,16 @@ et l'absence de dépendances dynamiques AOM, VPX et libyuv.
 
 macOS est construit par `.github/workflows/build-macos.yml`, pour ARM64 et Intel.
 Le workflow fixe le commit client et les dépendances, régénère le pont Flutter,
-construit les lanceurs et inclut les frameworks, ressources et service dans les
-deux applications. Il vérifie l'architecture, les empreintes et les signatures
-ad hoc. Il ne fournit pas de signature Developer ID ni de notarisation Apple.
+construit les lanceurs et conserve l'application native complète dans
+`Contents/Helpers/RelaisDeskEngine.app` de chacun d'eux. Ce moteur garde son propre
+Info.plist, ses frameworks, ressources, service et sa signature. Le lanceur cherche
+ce chemin et vérifie l'empreinte du moteur avant exécution. Le script commun
+`scripts/package-macos-verified-engine.sh` crée et monte les deux DMG pour vérifier
+leur contenu, les architectures, les empreintes et les signatures ad hoc.
+Le workflow `package-macos-verified-engine.yml` reprend les moteurs déjà compilés
+de l'exécution 39916359240, dont il vérifie le commit producteur et les signatures,
+pour terminer cette reconstruction. Il ne fournit pas de signature Developer ID
+ni de notarisation Apple.
 Les minimums système sont macOS 12.3 ARM et macOS 12.0 Intel.
 
 ## Lanceurs et paquets 1.0.0
