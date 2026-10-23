@@ -563,6 +563,9 @@ func TestSelfUpdateApplyRejectsSwappedFile(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		original = []byte("MZ-version-originale-win")
 		swapped = []byte("MZ-version-substitue-win")
+	} else if runtime.GOOS == "darwin" {
+		original = []byte("\xcf\xfa\xed\xfe-version-originale")
+		swapped = []byte("\xcf\xfa\xed\xfe-version-substitue")
 	}
 	sum := sha256.Sum256(original)
 	info := &SelfUpdateInfo{
