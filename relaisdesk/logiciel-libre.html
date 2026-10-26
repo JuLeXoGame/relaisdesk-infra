@@ -46,7 +46,7 @@
         <header class="legal-header">
           <div class="badge">GNU AGPLv3</div>
           <h1>Logiciel libre et code source</h1>
-          <p class="legal-date">Dernière mise à jour : 23 octobre 2026 — sources des moteurs et des lanceurs corrigés, version RelaisDesk 1.0.0 conservée.</p>
+          <p class="legal-date">Dernière mise à jour : 26 octobre 2026 — correctif des dossiers dans le Technicien Windows, version RelaisDesk 1.0.0 conservée.</p>
         </header>
         <div class="legal-body">
           <p>RelaisDesk utilise et modifie les projets RustDesk Community. Le paiement d'un accès RelaisDesk rémunère l'exploitation de l'infrastructure, la configuration et le support. Il ne retire aucun des droits accordés par les licences libres applicables.</p>
@@ -56,6 +56,12 @@
           <table>
             <thead><tr><th>Composant</th><th>Origine</th><th>Avis de modification</th><th>Source correspondante</th></tr></thead>
             <tbody>
+              <tr>
+                <td><strong>Technicien Windows — correctif du 26 octobre 2026</strong></td>
+                <td>Sources RelaisDesk du lanceur Go et de l'API.</td>
+                <td>Le choix des dossiers à autoriser affiche le parc de la licence concernée, recharge les noms à chaque ouverture et distingue les sous-dossiers par leur chemin. Seuls le portable et l'installateur Technicien Windows sont reconstruits ; les autres programmes conservent les sources du 23 octobre.</td>
+                <td><a href="https://github.com/JuLeXoGame/relaisdesk-infra/tree/af47dab659e916d69223c95f6fb94a6c0e4056a7" target="_blank" rel="noopener">sources du correctif — commit <code>af47dab</code></a> et <a href="https://github.com/JuLeXoGame/relaisdesk-infra/blob/codex/security-perf-1-0-20261023/docs/RECONSTRUCTION_1.0.0_2026-10-26.md" target="_blank" rel="noopener">instructions de reconstruction</a>. Le moteur reste au commit <code>1054d0f09</code> indiqué ci-dessous.</td>
+              </tr>
               <tr>
                 <td><strong>Moteur client — reconstruction du 23 octobre 2026</strong></td>
                 <td>Fork RelaisDesk de RustDesk Community.</td>
@@ -85,7 +91,7 @@
           </div>
 
           <h2>Identifier la version effectivement téléchargée</h2>
-          <p>Le <a href="https://api.relaisdesk.fr/api/v1/public/releases/latest">manifeste public signé courant</a> indique la date de publication, les noms, tailles et empreintes SHA-256 des fichiers distribués. Les sources publiées pour la reconstruction du 23 octobre 2026 sont identifiées dans le tableau ci-dessus. Un même numéro 1.0.0 peut correspondre à plusieurs reconstructions : vérifier aussi la date et l'empreinte du fichier.</p>
+          <p>Le <a href="https://api.relaisdesk.fr/api/v1/public/releases/latest">manifeste public signé courant</a> indique la date de publication, les noms, tailles et empreintes SHA-256 des fichiers distribués. Les sources des reconstructions du 23 octobre 2026 et du correctif Technicien Windows du 26 octobre sont identifiées dans le tableau ci-dessus. Un même numéro 1.0.0 peut correspondre à plusieurs reconstructions : vérifier aussi la date et l'empreinte du fichier.</p>
           <p><strong>Historique — contrôle du 12 septembre 2026 :</strong> le serveur de téléchargement proposait le lot <strong>1.0.2 daté du 11 septembre à 10:22:39 UTC</strong>. Une autre préparation locale portait aussi le numéro 1.0.2 avec des empreintes différentes. La version Windows 1.0.3 était un lot de test local, non publié lors de ce contrôle.</p>
           <p><strong>Technicien Windows portable du lot public contrôlé :</strong> SHA-256 <code>0479b842bed81c13e250a0b6922ba93d5e2e9b508bb9ffd82824aaba4e22da43</code>. Le moteur embarqué a été retrouvé à l'identique dans ce fichier : empreinte <code>86a2132b04743e3c2199cc20a86e158412bcb549e4e9ab247427a9a463f326c0</code>, associé au <a href="https://github.com/JuLeXoGame/relaisdesk/tree/e34c8bab932791961b2406bac5d0256b744b40b1" target="_blank" rel="noopener">commit client <code>e34c8bab</code></a> par le compte rendu de construction. Cette référence identifie le moteur, pas à elle seule les sources des lanceurs ni les scripts de l'ensemble des paquets. Elle ne doit pas être extrapolée à un fichier portant une autre empreinte.</p>
           <p><strong>Accès permanent :</strong> il n'est pas disponible sous Linux ou macOS dans les versions proposées. L'assistance ponctuelle Linux est distincte.</p>
