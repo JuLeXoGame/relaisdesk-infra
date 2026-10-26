@@ -8,7 +8,8 @@ param(
     [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9_-]{43}$')][string]$ReleasePublicKey,
     [string]$GoExecutable = 'go',
     [string]$GoCacheDirectory,
-    [ValidatePattern('^[0-9]+\.[0-9]+\.[0-9]+$')][string]$Version = '1.0.0'
+    [ValidatePattern('^[0-9]+\.[0-9]+\.[0-9]+$')][string]$Version = '1.0.0',
+    [switch]$TechnicianOnly
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -49,7 +50,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Launcher staging failed.' }
     $pinned=& (Join-Path $PSScriptRoot 'prepare-fleet-payload.ps1') -NativeExecutable $WindowsNativeExecutable -Destination (Join-Path $work 'sources/viewer/embedded/fleet')
     if ($pinned -ne $NativeSHA256) { throw 'Native payload changed while staging.' }
-    foreach ($app in @('configurator','viewer')) {
+    $apps = if ($TechnicianOnly) { @('configurator') } else { @('configurator','viewer') }
+    foreach ($app in $apps) {
         $staged=Join-Path $work "sources/$app"
         $flags="-s -w -H windowsgui -X main.APIURL=https://api.relaisdesk.fr -X main.APP_VERSION=$Version -X main.RUSTDESK_EXPECTED_SHA256=$($PortableSHA256.ToLowerInvariant())"
         if ($app -eq 'viewer') {
@@ -69,10 +71,11 @@ try {
         $name=if($app -eq 'viewer'){'RelaisDesk_Portable.exe'}else{'RelaisDesk_Technicien_Portable.exe'}
         Copy-Item -LiteralPath (Join-Path $build "$app.exe") -Destination (Join-Path $output $name)
     }
-    foreach ($entry in @(
-        @{Script='installer.nsi';Name='RelaisDesk_Setup.exe'},
+    $packages = @(
         @{Script='installer-configurator.nsi';Name="RelaisDesk_Technicien_Setup_$Version.exe"}
-    )) {
+    )
+    if (-not $TechnicianOnly) { $packages = @(@{Script='installer.nsi';Name='RelaisDesk_Setup.exe'}) + $packages }
+    foreach ($entry in $packages) {
         Write-Output "PACKAGE $($entry.Name)"
         & $nsis /INPUTCHARSET UTF8 /V2 "/DPRODUCT_VERSION=$Version" "/DPAYLOAD_DIR=$build" "/DOUTPUT_FILE=$(Join-Path $output $entry.Name)" (Join-Path $project "installer/nsis/$($entry.Script)")
         if ($LASTEXITCODE -ne 0) { throw 'NSIS packaging failed.' }

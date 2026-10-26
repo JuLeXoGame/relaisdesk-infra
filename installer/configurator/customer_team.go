@@ -88,17 +88,48 @@ type customerFolder struct {
 	LicenseID      string `json:"license_id"`
 }
 
-func listCustomerFolders(token string) ([]customerFolder, error) {
+func listCustomerFolders(token, licenseID string) ([]customerFolder, error) {
+	licenseID = strings.ToUpper(strings.TrimSpace(licenseID))
+	if licenseID == "" {
+		return nil, fmt.Errorf("licence requise pour charger les dossiers du parc")
+	}
 	var res struct {
 		Folders []customerFolder `json:"folders"`
 	}
-	if err := doTechnicianReq(http.MethodGet, "/api/v1/customer/device-folders", token, nil, &res); err != nil {
+	if err := doTechnicianReq(http.MethodGet, "/api/v1/customer/device-folders?license_id="+url.QueryEscape(licenseID), token, nil, &res); err != nil {
 		return nil, err
 	}
 	if res.Folders == nil {
 		res.Folders = []customerFolder{}
 	}
+	for _, folder := range res.Folders {
+		if folder.LicenseID != licenseID {
+			return nil, fmt.Errorf("le serveur n'a pas retourné les dossiers du parc sélectionné")
+		}
+	}
 	return res.Folders, nil
+}
+
+func listCustomerTeamFolders(token string, licenses []customerTeamLicense) ([]customerFolder, error) {
+	folders := []customerFolder{}
+	for _, license := range licenses {
+		items, err := listCustomerFolders(token, license.LicenseID)
+		if err != nil {
+			return nil, err
+		}
+		folders = append(folders, items...)
+	}
+	return folders, nil
+}
+
+func teamFoldersForLicense(folders []customerFolder, licenseID string) []customerFolder {
+	scope := []customerFolder{}
+	for _, folder := range folders {
+		if licenseID != "" && folder.LicenseID == licenseID {
+			scope = append(scope, folder)
+		}
+	}
+	return scope
 }
 
 // downloadCustomerFile récupère un binaire (PDF, CII, CSV) avec la session

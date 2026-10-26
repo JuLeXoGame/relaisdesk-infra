@@ -809,7 +809,8 @@ func TechnicianDeviceActionHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// CustomerListFoldersHandler returns all device folders belonging to the authenticated customer.
+// CustomerListFoldersHandler returns customer folders, or the technician fleet
+// catalog for an explicitly selected license owned by the authenticated customer.
 func CustomerListFoldersHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		identity, ok := customerIdentity(r)
@@ -817,7 +818,25 @@ func CustomerListFoldersHandler(db *sql.DB) http.HandlerFunc {
 			writeJSONError(w, "Session client invalide", http.StatusUnauthorized)
 			return
 		}
-		folders, err := dbpkg.ListDeviceFolders(db, identity.ID, "")
+		customerID, licenseID := identity.ID, ""
+		if values, scoped := r.URL.Query()["license_id"]; scoped {
+			if len(values) != 1 || strings.TrimSpace(values[0]) == "" {
+				writeJSONError(w, "Licence requise", http.StatusBadRequest)
+				return
+			}
+			licenseID = strings.ToUpper(strings.TrimSpace(values[0]))
+			var owned bool
+			if err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM licences WHERE license_id=? AND customer_id=?)`, licenseID, identity.ID).Scan(&owned); err != nil {
+				writeJSONError(w, "Impossible de charger les dossiers", http.StatusInternalServerError)
+				return
+			}
+			if !owned {
+				writeJSONError(w, "Licence introuvable", http.StatusNotFound)
+				return
+			}
+			customerID = 0
+		}
+		folders, err := dbpkg.ListDeviceFolders(db, customerID, licenseID)
 		if err != nil {
 			writeJSONError(w, "Impossible de charger les dossiers", http.StatusInternalServerError)
 			return
