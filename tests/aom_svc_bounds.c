@@ -1,3 +1,5 @@
+//go:build ignore
+
 #include <stdio.h>
 #include <aom/aom_encoder.h>
 #include <aom/aomcx.h>
