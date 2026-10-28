@@ -47,7 +47,7 @@ jobs:
         run: |
           git init rustdesk
           git -C rustdesk remote add origin https://github.com/JuLeXoGame/relaisdesk.git
-          git -C rustdesk fetch --depth 1 origin 1054d0f09e4e1d4aaea1309af714289e6055ba4b
+          git -C rustdesk fetch --depth 1 origin 1e1cc34019aafcf76d3fb4ada47655874bd0aaff
           git -C rustdesk checkout --detach FETCH_HEAD
           git -C rustdesk submodule update --init --recursive --depth 1
 
@@ -75,8 +75,9 @@ jobs:
           echo "$RUNNER_TEMP/nasm-2.16.03" >> "$GITHUB_PATH"
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
         with:
+          toolchain: '1.99.1'
           targets: ${{ matrix.target }}
 
       - name: Setup Flutter
@@ -121,7 +122,7 @@ jobs:
       - name: Audit Rust dependencies
         run: |
           cargo install cargo-audit --locked --version 0.22.2
-          cargo audit --file rustdesk/Cargo.lock
+          cargo audit --deny unsound --file rustdesk/Cargo.lock
 
       - name: Build RustDesk Core for macOS
         run: |
