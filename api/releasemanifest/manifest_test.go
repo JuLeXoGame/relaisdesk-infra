@@ -4,6 +4,9 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -48,11 +51,41 @@ func TestManifestSignatureRejectsUnexpectedKeyID(t *testing.T) {
 	}
 }
 
-func TestCheckProductionManifest(t *testing.T) {
-	manifest, err := LoadVerified("../../relaisdesk/downloads/release-manifest.json", "K3k6oko00jMzl7hN3poS6KYjJzZvjNz9Tgdz73E2duo", "release-1")
+func TestLoadVerifiedManifest(t *testing.T) {
+	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
-		t.Fatalf("Verification failed: %v", err)
-	} else {
-		t.Logf("Verification succeeded: version %s", manifest.Version)
+		t.Fatal(err)
+	}
+	manifest := Manifest{
+		Version: "1.0.0", PublishedAt: "2026-10-28T12:00:00Z", KeyID: "test-release",
+		Artifacts: []Artifact{{Name: "RelaisDesk.exe", URL: "https://example.test/RelaisDesk.exe", SHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Size: 42}},
+	}
+	if err := Sign(&manifest, privateKey); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "release-manifest.json")
+	writeManifest := func() {
+		t.Helper()
+		raw, err := json.Marshal(manifest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, raw, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeManifest()
+	encodedPublicKey := base64.RawURLEncoding.EncodeToString(publicKey)
+	loaded, err := LoadVerified(path, encodedPublicKey, manifest.KeyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Version != manifest.Version || len(loaded.Artifacts) != 1 || loaded.Artifacts[0] != manifest.Artifacts[0] {
+		t.Fatalf("unexpected loaded manifest: %+v", loaded)
+	}
+	manifest.Artifacts[0].Size++
+	writeManifest()
+	if _, err := LoadVerified(path, encodedPublicKey, manifest.KeyID); err == nil {
+		t.Fatal("loaded a manifest with a tampered artifact")
 	}
 }
