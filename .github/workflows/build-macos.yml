@@ -47,7 +47,7 @@ jobs:
         run: |
           git init rustdesk
           git -C rustdesk remote add origin https://github.com/JuLeXoGame/relaisdesk.git
-          git -C rustdesk fetch --depth 1 origin 1e1cc34019aafcf76d3fb4ada47655874bd0aaff
+          git -C rustdesk fetch --depth 1 origin 2c074a088c4980562a66d2788c7cdd744f4b0211
           git -C rustdesk checkout --detach FETCH_HEAD
           git -C rustdesk submodule update --init --recursive --depth 1
 
