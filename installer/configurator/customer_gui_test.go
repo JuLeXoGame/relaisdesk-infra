@@ -216,11 +216,11 @@ func TestTeamFoldersDialogContentHasUsableHeight(t *testing.T) {
 	defer a.Quit()
 	SetLang(LangFR)
 	defer SetLang(LangFR)
-	member := customerTeamMember{Email: "membre@example.test", FolderIDs: []string{"f1"}}
+	member := customerTeamMember{Email: "membre@example.test", LicenseID: "LIC-1", FolderIDs: []string{"f1"}}
 	folders := []customerFolder{
-		{FolderID: "f1", Name: "Compta"},
-		{FolderID: "f2", Name: "Technique"},
-		{FolderID: "f3", Name: "Direction"},
+		{FolderID: "f1", Name: "Compta", LicenseID: "LIC-1"},
+		{FolderID: "f2", Name: "Technique", LicenseID: "LIC-1"},
+		{FolderID: "f3", Name: "Direction", LicenseID: "LIC-1"},
 	}
 	content, check, _ := teamFoldersDialogContent(member, folders)
 	if len(check.Selected) != 1 {

@@ -92,6 +92,12 @@ func ServiceAwareRateLimit(db *sql.DB, limit int, window time.Duration) func(htt
 			}
 		}))
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// This exact route has its own IP and device budgets in main.go.
+			// The ordinary shared-IP ceiling would otherwise cap an entire park.
+			if r.Method == http.MethodPost && r.URL.Path == "/api/v1/devices/heartbeat" {
+				next.ServeHTTP(w, r)
+				return
+			}
 			if IsServiceMeterPulse(r) {
 				pulses.ServeHTTP(w, r)
 				return

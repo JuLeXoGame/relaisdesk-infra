@@ -16,7 +16,7 @@ import (
 func TestAdminLoginAndDashboardFlow(t *testing.T) {
 	env := setupDB(t)
 
-	// 1. Insert the Master Admin license from licenseAdmin.txt
+	// 1. Insert a synthetic admin licence using the current hashed-key format.
 	adminLicenseID := "MP-1CE6-0489-5AF5"
 	adminLicenseKey := "mpsk_00000000000000000000000000000000"
 	adminEmail := "admin@example.com"
@@ -25,7 +25,7 @@ func TestAdminLoginAndDashboardFlow(t *testing.T) {
 	_, err := env.db.Exec(`
 		INSERT INTO licences (license_id, email, license_key, status, created_at, expires_at, max_connections, notes)
 		VALUES (?, ?, ?, 'active', CURRENT_TIMESTAMP, ?, 100, 'ADMIN')
-	`, adminLicenseID, adminEmail, adminLicenseKey, expiresFuture)
+	`, adminLicenseID, adminEmail, dbpkg.HashLicenseKey(adminLicenseKey), expiresFuture)
 	if err != nil {
 		t.Fatalf("Failed to insert admin license: %v", err)
 	}
@@ -127,8 +127,8 @@ func TestAdminLoginAndDashboardFlow(t *testing.T) {
 	}
 	var proLic map[string]any
 	json.Unmarshal(proRec.Body.Bytes(), &proLic)
-	if proLic["max_connections"].(float64) != 10 {
-		t.Errorf("expected max_connections=10 for Pro, got %v", proLic["max_connections"])
+	if proLic["max_connections"].(float64) != 5 {
+		t.Errorf("expected max_connections=5 for Pro, got %v", proLic["max_connections"])
 	}
 
 	// 4.C Ultra Plan (50 techniciens)
@@ -147,7 +147,7 @@ func TestAdminLoginAndDashboardFlow(t *testing.T) {
 		t.Errorf("expected max_connections=50 for Ultra, got %v", ultraLic["max_connections"])
 	}
 
-	// 5. Test List Licenses with unmask=true
+	// 5. Legacy unmask=true must never recover the one-time plaintext key.
 	listRec := adminReq(http.MethodGet, "/api/v1/admin/licences?unmask=true", nil)
 	if listRec.Code != http.StatusOK {
 		t.Fatalf("list licences status = %d: %s", listRec.Code, listRec.Body.String())
@@ -160,15 +160,16 @@ func TestAdminLoginAndDashboardFlow(t *testing.T) {
 	if listResp.Total < 4 {
 		t.Errorf("expected at least 4 licenses, got %d", listResp.Total)
 	}
-	// Verify unmasked key is full mpsk_ string (not masked with ****)
+	// Listings expose only the support hint, even for an administrator.
 	var foundStarterKey string
 	for _, l := range listResp.Licences {
 		if l["license_id"] == starterID {
 			foundStarterKey = l["license_key"].(string)
 		}
 	}
-	if len(foundStarterKey) < 20 || foundStarterKey[:5] != "mpsk_" {
-		t.Errorf("expected unmasked key starting with mpsk_, got %q", foundStarterKey)
+	createdKey := starterLic["license_key"].(string)
+	if foundStarterKey != dbpkg.LicenseKeyHint(createdKey) || bytes.Contains(listRec.Body.Bytes(), []byte(createdKey)) {
+		t.Error("licence listing must expose only the support hint")
 	}
 
 	// 6. Test Extend License
@@ -197,7 +198,7 @@ func TestFormerMasterLicenseIDDoesNotGrantAdminRights(t *testing.T) {
 	if _, err := env.db.Exec(`
 		INSERT INTO licences (license_id, email, license_key, status, created_at, expires_at, max_connections, notes)
 		VALUES (?, 'ordinary@example.com', ?, 'active', CURRENT_TIMESTAMP, ?, 1, '')
-	`, licenseID, licenseKey, expiresFuture); err != nil {
+	`, licenseID, dbpkg.HashLicenseKey(licenseKey), expiresFuture); err != nil {
 		t.Fatal(err)
 	}
 
@@ -245,7 +246,7 @@ func TestAdminLoginWithEmailPasswordAndSetup(t *testing.T) {
 	_, err := env.db.Exec(`
 		INSERT INTO licences (license_id, email, license_key, status, created_at, expires_at, max_connections, notes)
 		VALUES (?, ?, ?, 'active', CURRENT_TIMESTAMP, ?, 100, 'ADMIN')
-	`, adminLicenseID, adminEmail, adminLicenseKey, expiresFuture)
+	`, adminLicenseID, adminEmail, dbpkg.HashLicenseKey(adminLicenseKey), expiresFuture)
 	if err != nil {
 		t.Fatalf("Failed to insert admin license: %v", err)
 	}
@@ -317,7 +318,7 @@ func TestAdminLoginWithEmailBadPasswordAndMissingRights(t *testing.T) {
 	_, err := env.db.Exec(`
 		INSERT INTO licences (license_id, email, license_key, status, created_at, expires_at, max_connections, notes)
 		VALUES (?, ?, ?, 'active', CURRENT_TIMESTAMP, ?, 100, 'ADMIN')
-	`, adminLicenseID, adminEmail, adminLicenseKey, expiresFuture)
+	`, adminLicenseID, adminEmail, dbpkg.HashLicenseKey(adminLicenseKey), expiresFuture)
 	if err != nil {
 		t.Fatalf("Failed to insert admin license: %v", err)
 	}
@@ -347,12 +348,14 @@ func TestAdminLoginWithEmailBadPasswordAndMissingRights(t *testing.T) {
 	userPassword := "NormalUserPass2026!"
 	_, err = env.db.Exec(`
 		INSERT INTO licences (license_id, email, license_key, status, created_at, expires_at, max_connections, notes)
-		VALUES ('MP-NORM-0001', ?, 'mpsk_norm00000000000000000000000001', 'active', CURRENT_TIMESTAMP, ?, 2, 'starter')
-	`, userEmail, expiresFuture)
+		VALUES ('MP-NORM-0001', ?, ?, 'active', CURRENT_TIMESTAMP, ?, 2, 'starter')
+	`, userEmail, dbpkg.HashLicenseKey("mpsk_norm00000000000000000000000001"), expiresFuture)
 	if err != nil {
 		t.Fatalf("Failed to insert normal license: %v", err)
 	}
-	_ = dbpkg.SetCustomerPassword(env.db, userEmail, userPassword)
+	if err := dbpkg.SetCustomerPassword(env.db, userEmail, userPassword); err != nil {
+		t.Fatal(err)
+	}
 
 	noAdminPayload, _ := json.Marshal(map[string]string{
 		"email":    userEmail,

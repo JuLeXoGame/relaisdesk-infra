@@ -11,7 +11,7 @@
 # Usage :  bash scripts/setup-wsl-go.sh   (depuis /home/julien/projet)
 set -euo pipefail
 
-GO_VERSION="${GO_VERSION:-1.26.6}"
+GO_VERSION="${GO_VERSION:-1.26.10}"
 SDK_DIR="${SDK_DIR:-$HOME/sdk}"
 GO_DIR="$SDK_DIR/go"
 

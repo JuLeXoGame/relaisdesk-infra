@@ -2,6 +2,7 @@ package middleware
 
 import (
 	dbpkg "database"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,50 @@ import (
 	"testing"
 	"time"
 )
+
+type failingHeartbeatBody struct{ reads int }
+
+func (b *failingHeartbeatBody) Read([]byte) (int, error) {
+	b.reads++
+	return 0, errors.New("body read failed")
+}
+func (b *failingHeartbeatBody) Close() error { return nil }
+
+func TestDeviceRateLimitRejectsOversizedAndBrokenBodies(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		body io.Reader
+		want int
+	}{
+		{"oversized JSON", strings.NewReader(`{"device_id":"` + strings.Repeat("x", 1<<20) + `"}`), http.StatusRequestEntityTooLarge},
+		{"oversized whitespace after JSON", strings.NewReader(`{"device_id":"DEV-A"}` + strings.Repeat(" ", 1<<20)), http.StatusRequestEntityTooLarge},
+		{"read failure", &failingHeartbeatBody{}, http.StatusBadRequest},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			reached := false
+			h := DeviceRateLimit(10, 2, time.Minute)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { reached = true }))
+			r := httptest.NewRequest(http.MethodPost, "/api/v1/devices/heartbeat", tc.body)
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, r)
+			if w.Code != tc.want || reached {
+				t.Fatalf("status=%d, handler reached=%t; want %d, false", w.Code, reached, tc.want)
+			}
+		})
+	}
+}
+
+func TestDeviceRateLimitRejectsFloodBeforeReadingBody(t *testing.T) {
+	h := DeviceRateLimit(1, 10, time.Minute)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) }))
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/devices/heartbeat", strings.NewReader(`{"device_id":"DEV-A"}`))
+	h.ServeHTTP(httptest.NewRecorder(), r)
+	body := &failingHeartbeatBody{}
+	r = httptest.NewRequest(http.MethodPost, "/api/v1/devices/heartbeat", body)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusTooManyRequests || body.reads != 0 {
+		t.Fatalf("status=%d, body reads=%d; flood must be rejected without reading", w.Code, body.reads)
+	}
+}
 
 func TestStrictAuthLimiterPersistenceAcrossRestarts(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test_limiter.db")

@@ -2,9 +2,11 @@ package middleware
 
 import (
 	"bytes"
+	"crypto/sha256"
 	dbpkg "database"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -218,26 +220,37 @@ func DeviceRateLimit(ipLimit, deviceLimit int, window time.Duration) func(http.H
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			deviceID := ""
-			if r.Body != nil {
-				body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
-				if err == nil {
-					r.Body = io.NopCloser(bytes.NewReader(body))
-					var peek struct {
-						DeviceID string `json:"device_id"`
-					}
-					if json.Unmarshal(body, &peek) == nil {
-						deviceID = strings.TrimSpace(peek.DeviceID)
-					}
-				}
-			}
-			if deviceID != "" && !allow(deviceLimiter, "device:"+deviceID) {
-				writeRateLimitExceeded(w)
-				return
-			}
 			if !allow(ipLimiter, GetClientIP(r)) {
 				writeRateLimitExceeded(w)
 				return
+			}
+			deviceID := ""
+			if r.Body != nil {
+				body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1<<20))
+				if err != nil {
+					var oversized *http.MaxBytesError
+					if errors.As(err, &oversized) {
+						http.Error(w, `{"error":"Request body too large"}`, http.StatusRequestEntityTooLarge)
+					} else {
+						http.Error(w, `{"error":"Invalid request body"}`, http.StatusBadRequest)
+					}
+					return
+				}
+				r.Body = io.NopCloser(bytes.NewReader(body))
+				var peek struct {
+					DeviceID string `json:"device_id"`
+				}
+				if json.Unmarshal(body, &peek) == nil {
+					deviceID = strings.TrimSpace(peek.DeviceID)
+				}
+			}
+			if deviceID != "" {
+				// Unauthenticated identifiers must not retain request-sized map keys.
+				key := sha256.Sum256([]byte(deviceID))
+				if !allow(deviceLimiter, string(key[:])) {
+					writeRateLimitExceeded(w)
+					return
+				}
 			}
 			next.ServeHTTP(w, r)
 		})

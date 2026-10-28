@@ -82,8 +82,9 @@ func folderNameMap(folders []customerFolder) map[string]string {
 func sortedFolderOptions(folders []customerFolder) ([]string, map[string]string) {
 	byID := map[string]string{}
 	labels := []string{}
+	tree := customerFoldersToDeviceFolders(folders)
 	for _, f := range folders {
-		label := f.Name + "  (" + f.FolderID + ")"
+		label := getFolderBreadcrumbPath(f.FolderID, tree) + "  (" + f.FolderID + ")"
 		byID[label] = f.FolderID
 		labels = append(labels, label)
 	}
@@ -136,7 +137,7 @@ func buildTeamMemberRow(member customerTeamMember, names map[string]string, fold
 		actions = append(actions, resendBtn)
 	}
 	foldersBtn := widget.NewButton(T("team_folders_btn"), func() {
-		openTeamFoldersDialog(member, folders, panelID, relaunch)
+		openTeamFoldersDialog(member, panelID, relaunch)
 	})
 	revokeBtn := widget.NewButton(T("team_revoke_btn"), func() {
 		dialog.ShowConfirm(T("team_revoke_btn"), TF("team_revoke_confirm", member.Email), func(ok bool) {
@@ -171,7 +172,7 @@ func teamPanel(panelID int, relaunch func(int)) fyne.CanvasObject {
 		if err != nil {
 			return nil, err
 		}
-		folders, err := listCustomerFolders(token)
+		folders, err := listCustomerTeamFolders(token, team.Licenses)
 		if err != nil {
 			return nil, err
 		}
@@ -421,11 +422,18 @@ func teamInviteForm(licOptions []string, licByLabel map[string]string, folders [
 		return form
 	}
 	licSelect := widget.NewSelect(licOptions, nil)
-	licSelect.SetSelected(licOptions[0])
 	emailEntry := widget.NewEntry()
 	emailEntry.SetPlaceHolder(T("email_placeholder"))
-	labels, byID := sortedFolderOptions(folders)
-	folderCheck := widget.NewCheckGroup(labels, nil)
+	byID := map[string]string{}
+	folderCheck := widget.NewCheckGroup(nil, nil)
+	licSelect.OnChanged = func(label string) {
+		var labels []string
+		labels, byID = sortedFolderOptions(teamFoldersForLicense(folders, licByLabel[label]))
+		folderCheck.Options = labels
+		folderCheck.SetSelected(nil)
+		folderCheck.Refresh()
+	}
+	licSelect.SetSelected(licOptions[0])
 	msg := widget.NewLabel("")
 	msg.Wrapping = fyne.TextWrapWord
 	submit := widget.NewButton(T("team_invite_btn"), func() {
@@ -473,7 +481,21 @@ func teamInviteForm(licOptions []string, licByLabel map[string]string, folders [
 // teamFoldersDialogContent construit le contenu du dialogue « Dossiers »
 // (extrait pour test headless : un VScroll sans taille min écrase la liste).
 func teamFoldersDialogContent(member customerTeamMember, folders []customerFolder) (fyne.CanvasObject, *widget.CheckGroup, map[string]string) {
-	labels, byID := sortedFolderOptions(folders)
+	labels, byID := sortedFolderOptions(teamFoldersForLicense(folders, member.LicenseID))
+	known := map[string]bool{}
+	for _, id := range byID {
+		known[id] = true
+	}
+	// Existing grants must remain visible and checked even when the folder
+	// no longer belongs to the current catalog. Never silently revoke them.
+	for _, id := range member.FolderIDs {
+		if !known[id] {
+			label := TF("team_folder_unavailable", id)
+			labels = append(labels, label)
+			byID[label] = id
+			known[id] = true
+		}
+	}
 	check := widget.NewCheckGroup(labels, nil)
 	initial := []string{}
 	for label, id := range byID {
@@ -495,7 +517,29 @@ func teamFoldersDialogContent(member customerTeamMember, folders []customerFolde
 	return content, check, byID
 }
 
-func openTeamFoldersDialog(member customerTeamMember, folders []customerFolder, panelID int, relaunch func(int)) {
+func openTeamFoldersDialog(member customerTeamMember, panelID int, relaunch func(int)) {
+	token := getCustomerSessionToken()
+	go func() {
+		folders, err := listCustomerFolders(token, member.LicenseID)
+		fyne.Do(func() {
+			if token == "" || token != getCustomerSessionToken() {
+				return
+			}
+			if err != nil {
+				if isCustomerSessionExpired(err) {
+					clearCustomerSession()
+					relaunch(panelID)
+					return
+				}
+				dialog.ShowError(err, mainWindow)
+				return
+			}
+			showTeamFoldersDialog(member, folders, panelID, relaunch)
+		})
+	}()
+}
+
+func showTeamFoldersDialog(member customerTeamMember, folders []customerFolder, panelID int, relaunch func(int)) {
 	content, check, byID := teamFoldersDialogContent(member, folders)
 	dialog.ShowCustomConfirm(T("team_folders_btn"), T("dialog_save_btn"), T("dialog_cancel_btn"), content, func(ok bool) {
 		if !ok {

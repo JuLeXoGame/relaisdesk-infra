@@ -1,5 +1,6 @@
 // Service Worker pour RelaisDesk Admin (PWA)
-const CACHE_NAME = 'relaisdesk-admin-v5';
+const CACHE_PREFIX = 'relaisdesk-admin-';
+const CACHE_NAME = `${CACHE_PREFIX}v6`;
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -24,7 +25,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
+          if (key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME) {
             return caches.delete(key);
           }
         })

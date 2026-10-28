@@ -11,18 +11,28 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: read
+
 jobs:
   build-macos:
-    runs-on: macos-14
+    runs-on: ${{ matrix.runner }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.min_macos }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - arch: aarch64-apple-darwin
+            runner: macos-15
+            min_macos: '12.3'
             target: aarch64-apple-darwin
             rustdesk_target: aarch64-apple-darwin
             goarch: arm64
             dmg_suffix: ""
           - arch: x86_64-apple-darwin
+            runner: macos-15-intel
+            min_macos: '12.0'
             target: x86_64-apple-darwin
             rustdesk_target: x86_64-apple-darwin
             goarch: amd64
@@ -35,20 +45,39 @@ jobs:
 
       - name: Clone RelaisDesk client fork
         run: |
-          git clone --branch relaisdesk/authorization --depth 1 https://github.com/JuLeXoGame/relaisdesk.git rustdesk
+          git init rustdesk
+          git -C rustdesk remote add origin https://github.com/JuLeXoGame/relaisdesk.git
+          git -C rustdesk fetch --depth 1 origin 2c074a088c4980562a66d2788c7cdd744f4b0211
+          git -C rustdesk checkout --detach FETCH_HEAD
+          git -C rustdesk submodule update --init --recursive --depth 1
 
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.26.6'
+          go-version: '1.26.10'
+          cache-dependency-path: |
+            installer/viewer/go.sum
+            installer/configurator/go.sum
+
+      - name: Run Go launcher tests
+        run: |
+          cd installer/viewer && go test -tags ci ./...
+          cd ../configurator && go test -tags ci ./...
 
       - name: Install macOS build tools
         run: |
-          brew install create-dmg nasm pkg-config
+          brew install create-dmg llvm
+          if ! command -v pkg-config >/dev/null; then brew install pkg-config; fi
+          echo "LIBCLANG_PATH=$(brew --prefix llvm)/lib" >> "$GITHUB_ENV"
+          curl -fsSL https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/macosx/nasm-2.16.03-macosx.zip -o "$RUNNER_TEMP/nasm.zip"
+          echo "074ea8479929d48cfb00cc8d7660129dc69f9d92b63e45c9ce861b478f1d201ce70abac5c87dc7ad8e7f9f46be48f57998ef45897f80d5f9a4737827783ad794  $RUNNER_TEMP/nasm.zip" | shasum -a 512 -c -
+          unzip -q "$RUNNER_TEMP/nasm.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/nasm-2.16.03" >> "$GITHUB_PATH"
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
         with:
+          toolchain: '1.99.1'
           targets: ${{ matrix.target }}
 
       - name: Setup Flutter
@@ -57,110 +86,109 @@ jobs:
           channel: 'stable'
           flutter-version: '3.24.5'
 
+      - name: Apply the fork's Flutter compatibility patch
+        run: |
+          sdk="$(dirname "$(dirname "$(command -v flutter)")")"
+          git -C "$sdk" apply "$GITHUB_WORKSPACE/rustdesk/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff"
+
+      - name: Setup native dependencies
+        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2
+        with:
+          vcpkgGitCommitId: 120deac3062162151622ca4860575a33844ba10b
+          vcpkgJsonGlob: rustdesk/vcpkg.json
+          doNotCache: true
+
+      - name: Install native dependencies
+        working-directory: rustdesk
+        run: |
+          "$VCPKG_ROOT/vcpkg" install --triplet "${{ matrix.goarch == 'arm64' && 'arm64-osx' || 'x64-osx' }}" --x-install-root="$VCPKG_ROOT/installed"
+
+      - name: Verify AV1 SVC security bounds
+        run: |
+          native="$VCPKG_ROOT/installed/${{ matrix.goarch == 'arm64' && 'arm64-osx' || 'x64-osx' }}"
+          clang tests/aom_svc_bounds.c -I"$native/include" "$native/lib/libaom.a" -lc++ -o "$RUNNER_TEMP/aom-svc-test"
+          "$RUNNER_TEMP/aom-svc-test"
+
+      - name: Generate Flutter bridge
+        working-directory: rustdesk
+        run: |
+          cargo install cargo-expand --version 1.0.95 --locked
+          cargo install flutter_rust_bridge_codegen --version 1.80.1 --features uuid --locked
+          cd flutter
+          flutter pub get
+          cd ..
+          flutter_rust_bridge_codegen --rust-input ./src/flutter_ffi.rs --dart-output ./flutter/lib/generated_bridge.dart --c-output ./flutter/macos/Runner/bridge_generated.h
+
+      - name: Audit Rust dependencies
+        run: |
+          cargo install cargo-audit --locked --version 0.22.2
+          cargo audit --deny unsound --file rustdesk/Cargo.lock
+
       - name: Build RustDesk Core for macOS
-        continue-on-error: true
         run: |
           cd rustdesk
-          cargo build --release --target ${{ matrix.target }}
-          mkdir -p flutter/build/macos/Build/Products/Release
-          # Build Flutter desktop shell
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+          minimum = os.environ["MACOSX_DEPLOYMENT_TARGET"]
+          p = Path("flutter/macos/Podfile")
+          p.write_text(re.sub(r"platform :osx, '[^']+'", f"platform :osx, '{minimum}'", p.read_text()))
+          p = Path("flutter/macos/Runner.xcodeproj/project.pbxproj")
+          p.write_text(re.sub(r"MACOSX_DEPLOYMENT_TARGET = [0-9.]+;", f"MACOSX_DEPLOYMENT_TARGET = {minimum};", p.read_text()))
+          PY
+          cargo build --locked --release --features flutter
+          cp target/release/liblibrustdesk.dylib target/release/librustdesk.dylib
           cd flutter
-          flutter build macos --release
+          FLUTTER_XCODE_ARCHS="${{ matrix.goarch == 'arm64' && 'arm64' || 'x86_64' }}" FLUTTER_XCODE_ONLY_ACTIVE_ARCH=YES flutter build macos --release
 
-      - name: Run Go launcher tests (advisory)
-        if: matrix.goarch == 'arm64'
-        continue-on-error: true
+      - name: Verify RustDesk payload
         run: |
-          cd installer/viewer && go test ./...
-          cd ../configurator && go test ./...
+          set -euo pipefail
+          apps=( "$PWD"/rustdesk/flutter/build/macos/Build/Products/Release/*.app )
+          test "${#apps[@]}" -eq 1
+          engine_app="${apps[0]}"
+          test -d "$engine_app"
+          cp rustdesk/target/release/service "$engine_app/Contents/MacOS/service"
+          test -f "$engine_app/Contents/Frameworks/liblibrustdesk.dylib"
+          test -d "$engine_app/Contents/Frameworks"
+          codesign --force --deep --sign - "$engine_app"
+          codesign --verify --deep --strict "$engine_app"
+          engine_name=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$engine_app/Contents/Info.plist")
+          engine_binary="$engine_app/Contents/MacOS/$engine_name"
+          test -x "$engine_binary"
+          lipo "$engine_binary" -verify_arch "${{ matrix.goarch == 'arm64' && 'arm64' || 'x86_64' }}"
+          engine_sha=$(shasum -a 256 "$engine_binary" | cut -d' ' -f1)
+          echo "ENGINE_APP=$engine_app" >> "$GITHUB_ENV"
+          echo "ENGINE_BINARY=$engine_binary" >> "$GITHUB_ENV"
+          echo "ENGINE_SHA256=$engine_sha" >> "$GITHUB_ENV"
 
-      - name: Build RelaisDesk Viewer macOS Launcher
+      - name: Preserve the verified engine bundle
         run: |
-          cd installer/viewer
-          export GOOS=darwin
-          export GOARCH=${{ matrix.goarch }}
-          # The fyne GUI needs cgo. Cross-compiling amd64 on the arm64
-          # runner disables cgo by default, which excludes go-gl: force it
-          # on with an arch-pinned clang (Xcode CLT is universal).
-          export CGO_ENABLED=1
-          if [ "${{ matrix.goarch }}" = "amd64" ]; then
-            export CC="clang -arch x86_64"
-            export CXX="clang++ -arch x86_64"
-          fi
-          go build -trimpath -ldflags "-s -w -X main.APIURL=https://api.relaisdesk.fr" -o RelaisDesk_Viewer_mac .
+          tar -czf "$RUNNER_TEMP/engine-${{ matrix.goarch }}.tar.gz" -C "$(dirname "$ENGINE_APP")" "$(basename "$ENGINE_APP")"
+          printf '%s\n' "$ENGINE_SHA256" > "$RUNNER_TEMP/engine-${{ matrix.goarch }}.sha256"
 
-      - name: Build RelaisDesk Technicien macOS Launcher
-        run: |
-          cd installer/configurator
-          export GOOS=darwin
-          export GOARCH=${{ matrix.goarch }}
-          export CGO_ENABLED=1
-          if [ "${{ matrix.goarch }}" = "amd64" ]; then
-            export CC="clang -arch x86_64"
-            export CXX="clang++ -arch x86_64"
-          fi
-          go build -trimpath -ldflags "-s -w -X main.APIURL=https://api.relaisdesk.fr" -o RelaisDesk_Technicien_mac .
+      - name: Upload verified engine intermediate
+        uses: actions/upload-artifact@v4
+        with:
+          name: relaisdesk-macos-engine-${{ matrix.goarch }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/engine-${{ matrix.goarch }}.tar.gz
+            ${{ runner.temp }}/engine-${{ matrix.goarch }}.sha256
 
-      - name: Package RelaisDesk Viewer (.app & .dmg)
-        run: |
-          mkdir -p build/RelaisDesk.app/Contents/MacOS
-          mkdir -p build/RelaisDesk.app/Contents/Resources
-          cp installer/viewer/RelaisDesk_Viewer_mac build/RelaisDesk.app/Contents/MacOS/RelaisDesk
-          chmod +x build/RelaisDesk.app/Contents/MacOS/RelaisDesk
-          
-          # Copie des binaires RustDesk dans le bundle
-          if [ -d "rustdesk/flutter/build/macos/Build/Products/Release/RustDesk.app" ]; then
-            cp -R rustdesk/flutter/build/macos/Build/Products/Release/RustDesk.app/Contents/Frameworks build/RelaisDesk.app/Contents/ || true
-          fi
-
-          # Création du DMG Viewer
-          create-dmg \
-            --volname "RelaisDesk Installer" \
-            --window-pos 200 120 \
-            --window-size 600 400 \
-            --icon-size 100 \
-            --app-drop-link 420 185 \
-            "RelaisDesk_Mac${{ matrix.dmg_suffix }}.dmg" \
-            "build/RelaisDesk.app" || true
-
-      - name: Package RelaisDesk Technicien (.app & .dmg)
-        run: |
-          mkdir -p build_tech/RelaisDesk_Technicien.app/Contents/MacOS
-          mkdir -p build_tech/RelaisDesk_Technicien.app/Contents/Resources
-          cp installer/configurator/RelaisDesk_Technicien_mac build_tech/RelaisDesk_Technicien.app/Contents/MacOS/RelaisDesk_Technicien
-          chmod +x build_tech/RelaisDesk_Technicien.app/Contents/MacOS/RelaisDesk_Technicien
-
-          # Création du DMG Technicien
-          create-dmg \
-            --volname "RelaisDesk Technicien" \
-            --window-pos 200 120 \
-            --window-size 600 400 \
-            --icon-size 100 \
-            --app-drop-link 420 185 \
-            "RelaisDesk_Technicien_Mac${{ matrix.dmg_suffix }}.dmg" \
-            "build_tech/RelaisDesk_Technicien.app" || true
-
-      - name: Compute SHA-256 Checksums
-        run: |
-          shasum -a 256 RelaisDesk_Mac*.dmg RelaisDesk_Technicien_Mac*.dmg > SHA256SUMS-macos-${{ matrix.goarch }}.txt
-          cat SHA256SUMS-macos-${{ matrix.goarch }}.txt
-
-      - name: Verify DMG artifacts (fail on missing/identical)
-        run: |
-          set -e
-          ls -la RelaisDesk_Mac*.dmg RelaisDesk_Technicien_Mac*.dmg
-          test -f "RelaisDesk_Mac${{ matrix.dmg_suffix }}.dmg"
-          test -f "RelaisDesk_Technicien_Mac${{ matrix.dmg_suffix }}.dmg"
-          A=$(shasum -a 256 "RelaisDesk_Mac${{ matrix.dmg_suffix }}.dmg" | cut -d' ' -f1)
-          B=$(shasum -a 256 "RelaisDesk_Technicien_Mac${{ matrix.dmg_suffix }}.dmg" | cut -d' ' -f1)
-          if [ "$A" = "$B" ]; then echo "FATAL: viewer and technicien DMGs are identical"; exit 1; fi
-          echo "DMGs OK: viewer=$A technicien=$B"
+      - name: Build and verify complete applications and disk images
+        env:
+          BUILD_ARCH: ${{ matrix.goarch }}
+        run: bash scripts/package-macos-verified-engine.sh
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
+          if-no-files-found: error
           name: relaisdesk-macos-dmg-${{ matrix.goarch }}
           path: |
             RelaisDesk_Mac*.dmg
             RelaisDesk_Technicien_Mac*.dmg
             SHA256SUMS-macos-${{ matrix.goarch }}.txt
+

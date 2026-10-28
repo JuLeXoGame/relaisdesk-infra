@@ -51,9 +51,18 @@ func teamLicense(q teamQueryer, licenseID string, owner int64) (*TeamLicense, er
 	if err != nil || (owner > 0 && owner != customer) {
 		return nil, ErrTeamAccess
 	}
+	if err := setTeamLicenseEligibility(&t, status, expires); err != nil {
+		return nil, err
+	}
+	err = q.QueryRow(`SELECT COUNT(*) FROM team_members WHERE license_id=? AND (status='active' OR
+		(status='invited' AND julianday(invite_expires_at)>julianday('now')))`, licenseID).Scan(&t.Used)
+	return &t, err
+}
+
+func setTeamLicenseEligibility(t *TeamLicense, status string, expires any) error {
 	end, err := ParseSQLiteTime(expires)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	plan := strings.ToLower(t.Plan)
 	t.Enabled = status == "active" && end.After(time.Now().UTC()) && t.Capacity > 0 &&
@@ -67,39 +76,34 @@ func teamLicense(q teamQueryer, licenseID string, owner int64) (*TeamLicense, er
 			t.Plan = "starter"
 		}
 	}
-	err = q.QueryRow(`SELECT COUNT(*) FROM team_members WHERE license_id=? AND (status='active' OR
-		(status='invited' AND julianday(invite_expires_at)>julianday('now')))`, licenseID).Scan(&t.Used)
-	return &t, err
+	return nil
 }
 
 func ListTeamLicenses(db *sql.DB, owner int64) ([]TeamLicense, error) {
-	rows, err := db.Query(`SELECT license_id FROM licences WHERE customer_id=? ORDER BY id`, owner)
+	rows, err := db.Query(`SELECT l.license_id,l.max_connections,l.status,l.expires_at,
+        COALESCE((SELECT plan FROM orders WHERE license_id=l.license_id AND status='paid' ORDER BY id DESC LIMIT 1),
+        (SELECT plan FROM trial_applications WHERE license_id=l.license_id LIMIT 1),''),
+        (SELECT COUNT(*) FROM team_members WHERE license_id=l.license_id AND (status='active' OR
+        (status='invited' AND julianday(invite_expires_at)>julianday('now'))))
+        FROM licences l WHERE l.customer_id=? ORDER BY l.id`, owner)
 	if err != nil {
 		return nil, err
 	}
-	ids := []string{}
+	defer rows.Close()
+	out := []TeamLicense{}
 	for rows.Next() {
-		var id string
-		if err = rows.Scan(&id); err != nil {
-			rows.Close()
+		var t TeamLicense
+		var status string
+		var expires any
+		if err := rows.Scan(&t.LicenseID, &t.Capacity, &status, &expires, &t.Plan, &t.Used); err != nil {
 			return nil, err
 		}
-		ids = append(ids, id)
-	}
-	err = rows.Err()
-	rows.Close()
-	if err != nil {
-		return nil, err
-	}
-	out := []TeamLicense{}
-	for _, id := range ids {
-		t, e := teamLicense(db, id, owner)
-		if e != nil {
-			return nil, e
+		if err := setTeamLicenseEligibility(&t, status, expires); err != nil {
+			return nil, err
 		}
-		out = append(out, *t)
+		out = append(out, t)
 	}
-	return out, nil
+	return out, rows.Err()
 }
 
 func teamMember(q teamQueryer, id string) (*TeamMember, error) {

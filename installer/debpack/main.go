@@ -19,8 +19,17 @@ func main() {
 	binName := flag.String("name", "", "Nom de l'exécutable dans /usr/bin")
 	version := flag.String("version", "1.0.0", "Version du paquet")
 	desc := flag.String("desc", "RelaisDesk - Support à distance", "Description du paquet")
+	depends := flag.String("depends", "", "Dépendances Debian nécessaires au lancement")
 	outPath := flag.String("out", "", "Chemin de sortie du fichier .deb")
 	flag.Parse()
+	if strings.ContainsAny(*depends, "\r\n\x00") {
+		fmt.Fprintln(os.Stderr, "Liste de dépendances Debian invalide")
+		os.Exit(1)
+	}
+	dependsField := ""
+	if value := strings.TrimSpace(*depends); value != "" {
+		dependsField = "Depends: " + value + "\n"
+	}
 
 	if *binPath == "" || *pkgName == "" || *binName == "" || *outPath == "" {
 		fmt.Println("Usage: debpack -bin <bin> -pkg <pkg> -name <name> -version <ver> -desc <desc> -out <out.deb>")
@@ -47,8 +56,8 @@ Architecture: amd64
 Maintainer: RelaisDesk <contact@relaisdesk.fr>
 Description: %s
 Installed-Size: %d
-Recommends: zenity
-`, *pkgName, *version, *desc, len(binData)/1024)
+%sRecommends: zenity
+`, *pkgName, *version, *desc, len(binData)/1024, dependsField)
 
 	var controlTarBuf bytes.Buffer
 	gwControl := gzip.NewWriter(&controlTarBuf)

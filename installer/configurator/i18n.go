@@ -960,8 +960,8 @@ var messages = map[string]map[Lang]string{
 		LangEN: "License %s — folders: %s",
 	},
 	"team_all_folders": {
-		LangFR: "tous",
-		LangEN: "all",
+		LangFR: "aucun dossier autorisé",
+		LangEN: "no allowed folders",
 	},
 	"team_resend_btn": {
 		LangFR: "Renvoyer",
@@ -996,8 +996,8 @@ var messages = map[string]map[Lang]string{
 		LangEN: "License",
 	},
 	"team_folders_label": {
-		LangFR: "Dossiers autorisés (vide = tout le parc)",
-		LangEN: "Allowed folders (empty = whole fleet)",
+		LangFR: "Dossiers autorisés, sous-dossiers inclus (vide = aucun accès)",
+		LangEN: "Allowed folders, including subfolders (empty = no access)",
 	},
 	"team_invite_btn": {
 		LangFR: "Envoyer l'invitation",
@@ -1016,8 +1016,12 @@ var messages = map[string]map[Lang]string{
 		LangEN: "License %s — %s",
 	},
 	"team_folders_dialog_sub": {
-		LangFR: "Dossiers autorisés pour %s (vide = tout le parc) :",
-		LangEN: "Allowed folders for %s (empty = whole fleet):",
+		LangFR: "Dossiers autorisés pour %s, sous-dossiers inclus (vide = aucun accès) :",
+		LangEN: "Allowed folders for %s, including subfolders (empty = no access):",
+	},
+	"team_folder_unavailable": {
+		LangFR: "Dossier hors du parc ou indisponible (%s)",
+		LangEN: "Folder outside this fleet or unavailable (%s)",
 	},
 	"license_detail_line": {
 		LangFR: "Créée le %s — expire le %s — %d connexion(s)",

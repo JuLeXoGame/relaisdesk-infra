@@ -1618,6 +1618,9 @@ func showDashboardScreenInner(email, expiresAt string, silent bool, targetTab ..
 			selectPanel := func(panelID int) {
 				selectedPanel = panelID
 				fleetTabVisible.Store(panelID == PanelFleet)
+				if panelID == PanelTeam {
+					delete(builtPanels, panelID)
+				}
 				if _, ok := builtPanels[panelID]; !ok {
 					switch panelID {
 					case PanelCodes:

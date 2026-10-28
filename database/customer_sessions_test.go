@@ -51,6 +51,9 @@ func TestCustomerSessionValidationSurvivesWriteLock(t *testing.T) {
 	if _, err = db.Exec(`PRAGMA busy_timeout = 50`); err != nil {
 		t.Fatal(err)
 	}
+	if _, err = db.Exec(`UPDATE customer_sessions SET last_used_at=datetime('now','-1 minute')`); err != nil {
+		t.Fatal(err)
+	}
 
 	locker, err := InitDatabase(path)
 	if err != nil {

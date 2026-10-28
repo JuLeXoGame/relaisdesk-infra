@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
@@ -459,6 +460,33 @@ func TestWakeDeviceEndpoints(t *testing.T) {
 }
 
 func TestDeviceRemoteUpdateAPI(t *testing.T) {
+	releasePublicKey, releasePrivateKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	release := releasemanifest.Manifest{
+		Version: "1.0.5", PublishedAt: "2026-10-28T12:00:00Z", KeyID: "test-release",
+		Artifacts: []releasemanifest.Artifact{{
+			Name: "RelaisDesk_Portable.exe", URL: "https://example.test/RelaisDesk_Portable.exe",
+			SHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Size: 42,
+		}},
+	}
+	if err := releasemanifest.Sign(&release, releasePrivateKey); err != nil {
+		t.Fatal(err)
+	}
+	releaseBytes, err := json.Marshal(release)
+	if err != nil {
+		t.Fatal(err)
+	}
+	releasePath := filepath.Join(t.TempDir(), "release-manifest.json")
+	if err := os.WriteFile(releasePath, releaseBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := &config.Config{
+		ReleaseManifestPath: releasePath, ReleaseKeyID: release.KeyID,
+		ReleasePublicKey: base64.RawURLEncoding.EncodeToString(releasePublicKey),
+	}
+
 	db, err := dbpkg.InitDatabase(filepath.Join(t.TempDir(), "update-endpoints.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -536,7 +564,7 @@ func TestDeviceRemoteUpdateAPI(t *testing.T) {
 	hbReq := httptest.NewRequest(http.MethodPost, "/api/v1/devices/heartbeat", bytes.NewReader(hbReqBody))
 	hbReq.RemoteAddr = "203.0.113.42:54321"
 	hbRec := httptest.NewRecorder()
-	DeviceHeartbeatHandler(db, &config.Config{ReleasePublicKey: "K3k6oko00jMzl7hN3poS6KYjJzZvjNz9Tgdz73E2duo", ReleaseKeyID: "release-1"}, signer)(hbRec, hbReq)
+	DeviceHeartbeatHandler(db, cfg, signer)(hbRec, hbReq)
 	if hbRec.Code != http.StatusOK {
 		t.Fatalf("heartbeat status=%d body=%s", hbRec.Code, hbRec.Body.String())
 	}
@@ -550,8 +578,8 @@ func TestDeviceRemoteUpdateAPI(t *testing.T) {
 	if hbResp.UpdateTarget.Version != "1.0.5" {
 		t.Fatalf("expected target version 1.0.5, got %s", hbResp.UpdateTarget.Version)
 	}
-	if hbResp.UpdateTarget.URL == "" {
-		t.Fatal("expected non-empty UpdateTarget URL")
+	if hbResp.UpdateTarget.URL != release.Artifacts[0].URL || hbResp.UpdateTarget.SHA256 != release.Artifacts[0].SHA256 {
+		t.Fatalf("update target differs from the signed fixture: %+v", hbResp.UpdateTarget)
 	}
 	if hbResp.UpdateTarget.StaggerSeconds < 5 || hbResp.UpdateTarget.StaggerSeconds > 60 {
 		t.Fatalf("expected StaggerSeconds between 5 and 60, got %d", hbResp.UpdateTarget.StaggerSeconds)
@@ -570,7 +598,7 @@ func TestDeviceRemoteUpdateAPI(t *testing.T) {
 	hbReq2 := httptest.NewRequest(http.MethodPost, "/api/v1/devices/heartbeat", bytes.NewReader(hbReqBody2))
 	hbReq2.RemoteAddr = "203.0.113.42:54321"
 	hbRec2 := httptest.NewRecorder()
-	DeviceHeartbeatHandler(db, &config.Config{ReleasePublicKey: "K3k6oko00jMzl7hN3poS6KYjJzZvjNz9Tgdz73E2duo", ReleaseKeyID: "release-1"}, signer)(hbRec2, hbReq2)
+	DeviceHeartbeatHandler(db, cfg, signer)(hbRec2, hbReq2)
 	if hbRec2.Code != http.StatusOK {
 		t.Fatalf("heartbeat 2 status=%d body=%s", hbRec2.Code, hbRec2.Body.String())
 	}

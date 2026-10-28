@@ -65,14 +65,16 @@ vm.runInNewContext(read('relaisdesk/legal-email.js'), {
 assert.equal(validHost.link.href, 'mailto:' + contact);
 assert.equal(validHost.link.textContent, contact);
 
-const pricing = vm.createContext({document: {addEventListener() {}}, window: {}});
+const pricing = vm.createContext({document: {addEventListener() {}}, window: {}, location: {hostname: 'relaisdesk.fr'}});
 vm.runInContext(read('relaisdesk/app.js'), pricing);
 for (const [capacity, expected] of [[10,199],[50,759],[100,1259],[500,4059]]) {
   assert.equal(vm.runInContext(`calculateUltraPrice(${capacity}, 'monthly')`, pricing), expected);
   assert.equal(vm.runInContext(`calculateUltraPrice(${capacity}, 'annual')`, pricing), expected * 10);
 }
 const notice = read('installer/LEGAL_NOTICE.txt');
-for (const file of ['installer/assets/license.txt', 'installer/configurator/license.txt', 'installer/build/license.txt']) assert.equal(read(file).trim(), notice.trim());
+const noticeFiles = ['installer/assets/license.txt', 'installer/configurator/license.txt'];
+if (!process.argv.includes('--sources-only')) noticeFiles.push('installer/build/license.txt');
+for (const file of noticeFiles) assert.equal(read(file).trim(), notice.trim());
 assert(!notice.includes('RelaisDesk SAS'));
 assert(notice.includes('entrepreneur individuel'));
 assert(notice.includes('AGPLv3'));

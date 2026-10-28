@@ -7,7 +7,6 @@ import (
 	"database/sql"
 	"net/http"
 	"strings"
-	"time"
 )
 
 func VerifyAdminToken(providedToken, expectedToken string) bool {
@@ -47,19 +46,6 @@ func AdminAuth(adminToken string, db *sql.DB) func(http.Handler) http.Handler {
 			if db != nil && dbpkg.ValidateAdminSession(db, token) == nil {
 				next.ServeHTTP(w, r)
 				return
-			}
-
-			// Admin licenses also use an opaque, database-backed session.
-			if db != nil {
-				licenseID, err := dbpkg.ValidateTechnicianSession(db, token)
-				if err == nil {
-					lic, err := dbpkg.GetLicense(db, licenseID)
-					if err == nil && lic.Status == "active" && lic.ExpiresAt.After(time.Now().UTC()) &&
-						IsAdminLicense(lic) {
-						next.ServeHTTP(w, r)
-						return
-					}
-				}
 			}
 
 			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
