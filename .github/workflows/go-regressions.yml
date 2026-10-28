@@ -38,7 +38,7 @@ jobs:
           done
       - name: Check website source consistency
         run: |
-          node scripts/legal-checks.mjs
+          node scripts/legal-checks.mjs --sources-only
           node scripts/fleet-legal-checks.mjs
 
   audit:
