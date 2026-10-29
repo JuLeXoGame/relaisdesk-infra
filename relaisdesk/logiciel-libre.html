@@ -46,7 +46,7 @@
         <header class="legal-header">
           <div class="badge">GNU AGPLv3</div>
           <h1>Logiciel libre et code source</h1>
-          <p class="legal-date">Dernière mise à jour : 26 octobre 2026 — correctif des dossiers dans le Technicien Windows, version RelaisDesk 1.0.0 conservée.</p>
+          <p class="legal-date">Dernière mise à jour : 29 octobre 2026 — reconstruction des programmes corrigés, version RelaisDesk 1.0.0 conservée.</p>
         </header>
         <div class="legal-body">
           <p>RelaisDesk utilise et modifie les projets RustDesk Community. Le paiement d'un accès RelaisDesk rémunère l'exploitation de l'infrastructure, la configuration et le support. Il ne retire aucun des droits accordés par les licences libres applicables.</p>
@@ -57,7 +57,19 @@
             <thead><tr><th>Composant</th><th>Origine</th><th>Avis de modification</th><th>Source correspondante</th></tr></thead>
             <tbody>
               <tr>
-                <td><strong>Technicien Windows — correctif du 26 octobre 2026</strong></td>
+                <td><strong>Programmes et lanceurs — reconstruction du 29 octobre 2026</strong></td>
+                <td>Sources RelaisDesk des lanceurs Go, de l'API et des scripts.</td>
+                <td>Correctif des dossiers du parc et mises à jour des dépendances de sécurité. Reconstruction Windows, Linux et macOS en version 1.0.0.</td>
+                <td><a href="https://github.com/JuLeXoGame/relaisdesk-infra/tree/0d7a40722967dd3b493af1799e03e171588f3d31" target="_blank" rel="noopener">sources des lanceurs et scripts — commit <code>0d7a407</code></a> et <a href="https://github.com/JuLeXoGame/relaisdesk-infra/blob/codex/security-perf-1-0-20261023/docs/RECONSTRUCTION_1.0.0_2026-10-29.md" target="_blank" rel="noopener">instructions de reconstruction et révisions exactes par plateforme</a>.</td>
+              </tr>
+              <tr>
+                <td><strong>Moteur client — reconstruction du 29 octobre 2026</strong></td>
+                <td>Fork RelaisDesk de RustDesk Community.</td>
+                <td>Correctifs fusionnés des dépendances, de la compression et du transport WebRTC facultatif. AOM 3.14.1 et FFmpeg 7.1.5 conservés.</td>
+                <td><a href="https://github.com/JuLeXoGame/relaisdesk/tree/a5043e4ed97c80412d25c39a0d91b8be4c402be4" target="_blank" rel="noopener">sources du moteur — commit <code>a5043e4</code></a>, à cloner avec ses sous-modules. Les instructions de reconstruction précisent les révisions de compilation équivalentes.</td>
+              </tr>
+              <tr>
+                <td><strong>Technicien Windows — lot précédent du 26 octobre 2026</strong></td>
                 <td>Sources RelaisDesk du lanceur Go et de l'API.</td>
                 <td>Le choix des dossiers à autoriser affiche le parc de la licence concernée, recharge les noms à chaque ouverture et distingue les sous-dossiers par leur chemin. Seuls le portable et l'installateur Technicien Windows sont reconstruits ; les autres programmes conservent les sources du 23 octobre.</td>
                 <td><a href="https://github.com/JuLeXoGame/relaisdesk-infra/tree/af47dab659e916d69223c95f6fb94a6c0e4056a7" target="_blank" rel="noopener">sources du correctif — commit <code>af47dab</code></a> et <a href="https://github.com/JuLeXoGame/relaisdesk-infra/blob/codex/security-perf-1-0-20261023/docs/RECONSTRUCTION_1.0.0_2026-10-26.md" target="_blank" rel="noopener">instructions de reconstruction</a>. Le moteur reste au commit <code>1054d0f09</code> indiqué ci-dessous.</td>
@@ -83,15 +95,15 @@
               <tr>
                 <td><strong>Serveur RelaisDesk</strong></td>
                 <td>RustDesk Server Community, révision <code>a7736be5e40f85bfc141120dce587e836e5d4b80</code></td>
-                <td>Modifié par RelaisDesk depuis le 24 août 2026. Ajout de jetons Ed25519, preuves de possession, protection anti-rejeu, séparation des rôles et contrôle de capacité. Correctif du 23 octobre 2026 : mise à jour des dépendances TLS, QUIC et de chiffrement.</td>
-                <td><a href="https://github.com/JuLeXoGame/rustdesk-server/tree/adca9567eaf9e865ac2085877c953856016d1c68" target="_blank" rel="noopener" style="color: var(--border-focus);">sources du serveur déployé — commit <code>adca9567</code>, à cloner avec ses sous-modules</a>. L'<a href="https://api.relaisdesk.fr/sources/rustdesk-server-security-20260919.tar.gz" style="color: var(--border-focus);">archive du 19 septembre 2026</a> reste disponible pour l'ancienne version.</td>
+                <td>Modifié par RelaisDesk depuis le 24 août 2026. Ajout de jetons Ed25519, preuves de possession, protection anti-rejeu, séparation des rôles et contrôle de capacité. Déploiement du 29 octobre 2026 : correctifs fusionnés et dépendances TLS, QUIC et de chiffrement actualisées.</td>
+                <td><a href="https://github.com/JuLeXoGame/rustdesk-server/tree/b5934ee107c26035877119da195bf04746804944" target="_blank" rel="noopener" style="color: var(--border-focus);">sources du serveur déployé — commit <code>b5934ee</code>, à cloner avec ses sous-modules</a>. Les sources du <a href="https://github.com/JuLeXoGame/rustdesk-server/tree/adca9567eaf9e865ac2085877c953856016d1c68" target="_blank" rel="noopener">lot du 23 octobre</a> et l'<a href="https://api.relaisdesk.fr/sources/rustdesk-server-security-20260919.tar.gz" style="color: var(--border-focus);">archive du 19 septembre 2026</a> restent disponibles pour les anciennes versions.</td>
               </tr>
             </tbody>
           </table>
           </div>
 
           <h2>Identifier la version effectivement téléchargée</h2>
-          <p>Le <a href="https://api.relaisdesk.fr/api/v1/public/releases/latest">manifeste public signé courant</a> indique la date de publication, les noms, tailles et empreintes SHA-256 des fichiers distribués. Les sources des reconstructions du 23 octobre 2026 et du correctif Technicien Windows du 26 octobre sont identifiées dans le tableau ci-dessus. Un même numéro 1.0.0 peut correspondre à plusieurs reconstructions : vérifier aussi la date et l'empreinte du fichier.</p>
+          <p>Le <a href="https://api.relaisdesk.fr/api/v1/public/releases/latest">manifeste public signé courant</a> indique la date de publication, les noms, tailles et empreintes SHA-256 des fichiers distribués. Les sources de la reconstruction du 29 octobre 2026 et des lots précédents des 23 et 26 octobre sont identifiées dans le tableau ci-dessus. Un même numéro 1.0.0 peut correspondre à plusieurs reconstructions : vérifier aussi la date et l'empreinte du fichier.</p>
           <p><strong>Historique — contrôle du 12 septembre 2026 :</strong> le serveur de téléchargement proposait le lot <strong>1.0.2 daté du 11 septembre à 10:22:39 UTC</strong>. Une autre préparation locale portait aussi le numéro 1.0.2 avec des empreintes différentes. La version Windows 1.0.3 était un lot de test local, non publié lors de ce contrôle.</p>
           <p><strong>Technicien Windows portable du lot public contrôlé :</strong> SHA-256 <code>0479b842bed81c13e250a0b6922ba93d5e2e9b508bb9ffd82824aaba4e22da43</code>. Le moteur embarqué a été retrouvé à l'identique dans ce fichier : empreinte <code>86a2132b04743e3c2199cc20a86e158412bcb549e4e9ab247427a9a463f326c0</code>, associé au <a href="https://github.com/JuLeXoGame/relaisdesk/tree/e34c8bab932791961b2406bac5d0256b744b40b1" target="_blank" rel="noopener">commit client <code>e34c8bab</code></a> par le compte rendu de construction. Cette référence identifie le moteur, pas à elle seule les sources des lanceurs ni les scripts de l'ensemble des paquets. Elle ne doit pas être extrapolée à un fichier portant une autre empreinte.</p>
           <p><strong>Accès permanent :</strong> il n'est pas disponible sous Linux ou macOS dans les versions proposées. L'assistance ponctuelle Linux est distincte.</p>
