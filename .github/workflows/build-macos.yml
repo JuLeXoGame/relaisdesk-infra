@@ -79,6 +79,7 @@ jobs:
         with:
           toolchain: '1.99.1'
           targets: ${{ matrix.target }}
+          components: rustfmt
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
