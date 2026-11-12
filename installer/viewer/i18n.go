@@ -159,6 +159,22 @@ var messages = map[string]map[Lang]string{
 		LangFR: "🚀 Lancement de RustDesk...",
 		LangEN: "🚀 Launching RustDesk...",
 	},
+	"step_registering": {
+		LangFR: "En attente de l’enregistrement auprès du serveur…",
+		LangEN: "Waiting for registration with the server…",
+	},
+	"err_engine_stopped": {
+		LangFR: "Le moteur de téléassistance s’est arrêté avant l’enregistrement.",
+		LangEN: "The remote assistance engine stopped before registering.",
+	},
+	"err_registration_timeout": {
+		LangFR: "Le serveur de connexion n’a pas confirmé l’enregistrement. Réessayez.",
+		LangEN: "The connection server did not confirm registration. Try again.",
+	},
+	"err_announce_id": {
+		LangFR: "Impossible de transmettre l’identifiant au Technicien (%v).",
+		LangEN: "Could not send the ID to the technician (%v).",
+	},
 	"step_success_expire": {
 		LangFR: "🎉 Configuration réussie !\nVotre code expire le %s.",
 		LangEN: "🎉 Setup successful!\nYour code expires on %s.",

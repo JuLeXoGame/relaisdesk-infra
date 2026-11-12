@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	_ "embed"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 )
 
 //go:embed embedded/rustdesk.exe
@@ -63,6 +65,18 @@ func ensureRustDesk() (string, error) {
 		return "", err
 	}
 	return targetPath, nil
+}
+
+func awaitViewerAnnouncement(rustdeskPath, code, devicePublicKey string) error {
+	for i := 0; i < 30; i++ {
+		time.Sleep(time.Second)
+		id := getRustDeskID(rustdeskPath)
+		if id != "" && (isRustDeskKeyConfirmed(RUSTDESK_CONFIG_DIR) || i >= 3) {
+			_ = announceViewerID(context.Background(), code, id, devicePublicKey)
+			break
+		}
+	}
+	return nil
 }
 
 func bytesMatchRustDeskSHA256(data []byte) bool {

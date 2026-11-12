@@ -23,9 +23,15 @@ jobs:
           - arch: arm64
             runner: macos-15
             minimum: '12.3'
+            viewer_dmg: RelaisDesk_Mac.dmg
+            viewer_sha: 11bbe50f397e83a3fa74fd5b1deb48c27d1abaf7a3119b4fc2ccb609dd19a16d
+            engine_sha: be486bb93e77f91d1400978e5e9841da396e2529f3f209c5a3c8287055ca9e37
           - arch: amd64
             runner: macos-15-intel
             minimum: '12.0'
+            viewer_dmg: RelaisDesk_Mac_Intel.dmg
+            viewer_sha: d5cf83000ebf9c923c910988208501e02b3754dfed4ec8a5856cdce935b743bb
+            engine_sha: 7c7a7ca074b7130a5aad5f5364898fe20cc9687d243c8b77a666929e4f1968b8
     runs-on: ${{ matrix.runner }}
     env:
       BUILD_ARCH: ${{ matrix.arch }}
@@ -42,30 +48,29 @@ jobs:
         run: |
           (cd installer/viewer && go test -tags ci ./... && go vet -tags ci ./...)
           (cd installer/configurator && go test -tags ci ./... && go vet -tags ci ./...)
-      - name: Retrieve and verify the original engine
+      - name: Retrieve the verified engine from the released viewer
         env:
           GH_TOKEN: ${{ github.token }}
+          VIEWER_DMG: ${{ matrix.viewer_dmg }}
+          VIEWER_SHA: ${{ matrix.viewer_sha }}
+          ENGINE_SHA: ${{ matrix.engine_sha }}
         run: |
           set -euo pipefail
-          test "$(gh api repos/JuLeXoGame/relaisdesk-infra/actions/runs/39916359240 --jq '.head_sha')" = 09bc44ca338e70aec6550777b64d88eabb94d4c3
-          ready=0
-          for attempt in $(seq 1 90); do
-            artifact_id=$(gh api repos/JuLeXoGame/relaisdesk-infra/actions/runs/39916359240/artifacts --jq ".artifacts[] | select(.name == \"relaisdesk-macos-engine-$BUILD_ARCH\" and .expired == false) | .id")
-            if [[ -n $artifact_id ]]; then ready=1; break; fi
-            echo "Waiting for verified $BUILD_ARCH engine: attempt $attempt"
-            sleep 30
-          done
-          test "$ready" = 1
-          gh run download 39916359240 --repo JuLeXoGame/relaisdesk-infra --name "relaisdesk-macos-engine-$BUILD_ARCH" --dir "$RUNNER_TEMP/verified-input"
-          mkdir "$RUNNER_TEMP/verified-engine"
-          tar -xzf "$RUNNER_TEMP/verified-input/engine-$BUILD_ARCH.tar.gz" -C "$RUNNER_TEMP/verified-engine"
-          engine_app="$RUNNER_TEMP/verified-engine/RelaisDesk.app"
-          expected=$(cat "$RUNNER_TEMP/verified-input/engine-$BUILD_ARCH.sha256")
-          [[ $expected =~ ^[0-9a-f]{64}$ ]]
-          test "$(shasum -a 256 "$engine_app/Contents/MacOS/RelaisDesk" | cut -d' ' -f1)" = "$expected"
+          source_run=40838090440
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$source_run" --jq '.head_sha + ":" + .conclusion')" = 0d7a40722967dd3b493af1799e03e171588f3d31:success
+          gh run download "$source_run" --repo "$GITHUB_REPOSITORY" --name "relaisdesk-macos-dmg-$BUILD_ARCH" --dir "$RUNNER_TEMP/verified-input"
+          dmg="$RUNNER_TEMP/verified-input/$VIEWER_DMG"
+          test "$(shasum -a 256 "$dmg" | cut -d' ' -f1)" = "$VIEWER_SHA"
+          mount_dir="$RUNNER_TEMP/verified-mount"
+          mkdir "$mount_dir"
+          hdiutil attach -readonly -nobrowse -mountpoint "$mount_dir" "$dmg"
+          trap 'hdiutil detach "$mount_dir" || true' EXIT
+          engine_app="$RUNNER_TEMP/verified-engine/RelaisDeskEngine.app"
+          ditto "$mount_dir/RelaisDesk.app/Contents/Helpers/RelaisDeskEngine.app" "$engine_app"
+          test "$(shasum -a 256 "$engine_app/Contents/MacOS/RelaisDesk" | cut -d' ' -f1)" = "$ENGINE_SHA"
           codesign --verify --deep --strict "$engine_app"
           echo "ENGINE_APP=$engine_app" >> "$GITHUB_ENV"
-          echo "ENGINE_SHA256=$expected" >> "$GITHUB_ENV"
+          echo "ENGINE_SHA256=$ENGINE_SHA" >> "$GITHUB_ENV"
       - name: Build and verify complete applications and disk images
         run: bash scripts/package-macos-verified-engine.sh
       - uses: actions/upload-artifact@v4

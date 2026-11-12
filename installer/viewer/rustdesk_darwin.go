@@ -3,8 +3,10 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -13,7 +15,15 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 )
+
+var darwinViewerEngine struct {
+	sync.Mutex
+	command *exec.Cmd
+	done    chan struct{}
+}
 
 func ensureRustDesk() (string, error) {
 	p, err := findRustDesk()
@@ -135,6 +145,7 @@ func generateViewerRustDesk2Toml(rendezvousWithPort, rendezvousHost, relayServer
 		"relay-server = %s\n"+
 		"api-server = %s\n"+
 		"key = %s\n"+
+		"stop-service = 'N'\n"+
 		"relaisdesk-token-file = %s\n"+
 		"relaisdesk-proof-key-file = %s\n",
 		tomlString(rendezvousWithPort),
@@ -167,13 +178,18 @@ func configureRustDesk(activation *ActivationResponse, _ string) error {
 		return fmt.Errorf("fichiers d'autorisation RelaisDesk invalides")
 	}
 
-	terminateRustDesk()
+	if err := stopDarwinViewerEngine(); err != nil {
+		return err
+	}
 
 	if err := os.MkdirAll(RUSTDESK_CONFIG_DIR, 0700); err != nil {
 		return err
 	}
 
 	cleanupCorruptedConfig(RUSTDESK_CONFIG_DIR)
+	if err := resetRustDeskKeyConfirmed(RUSTDESK_CONFIG_DIR); err != nil {
+		return err
+	}
 
 	rendezvousWithPort := net.JoinHostPort(rendezvousHost, fmt.Sprintf("%d", activation.RendezvousPort))
 	relayServer := rendezvousHost
@@ -190,7 +206,8 @@ func configureRustDesk(activation *ActivationResponse, _ string) error {
 		activation.NetworkProofKeyFile,
 	)
 
-	return os.WriteFile(filepath.Join(RUSTDESK_CONFIG_DIR, RUSTDESK_CONFIG2_FILE), []byte(configData), 0600)
+	_, err := writeFileIfChangedAtomically(filepath.Join(RUSTDESK_CONFIG_DIR, RUSTDESK_CONFIG2_FILE), []byte(configData), 0600)
+	return err
 }
 
 // rustDesk2TomlPaths lists known RustDesk2.toml locations for --set-hwcodec.
@@ -203,8 +220,24 @@ func cleanupRustDesk2Toml() {
 }
 
 func terminateRustDesk() {
-	_ = exec.Command("pkill", "-9", "-f", "rustdesk").Run()
-	_ = exec.Command("pkill", "-9", "-f", "RelaisDesk").Run()
+	if err := stopDarwinViewerEngine(); err != nil {
+		log.Printf("[macOS] arrêt du moteur de téléassistance : %v", err)
+	}
+}
+
+func stopDarwinViewerEngine() error {
+	darwinViewerEngine.Lock()
+	defer darwinViewerEngine.Unlock()
+	if darwinViewerEngine.command == nil {
+		return nil
+	}
+	if err := darwinViewerEngine.command.Process.Kill(); err != nil && !errors.Is(err, os.ErrProcessDone) {
+		return err
+	}
+	<-darwinViewerEngine.done
+	darwinViewerEngine.command = nil
+	darwinViewerEngine.done = nil
+	return nil
 }
 
 func parseNumericRustDeskID(output string) string {
@@ -230,56 +263,70 @@ func isNumericRustDeskID(id string) bool {
 	return true
 }
 
-func getRustDeskID(rustdeskPath string) string {
-	if rustdeskPath != "" {
-		cmd := exec.Command(rustdeskPath, "--get-id")
-		if out, err := cmd.Output(); err == nil {
-			if id := parseNumericRustDeskID(string(out)); id != "" {
-				return id
-			}
-		}
-	}
-
-	tomlPath := filepath.Join(RUSTDESK_CONFIG_DIR, RUSTDESK_CONFIG_FILE)
-	if content, err := os.ReadFile(tomlPath); err == nil {
-		for _, line := range strings.Split(string(content), "\n") {
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "id =") {
-				parts := strings.SplitN(line, "=", 2)
-				if len(parts) == 2 {
-					id := strings.Trim(strings.TrimSpace(parts[1]), `"'`)
-					if isNumericRustDeskID(id) {
-						return id
-					}
-				}
-			}
-		}
-	}
-	return ""
-}
-
 func createDesktopShortcut(rustdeskPath string) error {
 	// Sur macOS, l'application est placée dans /Applications ou lancée depuis le DMG.
 	return nil
 }
 
-func isRustDeskRunning() bool {
-	cmd := exec.Command("pgrep", "-f", "RustDesk")
-	return cmd.Run() == nil
-}
-
 func launchRustDesk(path string) error {
-	return launchRustDeskBackground(path)
+	darwinViewerEngine.Lock()
+	defer darwinViewerEngine.Unlock()
+	if darwinViewerEngine.command != nil {
+		return fmt.Errorf("le moteur de téléassistance est déjà démarré")
+	}
+	cmd := exec.Command(path, "--server")
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	done := make(chan struct{})
+	darwinViewerEngine.command = cmd
+	darwinViewerEngine.done = done
+	go func() {
+		_ = cmd.Wait()
+		close(done)
+	}()
+	return nil
 }
 
-func launchRustDeskBackground(path string) error {
-	if isRustDeskRunning() {
+func awaitViewerAnnouncement(rustdeskPath, code, devicePublicKey string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return awaitDarwinViewerAnnouncement(ctx, rustdeskPath, code, devicePublicKey, time.Second)
+}
+
+func awaitDarwinViewerAnnouncement(ctx context.Context, rustdeskPath, code, devicePublicKey string, pollInterval time.Duration) error {
+	darwinViewerEngine.Lock()
+	done := darwinViewerEngine.done
+	darwinViewerEngine.Unlock()
+	if done == nil {
+		return errors.New(T("err_engine_stopped"))
+	}
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-done:
+			return errors.New(T("err_engine_stopped"))
+		case <-ctx.Done():
+			return errors.New(T("err_registration_timeout"))
+		case <-ticker.C:
+		}
+		if !isRustDeskKeyConfirmed(RUSTDESK_CONFIG_DIR) {
+			continue
+		}
+		out, err := exec.CommandContext(ctx, rustdeskPath, "--get-id").Output()
+		id := parseNumericRustDeskID(string(out))
+		if err != nil || id == "" || !isRustDeskKeyConfirmed(RUSTDESK_CONFIG_DIR) {
+			continue
+		}
+		select {
+		case <-done:
+			return errors.New(T("err_engine_stopped"))
+		default:
+		}
+		if err := announceViewerID(ctx, code, id, devicePublicKey); err != nil {
+			return errors.New(TF("err_announce_id", err))
+		}
 		return nil
 	}
-	if strings.HasSuffix(path, ".app") {
-		cmd := exec.Command("open", "-a", path, "--args", "--tray")
-		return cmd.Start()
-	}
-	cmd := exec.Command(path, "--tray")
-	return cmd.Start()
 }

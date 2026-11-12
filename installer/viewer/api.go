@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -34,7 +35,6 @@ type DeviceEnrollResponse struct {
 	UpdateTarget        *DeviceUpdateTarget `json:"update_target,omitempty"`
 	NextIntervalSeconds int                 `json:"next_interval_seconds,omitempty"`
 }
-
 
 type ActivationResponse struct {
 	Valid               bool   `json:"valid"`
@@ -141,7 +141,7 @@ func validateActivationResponse(result *ActivationResponse) error {
 	return nil
 }
 
-func announceViewerID(code, rustdeskID, devicePublicKey string) error {
+func announceViewerID(ctx context.Context, code, rustdeskID, devicePublicKey string) error {
 	client := &http.Client{Timeout: 10 * time.Second}
 
 	payload := map[string]string{
@@ -155,7 +155,7 @@ func announceViewerID(code, rustdeskID, devicePublicKey string) error {
 	}
 
 	endpoint := strings.TrimRight(APIURL, "/") + "/api/v1/viewer/announce"
-	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
