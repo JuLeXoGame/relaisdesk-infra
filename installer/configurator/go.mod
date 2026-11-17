@@ -1,6 +1,6 @@
 module configurator
 
-go 1.26.10
+go 1.26.11
 
 require (
 	fyne.io/fyne/v2 v2.8.0
