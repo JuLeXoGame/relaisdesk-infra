@@ -47,12 +47,13 @@ l'exécutable actif sur Oracle) signale :
 
 - `govulncheck -mode=binary` sur ces quatre exécutables : aucune vulnérabilité.
 
+## Déploiement
+
+Effectué le 17 novembre 2026 sur Oracle : voir le
+[compte rendu](../rapports/DEPLOIEMENT_API_GO_1.26.11_2026-11-17.md).
+
 ## Reste à faire
 
-- Déployer ces exécutables sur Oracle (procédure habituelle : copie, bascule
-  atomique, contrôle d'empreinte du processus actif, santé, retour arrière).
-  Tant que ce déploiement n'est pas fait, l'API en production reste exposée à
-  GO-2026-6859.
 - La CI `go-regressions.yml` s'exécutera sur la prochaine demande de fusion.
 - L'audit ne garantit pas l'absence de tout défaut ; il couvre les avis connus
   de la base Go à la date du 17 novembre 2026.
