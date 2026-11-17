@@ -49,3 +49,7 @@
 </IfModule>
 
 ErrorDocument 404 /404.html
+# HSTS : le site est servi uniquement en HTTPS (sans includeSubDomains ni preload).
+<IfModule mod_headers.c>
+    Header always set Strict-Transport-Security "max-age=31536000" "expr=%{HTTPS} == 'on'"
+</IfModule>
