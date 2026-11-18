@@ -1,10 +1,10 @@
 # Durcissement du serveur Oracle - plan du 2026-11-17
 
-Statut : **partiellement appliqué le 18 novembre 2026** (voir §0) ; `nginx`, `upgrade` et `certbot-delete-duckdns` restent à faire. Tous les relevés ci-dessous ont été faits en lecture seule sur `79.72.27.213`. Le script `scripts/hardening-oracle-20261117.sh` doit être copié sur le serveur et lancé en root, une sous-commande à la fois, après validation de l'exploitant.
+Statut : **partiellement appliqué le 18 novembre 2026** (voir §0) ; `nginx` et `certbot-delete-duckdns` restent à faire. Tous les relevés ci-dessous ont été faits en lecture seule sur `79.72.27.213`. Le script `scripts/hardening-oracle-20261117.sh` doit être copié sur le serveur et lancé en root, une sous-commande à la fois, après validation de l'exploitant.
 
 ## 0. Application du 18 novembre 2026 (01:21-01:45 UTC)
 
-Autorisée par l'exploitant : `backup`, `sshd`, `certbot`, `iptables`, `verify`. Sauvegarde : `/root/hardening-20261117-20261118-012152/`.
+Autorisée par l'exploitant : `backup`, `sshd`, `certbot`, `iptables`, `upgrade`, `verify`. Sauvegarde : `/root/hardening-20261117-20261118-012152/`.
 
 | Étape | Résultat |
 |---|---|
@@ -12,11 +12,16 @@ Autorisée par l'exploitant : `backup`, `sshd`, `certbot`, `iptables`, `verify`.
 | `sshd` | Drop-in appliqué : `PermitRootLogin no`, `X11Forwarding no` ; une 2ᵉ connexion `ubuntu` + `sudo -n` a été testée avec succès |
 | `certbot` | Cron root retiré, `certbot.timer` apt désactivé, `snap.certbot.renew.timer` actif. Le paquet apt n'a **pas** été retiré : l'abandon de sécurité du script s'est déclenché (apt aurait aussi retiré `python3-certbot-nginx`) ; il reste installé, inactif. Dry-run snap réussi pour `api.relaisdesk.fr`, `informatiqueadomicile03.fr-0001` et `informatiqueadomicile03.fr`. Le certificat `relaisdesk.duckdns.org` (authentificateur manuel) est ignoré. |
 | `iptables` | 4 règles 51820/udp en live ramenées à 1 ; `rules.v4` ramené de 3 à 1 ; REJECT final et autres ports inchangés |
+| `upgrade` | 01:44 UTC : 24 paquets mis à jour, aucun retiré (docker-ce 29.8.2 vers 29.10.0, containerd 2.3.6 vers 2.4.2, snapd, glib, etc.). hbbs/hbbr redémarrés par Docker (restart policy), joignables ensuite ; API non redémarrée (`NRestarts=0`) ; pas de redémarrage du serveur requis ; `verify` 43 OK, 0 échec |
 | `verify` | 43 OK, 2 avertissements (nginx, hors étape), 0 échec ; santé des deux domaines 200 ; ports 21115-21117 et 443 joignables depuis l'extérieur |
 
 Deux défauts du script ont été trouvés et corrigés pendant l'application : `certbot renew` ne retient qu'un seul `--cert-name` (le dry-run n'avait testé qu'un certificat ; un dry-run par certificat est maintenant fait) et le contrôle « en écoute » de `verify` lisait la mauvaise colonne de `ss`.
 
-Non fait : `nginx` (l'autre session éditait nginx), `upgrade` (coupure brève de hbbs/hbbr, à faire en heure creuse), suppression du certificat duckdns, doublons `MASQUERADE`.
+Non fait : `nginx` (l'autre session éditait nginx), suppression du certificat duckdns, doublons `MASQUERADE`.
+
+### Anomalie préexistante constatée : 502 intermittents sur `api.relaisdesk.fr`
+
+Environ 1 à 3 % des requêtes reçoivent un 502 (11 sur ~880 dans `access.log` du 18 novembre) ; `error.log` montre « upstream SSL certificate verify error: (20:unable to get local issuer certificate) » vers `https://127.0.0.1:8443`, **déjà présent le 17 novembre dès minuit** (1 à 7 par heure), donc antérieur au durcissement et à l'upgrade. Le vhost historique `api.informatiqueadomicile03.fr` (sans vérification amont) n'est pas touché. Le client `openssl` valide toujours la chaîne (4 certificats Let's Encrypt « Root YE », profondeur 2 à 5), et un nginx temporaire avec la même configuration (`proxy_ssl_verify_depth` 3 ou 5) n'a produit aucun échec sur 2 x 150 requêtes : la cause n'est pas établie. À investiguer avant de modifier le vhost de production (hypothèse : intermittence de la vérification de la chaîne amont avec la chaîne ISRG/cross-signée ; palliatif possible : `proxy_ssl_verify off` sur la boucle locale 127.0.0.1, décision de l'exploitant).
 
 ## 1. Constat (relevés du 2026-11-17)
 
