@@ -398,7 +398,7 @@ func handleActivationAndLaunch(code string) error {
 		id := getRustDeskID(rustdeskPath)
 		if id != "" {
 			if isRustDeskKeyConfirmed(RUSTDESK_CONFIG_DIR) || i >= 3 {
-				_ = announceViewerID(code, id, networkAuthorization.DevicePublicKey)
+				_ = announceViewerID(context.Background(), code, id, networkAuthorization.DevicePublicKey)
 				break
 			}
 		}

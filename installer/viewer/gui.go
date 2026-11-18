@@ -115,7 +115,6 @@ func renderViewerScreen(presetCode string, autoStart bool) {
 				fyne.Do(func() {
 					activateButton.Enable()
 					codeEntry.Enable()
-					statusLabel.SetText("")
 				})
 			}
 		}()
@@ -223,22 +222,13 @@ func handleActivationFyne(code string, setStatus func(string)) error {
 	if err := launchRustDesk(rustdeskPath); err != nil {
 		return err
 	}
+	setStatus(T("step_registering"))
+	if err := awaitViewerAnnouncement(rustdeskPath, code, networkAuthorization.DevicePublicKey); err != nil {
+		terminateRustDesk()
+		return err
+	}
 	startViewerNetworkRefresh(code, networkAuthorization)
 	keepAuthorization = true
-
-	// Attendre l'annonce avant de fermer le Viewer : les goroutines seraient
-	// sinon interrompues par la fin du processus et l'ID pourrait ne jamais
-	// parvenir au technicien.
-	for i := 0; i < 30; i++ {
-		time.Sleep(1 * time.Second)
-		id := getRustDeskID(rustdeskPath)
-		if id != "" {
-			if isRustDeskKeyConfirmed(RUSTDESK_CONFIG_DIR) || i >= 3 {
-				_ = announceViewerID(code, id, networkAuthorization.DevicePublicKey)
-				break
-			}
-		}
-	}
 
 	expDate, _ := time.Parse(time.RFC3339, activation.ExpiresAt)
 	dateFormat := T("date_format")

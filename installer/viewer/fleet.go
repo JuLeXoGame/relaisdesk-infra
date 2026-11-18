@@ -540,48 +540,35 @@ func isRustDeskKeyConfirmed(dir string) bool {
 	if err != nil {
 		return false
 	}
-	for _, line := range strings.Split(string(content), "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "key_confirmed") {
-			parts := strings.SplitN(line, "=", 2)
-			if len(parts) == 2 && strings.TrimSpace(parts[1]) == "true" {
-				return true
-			}
+	lines := strings.Split(string(content), "\n")
+	_, end := sectionBounds(lines, "")
+	for _, line := range lines[:end] {
+		if lineKey(line) == "key_confirmed" {
+			_, value, _ := strings.Cut(line, "=")
+			value, _, _ = strings.Cut(value, "#")
+			return strings.TrimSpace(value) == "true"
 		}
 	}
 	return false
 }
 
-func resetRustDeskKeyConfirmed(dir string) {
+func resetRustDeskKeyConfirmed(dir string) error {
 	tomlPath := filepath.Join(dir, "RustDesk.toml")
 	content, err := os.ReadFile(tomlPath)
+	if os.IsNotExist(err) {
+		return nil
+	}
 	if err != nil {
-		return
+		return err
 	}
 	lines := strings.Split(string(content), "\n")
-	newLines := make([]string, 0, len(lines)+1)
-	found := false
-	changed := false
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "key_confirmed") {
-			if trimmed != "key_confirmed = false" {
-				changed = true
-			}
-			newLines = append(newLines, "key_confirmed = false")
-			found = true
-		} else {
-			newLines = append(newLines, line)
+	_, end := sectionBounds(lines, "")
+	for i, line := range lines[:end] {
+		if lineKey(line) == "key_confirmed" {
+			lines[i] = "key_confirmed = false"
+			_, err = writeFileIfChangedAtomically(tomlPath, []byte(strings.Join(lines, "\n")), 0600)
+			return err
 		}
 	}
-	if !found {
-		newLines = append(newLines, "key_confirmed = false")
-		changed = true
-	}
-	if !changed {
-		return
-	}
-	// Atomic replace: a truncate-write here races the running engine's own
-	// config reads and could wipe the stored id.
-	_, _ = writeFileIfChangedAtomically(tomlPath, []byte(strings.Join(newLines, "\n")), 0600)
+	return nil
 }
