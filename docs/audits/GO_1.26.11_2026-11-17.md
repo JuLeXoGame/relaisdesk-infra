@@ -47,6 +47,10 @@ l'exécutable actif sur Oracle) signale :
 
 - `govulncheck -mode=binary` sur ces quatre exécutables : aucune vulnérabilité.
 
+## Avis publié après la rédaction (18 novembre 2026)
+
+La CI (`govulncheck` sur la demande de fusion) a signalé [GO-2026-6865](https://pkg.go.dev/vuln/GO-2026-6865) : plantage sur les trames à deux blocs dans `github.com/klauspost/compress` v1.20.1, atteint depuis `installer/viewer`. Corrigé en v1.20.2, mis à jour dans `installer/viewer` et `installer/configurator` (tests Windows `-tags ci` réussis). Aucun programme livré n'est reconstruit par cette note : les installateurs en circulation contiennent v1.20.1 jusqu'à leur prochaine reconstruction.
+
 ## Déploiement
 
 Effectué le 17 novembre 2026 sur Oracle : voir le
