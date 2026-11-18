@@ -27,6 +27,8 @@ Non fait : `nginx` (l'autre session éditait nginx), suppression du certificat d
 
 **Cause non établie.** Pistes restantes : (1) capturer une poignée de main en échec (`tcpdump` est installé ; capture en boucle sur `lo` port 8443, puis rapprochement avec l'heure d'une erreur) ; (2) essayer `proxy_ssl_session_reuse off` sur le vhost de production et mesurer le taux pendant 24 h ; (3) palliatif : `proxy_ssl_verify off` sur cette liaison loopback (le trafic ne quitte pas la machine). Toute modification du vhost de production est à décider par l'exploitant.
 
+**Essai en cours (autorisé par l'exploitant) : `proxy_ssl_session_reuse off`.** Appliqué le 18 novembre à 01:58 UTC dans les deux blocs `proxy_pass` de `/etc/nginx/sites-available/relaisdesk-api` (`nginx -t` OK, rechargement OK, santé 200). Sauvegarde de l'état précédent : `/root/hardening-20261117-20261118-012152/relaisdesk-api.avant-session-reuse` (SHA-256 d'origine `bcda9293…ce22`). Base de mesure : 11 réponses 502 dans l'`access.log` courant au moment du changement (journal du 18 novembre démarré à 00:00 UTC) ; taux antérieur ~50 à 100 par jour. À relire après 24 h : `sudo awk '$4 >= "[18/Nov/2026:02" && $9==502' /var/log/nginx/access.log | wc -l` ; si le taux reste identique, remettre l'ancien fichier (`sudo cp -a <sauvegarde> /etc/nginx/sites-available/relaisdesk-api && sudo nginx -t && sudo systemctl reload nginx`) et passer à la capture `tcpdump`.
+
 ## 1. Constat (relevés du 2026-11-17)
 
 ### Événement notable pendant l'audit
