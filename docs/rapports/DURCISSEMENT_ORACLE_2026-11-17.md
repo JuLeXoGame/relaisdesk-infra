@@ -37,7 +37,7 @@ Le serveur a **redémarré à 17:05 UTC** (hors de cet audit) : noyau passé de 
 ### Domaine historique `api.informatiqueadomicile03.fr`
 - Résolu en DNS vers la même IP ; vhost proxifiant tout vers l'API (aucune des protections du vhost `relaisdesk-api`).
 - Le certificat utilisé (`live/informatiqueadomicile03.fr`) couvre bien `api.informatiqueadomicile03.fr` ; expire le 2027-01-15.
-- **Usage réel non mesurable aujourd'hui** : le journal nginx global n'enregistre pas le nom d'hôte, le vhost n'a pas de journal propre et l'API ne journalise ni Host ni Origin. Ordre de grandeur du trafic total (tous vhosts) : environ 42 000 lignes/jour, dont 1 918 `POST /api/v1/devices/heartbeat` et 511 `/api/v1/health` sur la veille ; une partie vient de `79.72.27.213` lui-même (supervision/PHP). Rien ne permet d'attribuer ce trafic à l'ancien domaine.
+- **Usage réel non mesurable aujourd'hui** : le journal nginx global n'enregistre pas le nom d'hôte, le vhost n'a pas de journal propre et l'API ne journalise ni Host ni Origin. Ordre de grandeur du trafic total (tous vhosts) : environ 42 000 lignes/jour, dont 1 918 `POST /api/v1/devices/heartbeat` et 511 `/api/v1/health` sur la veille ; une partie vient de `79.72.27.213` : c'est le trafic d'un poste relié par WireGuard (pair `10.66.66.2`), qui ressort avec l'IP publique du serveur (correction du 18 novembre). Rien ne permet d'attribuer ce trafic à l'ancien domaine.
 - Le script ajoute un journal dédié `/var/log/nginx/api-legacy.access.log` : après quelques jours, `wc -l` donne l'usage réel et permet de décider de la suppression du vhost.
 - Constaté : l'en-tête `Server: nginx/1.18.0 (Ubuntu)` fuit la version sur ce vhost seulement.
 - CORS de l'API autorise toujours `https://informatiqueadomicile03.fr` (code API non modifié).
@@ -112,6 +112,6 @@ Déploiement : `scp -i .secrets/oracle_openssh scripts/hardening-oracle-20261117
 ## 6. Points restant à l'appréciation de l'exploitant
 - Supprimer ou non le vhost historique (après mesure via `api-legacy.access.log`), et le CORS correspondant côté API (code non modifié ici).
 - Doublons `MASQUERADE -o ens3` (même cause) : à traiter séparément en alignant `wg0.conf` et `rules.v4`.
-- Pair WireGuard inactif depuis environ 37 jours.
+- Pair WireGuard `10.66.66.3` inactif depuis environ 37 jours (l'autre pair, `10.66.66.2`, est actif).
 - Anciens noyaux (`autoremove`) et paquet `python3-certbot-nginx` désormais inutile.
-- Constat de lecture : un test `POST /api/heartbeat` (404) provenant de `79.72.27.213` apparaît dans le journal de l'API (supervision locale probable).
+- ~~Constat de lecture : un test `POST /api/heartbeat` (404) provenant de `79.72.27.213` (supervision locale probable).~~ Corrigé le 18 novembre : ce sont les envois de l'ancien protocole RustDesk Pro par le moteur client d'un poste relié par WireGuard ; traité, voir [HEARTBEAT_RUSTDESK_PRO_2026-11-18.md](HEARTBEAT_RUSTDESK_PRO_2026-11-18.md).
