@@ -335,11 +335,13 @@ cmd_certbot() {
     [[ ${#names[@]} -gt 0 ]] || die "Aucun certificat renouvelable detecte."
 
     log "Dry-run avec le certbot snap sur : ${names[*]}"
-    local args=() i
-    for i in "${names[@]}"; do args+=(--cert-name "$i"); done
-    if ! "$SNAP_CERTBOT" renew --dry-run "${args[@]}"; then
-        die "Le dry-run snap a echoue : AUCUN changement effectue (cron et paquet apt conserves)."
-    fi
+    # `certbot renew` ne retient qu'un seul --cert-name : un dry-run par certificat.
+    local i
+    for i in "${names[@]}"; do
+        if ! "$SNAP_CERTBOT" renew --dry-run --no-random-sleep-on-renew --cert-name "$i"; then
+            die "Le dry-run snap a echoue pour $i : AUCUN changement effectue (cron et paquet apt conserves)."
+        fi
+    done
     ok "Dry-run snap reussi pour tous les certificats nginx."
 
     systemctl is-enabled snap.certbot.renew.timer >/dev/null 2>&1 \
@@ -550,7 +552,7 @@ chk()  { if "${@:2}" >/dev/null 2>&1; then ok "$1"; PASS=$((PASS+1)); else err "
 chkw() { if "${@:2}" >/dev/null 2>&1; then ok "$1"; PASS=$((PASS+1)); else warn "$1"; WARNS=$((WARNS+1)); fi; }
 
 listening() { # $1=proto(tcp|udp) $2=port
-    ss -H -"${1:0:1}"ln | awk '{print $5}' | grep -qE "[:.]$2\$"
+    ss -H -"${1:0:1}"ln | awk '{print $4}' | grep -qE "[:.]$2\$"
 }
 
 cmd_verify() {

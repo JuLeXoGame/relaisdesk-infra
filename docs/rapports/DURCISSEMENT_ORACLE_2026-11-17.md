@@ -1,6 +1,22 @@
 # Durcissement du serveur Oracle - plan du 2026-11-17
 
-Statut : **préparé, non exécuté**. Tous les relevés ci-dessous ont été faits en lecture seule sur `79.72.27.213`. Le script `scripts/hardening-oracle-20261117.sh` doit être copié sur le serveur et lancé en root, une sous-commande à la fois, après validation de l'exploitant.
+Statut : **partiellement appliqué le 18 novembre 2026** (voir §0) ; `nginx`, `upgrade` et `certbot-delete-duckdns` restent à faire. Tous les relevés ci-dessous ont été faits en lecture seule sur `79.72.27.213`. Le script `scripts/hardening-oracle-20261117.sh` doit être copié sur le serveur et lancé en root, une sous-commande à la fois, après validation de l'exploitant.
+
+## 0. Application du 18 novembre 2026 (01:21-01:45 UTC)
+
+Autorisée par l'exploitant : `backup`, `sshd`, `certbot`, `iptables`, `verify`. Sauvegarde : `/root/hardening-20261117-20261118-012152/`.
+
+| Étape | Résultat |
+|---|---|
+| `backup` | OK (692 Ko, root seul) |
+| `sshd` | Drop-in appliqué : `PermitRootLogin no`, `X11Forwarding no` ; une 2ᵉ connexion `ubuntu` + `sudo -n` a été testée avec succès |
+| `certbot` | Cron root retiré, `certbot.timer` apt désactivé, `snap.certbot.renew.timer` actif. Le paquet apt n'a **pas** été retiré : l'abandon de sécurité du script s'est déclenché (apt aurait aussi retiré `python3-certbot-nginx`) ; il reste installé, inactif. Dry-run snap réussi pour `api.relaisdesk.fr`, `informatiqueadomicile03.fr-0001` et `informatiqueadomicile03.fr`. Le certificat `relaisdesk.duckdns.org` (authentificateur manuel) est ignoré. |
+| `iptables` | 4 règles 51820/udp en live ramenées à 1 ; `rules.v4` ramené de 3 à 1 ; REJECT final et autres ports inchangés |
+| `verify` | 43 OK, 2 avertissements (nginx, hors étape), 0 échec ; santé des deux domaines 200 ; ports 21115-21117 et 443 joignables depuis l'extérieur |
+
+Deux défauts du script ont été trouvés et corrigés pendant l'application : `certbot renew` ne retient qu'un seul `--cert-name` (le dry-run n'avait testé qu'un certificat ; un dry-run par certificat est maintenant fait) et le contrôle « en écoute » de `verify` lisait la mauvaise colonne de `ss`.
+
+Non fait : `nginx` (l'autre session éditait nginx), `upgrade` (coupure brève de hbbs/hbbr, à faire en heure creuse), suppression du certificat duckdns, doublons `MASQUERADE`.
 
 ## 1. Constat (relevés du 2026-11-17)
 
